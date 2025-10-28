@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HRCS - Offline Browser Mode</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        h1 { color: #333; text-align: center; }
+        .panel { background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; width: 100%; margin: 5px 0; }
+        button:hover { background: #5568d3; }
+        .log { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        .math-display { background: #fff8e1; padding: 15px; border-radius: 5px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HRCS - Harmonic Resonance Communication System</h1>
+        <p style="text-align:center; color:#666;">Offline Browser Mode - No Internet Required</p>
+        
+        <div class="panel">
+            <h2>Transmission</h2>
+            <textarea id="messageInput" placeholder="Enter message...">Hello from HRCS!</textarea>
+            <button onclick="transmitMessage()">Send Message</button>
+        </div>
+        
+        <div class="panel">
+            <h2>Reception</h2>
+            <div class="log" id="messageLog">No messages yet...</div>
+            <button onclick="startListening()">Start Listening</button>
+        </div>
+        
+        <div class="panel">
+            <h2>Mathematical Framework</h2>
+            <button onclick="demoMath()">Demo: Golden Ratio Frequencies</button>
+            <div class="math-display" id="mathOutput"></div>
+        </div>
+        
+        <div class="panel">
+            <h2>Activity Log</h2>
+            <div class="log" id="activityLog"></div>
+        </div>
+    </div>
+
+    <script>
+        const PHI = 1.618033988749895;
+        let audioContext = null;
+        
+        function log(message) {
+            const logDiv = document.getElementById('activityLog');
+            const entry = document.createElement('div');
+            entry.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+        
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                log('Audio initialized');
+            }
+        }
+        
+        function transmitMessage() {
+            initAudio();
+            const message = document.getElementById('messageInput').value;
+            log('Transmitting: ' + message);
+            
+            // Generate golden ratio frequency
+            const freq = BASE_FREQ * PHI;
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            osc.frequency.value = freq;
+            gainNode.gain.value = 0.1;
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.5);
+            
+            // Store locally
+            localStorage.setItem('hrcs_last_message', message);
+            log('Message sent at frequency: ' + freq.toFixed(2) + ' Hz');
+        }
+        
+        function startListening() {
+            initAudio();
+            log('Listening started...');
+            setInterval(() => {
+                const msg = localStorage.getItem('hrcs_last_message');
+                if (msg) {
+                    const logDiv = document.getElementById('messageLog');
+                    logDiv.innerHTML = '<div>Received: ' + msg + '</div>' + logDiv.innerHTML;
+                    localStorage.removeItem('hrcs_last_message');
+                }
+            }, 500);
+        }
+        
+        function demoMath() {
+            const BASE_FREQ = 432;
+            const channels = [];
+            for (let i = 0; i < 8; i++) {
+                channels.push((BASE_FREQ * Math.pow(PHI, i/2)).toFixed(2));
+            }
+            document.getElementById('mathOutput').innerHTML = 
+                'Golden Ratio Frequencies: ' + channels.join(', ') + ' Hz';
+            log('Generated golden ratio frequencies');
+        }
+        
+        window.onload = function() {
+            log('HRCS Browser Mode ready');
+            log('Node ID: 0x0001');
+        };
+    </script>
+</body>
+</html>

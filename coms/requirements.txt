@@ -1,0 +1,17 @@
+# HRCS Dependencies
+# Core dependencies required for operation
+
+numpy>=1.21.0
+scipy>=1.7.0
+sounddevice>=0.4.4
+cryptography>=3.4.8
+pyyaml>=5.4.1
+
+# Optional dependencies
+click>=8.0.0  # For CLI
+psutil>=5.8.0  # For system monitoring
+
+# Optional SDR support (install separately if needed)
+# soapysdr  # For radio modem
+# SoapySDR  # SoapySDR Python bindings
+

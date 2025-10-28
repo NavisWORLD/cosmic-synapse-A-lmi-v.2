@@ -1,0 +1,51 @@
+# HRCS Node Configuration
+# Copy this file to config.yaml and modify as needed
+
+node:
+  id: 0x0000000000000001  # Unique node ID (64-bit hex)
+  name: "Node-01"
+  
+network:
+  network_key: "changeme-strong-password-here"  # Pre-shared encryption key
+  auto_join: true
+  mesh_ttl: 10  # Maximum hop count
+  
+physical:
+  # Acoustic modem
+  acoustic:
+    enabled: true
+    sample_rate: 48000
+    base_frequency: 432  # Hz
+    channels: 32
+    power: 10  # Watts
+  
+  # VHF radio (30-300 MHz)
+  radio_vhf:
+    enabled: false  # Set to true if SDR available
+    center_freq: 146.500e6  # Hz (2m amateur band)
+    bandwidth: 25e3  # Hz
+    power: 5  # Watts
+  
+  # UHF radio (300-3000 MHz)
+  radio_uhf:
+    enabled: false  # Set to true if SDR available
+    center_freq: 433.920e6  # Hz (ISM band)
+    bandwidth: 200e3  # Hz
+    power: 1  # Watt
+
+routing:
+  algorithm: "golden_ratio_dv"
+  update_interval: 30  # seconds
+  neighbor_timeout: 120  # seconds
+
+power:
+  solar_enabled: true
+  battery_capacity: 100  # Ah
+  low_power_threshold: 20  # %
+  emergency_mode_threshold: 10  # %
+
+logging:
+  level: "INFO"
+  file: "/var/log/hrcs/node.log"
+  max_size: 100  # MB
+

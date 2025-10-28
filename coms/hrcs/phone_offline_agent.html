@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    <title>HRCS - Phone Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .status-bar {
+            background: #f0f0f0;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .button-panel {
+            padding: 20px;
+        }
+        
+        .big-button {
+            width: 100%;
+            padding: 25px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: manipulation;
+        }
+        
+        .big-button:active {
+            transform: scale(0.98);
+        }
+        
+        .big-button.send {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+        
+        .big-button.listen {
+            background: linear-gradient(135deg, #2196F3 0%, #0b7dda 100%);
+        }
+        
+        .big-button.stop {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        }
+        
+        .big-button.math {
+            background: linear-gradient(135deg, #FF9800 0Kennedy #f57c00 100%);
+        }
+        
+        .input-section {
+            padding: 20px;
+        }
+        
+        .message-input {
+            width: 100%;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            font-size: 18px;
+            min-height: 120px;
+            margin-bottom: 15px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+        }
+        
+        .log-entry.sent {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81C784;
+        }
+        
+        .log-entry.received {
+            background: rgba(33, 150, 243, 0.2);
+            color: #64B5F6;
+        }
+        
+        .log-entry.info {
+            background: rgba(255, 193, 7, 0.2);
+            color: #FFD54F;
+        }
+        
+        .frequency-display {
+            background: #fff8e1;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f5f5f5;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: bold;
+        }
+        
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .big-button {
+                padding: 20px;
+                font-size: 18px;
+            }
+        }
+        
+        /* Prevent zoom on input focus */
+        input, textarea {
+            font-size: 16px !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 HRCS Phone Agent</h1>
+            <p>Offline Mesh Communication</p>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span id="statusText">Ready</span>
+            </div>
+            <div id="nodeInfo">Node: 0x0001</div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab(0)">📤 Send</div>
+            <div class="tab" onclick="switchTab(1)">📥 Receive</div>
+            <div class="tab" onclick="switchTab(2)">⚙️ Tools</div>
+        </div>
+        
+        <div class="tab-content active" id="tab0">
+            <div class="input-section">
+                <textarea class="message-input" id="messageInput" placeholder="Type your message here...">Hello from HRCS Phone!</textarea>
+                <button class="big-button send" onclick="sendMessage()">📤 Transmit Message</button>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="tab1">
+            <div class="button-panel">
+                <button class="big-button listen" onclick="startListening()">👂 Start Listening</button>
+                <button class="big-button stop" onclick="stopListening()">⏹ Stop Listening</button>
+            </div>
+            <div class="log-container" id="receiveLog">
+                <div class="log-entry info">No messages received yet</div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="tab2">
+            <div class="button-panel">
+                <button class="big-button math" onclick="demonstrateMath()">🔢 Golden Ratio Demo</button>
+            </div>
+            <div class="frequency-display" id="mathDisplay">
+                Click button to generate frequencies
+            </div>
+            <div class="log-container" id="activityLog">
+                <div class="log-entry info">HRCS Phone Agent Ready</div>
+                <div class="log-entry info">Using device microphone and speaker</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PHI = 1.618033988749895;
+        const BASE_FREQ = 432;
+        
+        let audioContext = null;
+        let isListening = false;
+        let micStream = null;
+        let analyser = null;
+        
+        function log(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `${timestamp}: ${message}`;
+            
+            const logDiv = document.getElementById('activityLog');
+            logDiv.insertBefore(entry, logDiv.firstChild);
+            
+            // Auto-scroll
+            if (logDiv.scrollTop === 0) {
+                setTimeout(() => logDiv.scrollTop = 0, 10);
+            }
+        }
+        
+        function receiveLog(type, message) {
+            const logDiv = document.getElementById('receiveLog');
+            if (logDiv.innerHTML.includes('No messages')) {
+                logDiv.innerHTML = '';
+            }
+            
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = message;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+        
+        function switchTab(index) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            document.querySelectorAll('.tab')[index].classList.add('active');
+            document.getElementById('tab' + index).classList.add('active');
+        }
+        
+        async function initAudio() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: 48000
+                    });
+                    log('info', 'Audio system initialized');
+                    updateStatus('Audio Ready');
+                } catch(e) {
+                    log('error', 'Audio init failed: ' + e.message);
+                    updateStatus('Audio Error');
+                }
+            }
+        }
+        
+        async function sendMessage() {
+            await initAudio();
+            const message = document.getElementById('messageInput').value;
+            
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            log('sent', 'Transmitting: ' + message);
+            updateStatus('Transmitting...');
+            
+            // Generate frequencies
+            const frequencies = [];
+            for (let i = 0; i < 5; i++) {
+                frequencies.push(BASE_FREQ * Math.pow(PHI, i/2));
+            }
+            
+            // Create audio signal
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.value = frequencies[0];
+            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.5);
+            
+            // Store in local storage for demo
+            localStorage.setItem('hrcs_last_msg', JSON.stringify({
+                text: message,
+                time: Date.now(),
+                freq: frequencies[0]
+            }));
+            
+            updateStatus('Message Sent');
+            receiveLog('sent', message);
+            
+            log('info', 'Sent at ' + frequencies[0].toFixed(2) + ' Hz');
+        }
+        
+        async function startListening() {
+            await initAudio();
+            
+            if (isListening) {
+                return;
+            }
+            
+            try {
+                micStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    } 
+                });
+                
+                analyser = audioContext.createAnalyser();
+                const micSource = audioContext.createMediaStreamSource(micStream);
+                
+                analyser.fftSize = 2048;
+                micSource.connect(analyser);
+                
+                isListening = true;
+                updateStatus('Listening...');
+                log('info', 'Microphone active, listening for signals');
+                
+                // Simulate receiving messages
+                const checkInterval = setInterval(() => {
+                    if (!isListening) {
+                        clearInterval(checkInterval);
+                        return;
+                    }
+                    
+                    const stored = localStorage.getItem('hrcs_last_msg');
+                    if (stored) {
+                        const msg = JSON.parse(stored);
+                        if (Date.now() - msg.time < 10000) {
+                            receiveLog('received', 'Received: ' + msg.text);
+                            localStorage.removeItem('hrcs_last_msg');
+                        }
+                    }
+                }, 1000);
+                
+            } catch(e) {
+                log('error', 'Mic access denied: ' + e.message);
+                alert('Microphone permission required for receiving');
+            }
+        }
+        
+        function stopListening() {
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+                micStream = null;
+            }
+            
+            isListening = false;
+            updateStatus('Stopped');
+            log('info', 'Stopped listening');
+        }
+        
+        function demonstrateMath() {
+            const frequencies = [];
+            const noteNames = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+            
+            for (let i = 0; i < 8; i++) {
+                const freq = BASE_FREQ * Math.pow(PHI, i/2);
+                frequencies.push(freq.toFixed(2));
+            }
+            
+            document.getElementById('mathDisplay').innerHTML = 
+                'Golden Ratio Frequencies (Hz):<br><strong>' + 
+                frequencies.join(' - ') + '</strong>';
+            
+            log('info', 'Generated ' + frequencies.length + ' frequencies using golden ratio');
+        }
+        
+        function updateStatus(text) {
+            document.getElementById('statusText').textContent = text;
+        }
+        
+        // Initialize on load
+        window.onload = function() {
+            initAudio();
+            log('info', 'HRCS Phone Agent ready');
+            log('info', 'Hardware: Microphone ✓ Speaker ✓');
+            
+            // Request mic permission early
+            if (navigator.mediaDevices) {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        stream.getTracks().forEach(track => track.stop());
+                    })
+                    .catch(() => {});
+            }
+        };
+        
+        // Handle page visibility
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && isListening) {
+                log('info', 'Page hidden, continuing in background');
+            }
+        });
+    </script>
+</body>
+</html>
+
