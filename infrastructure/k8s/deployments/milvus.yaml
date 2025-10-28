@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: milvus
+  namespace: vibrational-intelligence
+spec:
+  serviceName: milvus-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: milvus
+  template:
+    metadata:
+      labels:
+        app: milvus
+    spec:
+      containers:
+      - name: milvus
+        image: milvusdb/milvus:latest
+        ports:
+        - containerPort: 19530
+          name: grpc
+        - containerPort: 9091
+          name: rest
+        env:
+        - name: ETCD_ENDPOINTS
+          value: "etcd:2379"
+        - name: MINIO_ADDRESS
+          value: "minio-service:9000"
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2"
+          limits:
+            memory: "8Gi"
+            cpu: "4"
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/milvus
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 50Gi
+

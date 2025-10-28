@@ -1,0 +1,79 @@
+# Core Dependencies
+numpy>=1.24.0
+scipy>=1.10.0
+pandas>=2.0.0
+
+# Machine Learning & AI - Updated for multimodal
+torch>=2.0.0
+transformers[torch]>=4.30.0
+sentence-transformers>=2.2.0
+openai>=1.0.0
+clip-by-openai>=1.1
+
+# Image Processing & Vision
+Pillow>=10.0.0
+imagehash>=4.3.0
+opencv-python>=4.8.0
+
+# Audio Processing
+pyaudio>=0.2.11
+vosk>=0.3.45
+librosa>=0.10.0
+soundfile>=0.12.0
+chromaprint>=1.0.0
+pyacoustid>=1.2.0
+
+# Message Queue & Infrastructure
+kafka-python>=2.0.2
+minio>=7.2.0
+
+# Vector Databases
+pymilvus>=2.3.0
+
+# Graph Databases
+neo4j>=5.14.0
+py2neo>=2021.2.0
+
+# Named Entity Recognition
+spacy>=3.7.0
+
+# Web Crawling
+scrapy>=2.11.0
+selenium>=4.13.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+
+# Visualization - Added Dash
+plotly>=5.17.0
+dash>=2.14.0
+dash-cytoscape>=0.3.0
+matplotlib>=3.7.0
+
+# Security - Added all required
+cryptography>=41.0.0
+pycryptodome>=3.19.0
+cffi>=1.15.0
+pyfhel>=3.4.0
+mpyc>=0.9.0
+
+# Mathematical Reasoning
+sympy>=1.12.0
+
+# IPC and Communication
+websockets>=12.0
+prometheus-client>=0.19.0
+
+# Audio fingerprinting
+acoustid>=1.1.0
+
+# Utilities
+python-dateutil>=2.8.2
+pytz>=2023.3
+uuid>=1.30
+pyyaml>=6.0
+
+# Development & Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.7.0
+flake8>=6.1.0

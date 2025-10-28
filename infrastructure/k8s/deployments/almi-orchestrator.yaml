@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: almi-orchestrator
+  namespace: vibrational-intelligence
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: almi-orchestrator
+  template:
+    metadata:
+      labels:
+        app: almi-orchestrator
+    spec:
+      containers:
+      - name: orchestrator
+        image: vibrational-intelligence:latest
+        command: ["python", "main.py"]
+        env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka-service:9092"
+        - name: NEO4J_URI
+          value: "bolt://neo4j-service:7687"
+        volumeMounts:
+        - name: config
+          mountPath: /app/infrastructure/config.yaml
+          subPath: config.yaml
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+        ports:
+        - containerPort: 8765
+          name: ipc
+      volumes:
+      - name: config
+        configMap:
+          name: almi-config
+

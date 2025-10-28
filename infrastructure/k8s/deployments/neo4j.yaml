@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: neo4j
+  namespace: vibrational-intelligence
+spec:
+  serviceName: neo4j-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neo4j
+  template:
+    metadata:
+      labels:
+        app: neo4j
+    spec:
+      containers:
+      - name: neo4j
+        image: neo4j:latest
+        ports:
+        - containerPort: 7687
+          name: bolt
+        - containerPort: 7474
+          name: http
+        env:
+        - name: NEO4J_AUTH
+          value: "neo4j/changeme"
+        - name: NEO4J_dbms_memory_heap_initial__size
+          value: "2g"
+        - name: NEO4J_dbms_memory_heap_max__size
+          value: "4g"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2"
+          limits:
+            memory: "8Gi"
+            cpu: "4"
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 50Gi
+

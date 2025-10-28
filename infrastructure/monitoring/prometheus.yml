@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # A-LMI system metrics
+  - job_name: 'almi-system'
+    static_configs:
+      - targets: ['almi-orchestrator:9090']
+        labels:
+          service: 'almi-orchestrator'
+  
+  # Kafka metrics
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka-exporter:9308']
+  
+  # Database metrics
+  - job_name: 'milvus'
+    static_configs:
+      - targets: ['milvus-metrics:9090']
+  
+  - job_name: 'neo4j'
+    static_configs:
+      - targets: ['neo4j-exporter:9307']
+  
+  # Node exporter
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+

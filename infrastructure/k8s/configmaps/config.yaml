@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: almi-config
+  namespace: vibrational-intelligence
+data:
+  config.yaml: |
+    infrastructure:
+      kafka:
+        bootstrap_servers: kafka-service:9092
+      minio:
+        endpoint: minio-service:9000
+        access_key: minioadmin
+        secret_key: minioadmin
+        bucket: light-tokens
+      milvus:
+        host: milvus-service
+        port: 19530
+      neo4j:
+        uri: bolt://neo4j-service:7687
+        username: neo4j
+        password: "changeme"
+    
+    security:
+      encryption:
+        algorithm: aes-256-gcm
+        key_derivation: pbkdf2
+      homomorphic:
+        enabled: true
+        library: pyfhel
+    
+    processing:
+      multimodal:
+        text_model: "clip-vit-large-patch14"
+        audio_model: "microsoft/wavlm-base-plus"
+        embedding_dim: 1536
+      
+    cosmic_synapse:
+      ipc:
+        host: localhost
+        port: 8765
+        protocol: websocket
+

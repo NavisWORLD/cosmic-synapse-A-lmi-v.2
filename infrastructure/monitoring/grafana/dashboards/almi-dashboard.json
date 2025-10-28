@@ -1,0 +1,61 @@
+{
+  "dashboard": {
+    "title": "A-LMI System Monitoring",
+    "tags": ["almi", "monitoring"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Kafka Message Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(kafka_messages_total[5m])",
+            "legendFormat": "Messages/sec"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Processing Throughput",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(almi_processing_duration_seconds[5m])",
+            "legendFormat": "Throughput"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Memory Usage by Layer",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "almi_memory_usage_bytes",
+            "legendFormat": "{{layer}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(almi_errors_total[5m])",
+            "legendFormat": "Errors/sec"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      }
+    ],
+    "refresh": "5s"
+  }
+}
+

@@ -1,0 +1,113 @@
+# Global Configuration for Unified Vibrational Intelligence System
+
+infrastructure:
+  kafka:
+    bootstrap_servers: "localhost:9092"
+    topics:
+      - "web_crawler"
+      - "audio_processing"
+      - "light_tokens"
+      - "reasoning"
+      - "cosmic_synapse"
+  
+  minio:
+    endpoint: "localhost:9000"
+    access_key: "admin"
+    secret_key: "admin123456"
+    bucket: "a-lmi-data"
+    secure: false
+  
+  milvus:
+    host: "localhost"
+    port: 19530
+    collection_name: "light_tokens"
+  
+  neo4j:
+    uri: "bolt://localhost:7687"
+    username: "neo4j"
+    password: "vibrational123"
+    database: "neo4j"
+
+a_lmi:
+  data_structures:
+    embedding_dimension: 1536
+    spectral_signature_size: 768  # Half of embedding dim (Nyquist)
+  
+  perception:
+    web_crawler:
+      max_pages_per_domain: 1000
+      delay_between_requests: 1.0  # seconds
+      respect_robots_txt: true
+    
+    audio_processor:
+      sample_rate: 44100
+      chunk_size: 4096
+      format: "paInt16"
+      channels: 1
+      
+    speech_to_text:
+      model_path: "models/vosk-model-en-us-0.22"
+      sample_rate: 16000
+  
+  urgent:
+    # Mathematical constants from 8D equation
+    golden_ratio: 1.61803398875
+    speed_of_light: 299792458.0  # m/s
+    lyapunov_base: 0.9056
+  
+  memory:
+    temporal_kg:
+      enable_temporal_modeling: true
+      default_timestamp_property: "timestamp"
+    
+    vector_db:
+      metric_type: "L2"
+      index_type: "IVF_FLAT"
+      index_params:
+        nlist: 1024
+
+cosmic_synapse:
+  physics:
+    timestep: 0.01  # dimensionless time step
+    max_particles: 1000
+    
+    # Potential field parameters
+    alpha_phi: 1.0      # Bowl potential strength
+    beta: 0.5           # Gravity strength
+    gamma: 0.3          # Connectivity strength
+    kappa_omega: 0.2    # Swirl gain
+    zeta: 0.05          # Damping coefficient
+    
+    # NWise parameters
+    sigma_lambda_base: 0.1
+    sigma_psd_scale: 0.5
+  
+  audio:
+    enable_live_audio: true
+    sample_rate: 44100
+    fft_size: 4096
+    normalization_range: [0.0, 1.0]
+  
+  rendering:
+    frame_rate: 60  # FPS
+    enable_3d: false  # Start with 2D
+    background_color: [0.0, 0.0, 0.0, 1.0]  # Black
+
+security:
+  encryption:
+    algorithm: "AES-256"
+    key_size: 32  # bytes
+    
+  key_management:
+    kms_type: "local"  # local, aws_kms, azure_keyvault
+    key_storage_path: "keys/"
+  
+  privacy:
+    enable_homomorphic_encryption: false  # Requires additional setup
+    enable_federated_learning: false
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/a_lmi.log"
+
