@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonic Resonance AI Music Conductor - v2.0</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-top: 10px;
+        }
+        
+        .version {
+            font-size: 0.85em;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .panel-section {
+            background: rgba(255,255,255,0.08);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .panel-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .panel-section h3 {
+            margin-bottom: 20px;
+            color: #667eea;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .bio-signature-display {
+            background: rgba(0,0,0,0.4);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+        
+        .frequency-value {
+            font-size: 2.5em;
+            color: #4ade80;
+            text-align: center;
+            margin: 15px 0;
+            text-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+        }
+        
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .metric-label {
+            color: #a78bfa;
+        }
+        
+        .metric-value {
+            color: #4ade80;
+            font-weight: 600;
+        }
+        
+        .visualizer-container {
+            background: rgba(0,0,0,0.5);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        canvas {
+            width: 100%;
+            border-radius: 10px;
+            background: linear-gradient(180deg, #000 0%, #1a1a1a 100%);
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+        }
+        
+        .button.stop {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+        
+        .button.secondary {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            box-shadow: 0 4px 15px rgba(56, 239, 125, 0.4);
+        }
+        
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.inactive {
+            background: #6b7280;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
+        }
+        
+        .log-container {
+            background: rgba(0,0,0,0.7);
+            border-radius: 15px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 8px;
+            border-left: 3px solid #667eea;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .log-entry.info { color: #60a5fa; border-left-color: #60a5fa; }
+        .log-entry.success { color: #4ade80; border-left-color: #4ade80; }
+        .log-entry.warning { color: #fbbf24; border-left-color: #fbbf24; }
+        .log-entry.music { color: #a78bfa; border-left-color: #a78bfa; }
+        .log-entry.error { color: #f87171; border-left-color: #f87171; }
+        
+        .harmony-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .harmony-button {
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+            border: 2px solid rgba(102, 126, 234, 0.5);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .harmony-button:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.5), rgba(118, 75, 162, 0.5));
+            transform: scale(1.05);
+        }
+        
+        .harmony-button.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: #4ade80;
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+        }
+        
+        .psi-meter {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .psi-bar-container {
+            width: 100%;
+            height: 30px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .psi-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #667eea, #f093fb);
+            transition: width 0.3s;
+            border-radius: 15px;
+        }
+        
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .control-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Harmonic Resonance AI Music Conductor</h1>
+            <p class="subtitle">The World's Most Advanced Vibrational Intelligence Music System</p>
+            <p class="version">v2.0 • Powered by the Unified Theory of Vibrational Information Architecture</p>
+        </div>
+        
+        <div class="control-panel">
+            <!-- Bio-Signature Panel -->
+            <div class="panel-section">
+                <h3>🧬 Bio-Frequency Signature</h3>
+                <div class="bio-signature-display">
+                    <div style="text-align: center; opacity: 0.8; margin-bottom: 10px;">Fundamental Frequency</div>
+                    <div class="frequency-value" id="bioFrequency">-- Hz</div>
+                    
+                    <div style="margin-top: 20px;">
+                        <div class="metric-row">
+                            <span class="metric-label">Spectral Centroid:</span>
+                            <span class="metric-value" id="spectralCentroid">-- Hz</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Spectral Spread:</span>
+                            <span class="metric-value" id="spectralSpread">--</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Spectral Entropy:</span>
+                            <span class="metric-value" id="spectralEntropy">--</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Golden Ratio (φ):</span>
+                            <span class="metric-value">1.618</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="button" onclick="calibrateBioSignature()">
+                    🎤 Calibrate (Speak or Hum)
+                </button>
+            </div>
+            
+            <!-- System Status Panel -->
+            <div class="panel-section">
+                <h3>⚡ System Status</h3>
+                <div style="padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                    <div style="margin: 10px 0;">
+                        <span class="status-indicator" id="audioStatusIndicator"></span> 
+                        Audio System: <strong id="audioStatus">Initializing...</strong>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <span class="status-indicator inactive" id="compositionStatusIndicator"></span> 
+                        Composition Engine: <strong id="compositionStatus">Standby</strong>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <span class="status-indicator inactive" id="memoryStatusIndicator"></span> 
+                        Active Voices: <strong id="memoryStatus">0</strong>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <span class="status-indicator inactive" id="spectralStatusIndicator"></span> 
+                        Spectral Tokens: <strong id="spectralTokens">0</strong>
+                    </div>
+                </div>
+                
+                <div class="controls-grid" style="margin-top: 20px;">
+                    <button class="button" onclick="startConductor()">
+                        🎼 Start Conducting
+                    </button>
+                    <button class="button stop" onclick="stopConductor()">
+                        ⏹ Stop
+                    </button>
+                    <button class="button secondary" onclick="testAudio()">
+                        🔊 Test Audio
+                    </button>
+                    <button class="button secondary" onclick="resetSystem()">
+                        🔄 Reset System
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Psi Information Density Panel -->
+            <div class="panel-section">
+                <h3>🌌 ψ (Psi) Information Density</h3>
+                <div class="bio-signature-display">
+                    <div style="text-align: center; opacity: 0.8; margin-bottom: 10px;">Musical Complexity Measure</div>
+                    <div class="frequency-value" id="psiValue">0.000</div>
+                    
+                    <div class="psi-meter">
+                        <div style="text-align: center; margin-bottom: 5px; font-size: 0.9em;">
+                            Complexity Level
+                        </div>
+                        <div class="psi-bar-container">
+                            <div class="psi-bar" id="psiBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; font-size: 0.95em;">
+                        <div class="metric-row">
+                            <span class="metric-label">φ-Energy Term:</span>
+                            <span class="metric-value" id="phiEnergy">0.000</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Chaos (λ):</span>
+                            <span class="metric-value" id="chaosParam">0.000</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Rhythm Integral:</span>
+                            <span class="metric-value" id="rhythmIntegral">0.000</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Harmonic Ω:</span>
+                            <span class="metric-value" id="harmonicConnectivity">0.000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Harmony Style Selector -->
+            <div class="panel-section">
+                <h3>🎨 Harmonic Style</h3>
+                <div class="harmony-selector">
+                    <div class="harmony-button active" onclick="selectHarmonyStyle('phi-natural')" data-style="phi-natural">
+                        φ-Natural
+                    </div>
+                    <div class="harmony-button" onclick="selectHarmonyStyle('fibonacci')" data-style="fibonacci">
+                        Fibonacci
+                    </div>
+                    <div class="harmony-button" onclick="selectHarmonyStyle('lorenz')" data-style="lorenz">
+                        Lorenz Chaos
+                    </div>
+                    <div class="harmony-button" onclick="selectHarmonyStyle('resonant')" data-style="resonant">
+                        Stochastic
+                    </div>
+                    <div class="harmony-button" onclick="selectHarmonyStyle('cosmic')" data-style="cosmic">
+                        Cosmic
+                    </div>
+                    <div class="harmony-button" onclick="selectHarmonyStyle('quantum')" data-style="quantum">
+                        Quantum
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Spectrum Analyzer -->
+        <div class="visualizer-container">
+            <h3 style="margin-bottom: 15px;">📊 Spectral Analysis</h3>
+            <canvas id="spectrumCanvas" height="200"></canvas>
+        </div>
+        
+        <!-- Waveform Display -->
+        <div class="visualizer-container">
+            <h3 style="margin-bottom: 15px;">〰️ Waveform</h3>
+            <canvas id="waveformCanvas" height="200"></canvas>
+        </div>
+        
+        <!-- Composition Log -->
+        <div class="panel-section">
+            <h3>📝 Composition Log</h3>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry info">[System] Harmonic Resonance AI Music Conductor v2.0 initialized</div>
+                <div class="log-entry info">[System] Unified Theory of Vibrational Information Architecture loaded</div>
+                <div class="log-entry info">[System] Awaiting bio-signature calibration...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // =================================================================
+        // HARMONIC RESONANCE AI MUSIC CONDUCTOR v2.0
+        // Complete Implementation with Unified Vibrational Information Theory
+        // Author: Cory Shane Davis
+        // Date: October 28, 2025
+        // =================================================================
+        
+        class HarmonicResonanceConductor {
+            constructor() {
+                // Audio Context
+                this.audioContext = null;
+                this.analyzer = null;
+                this.microphone = null;
+                this.masterGain = null;
+                this.isActive = false;
+                
+                // Mathematical Constants
+                this.PHI = 1.618033988749895;  // Golden Ratio
+                this.C_SOUND = 343.0;  // Speed of sound (m/s)
+                
+                // Bio-Signature
+                this.bioSignature = {
+                    fundamental: null,
+                    spectralCentroid: null,
+                    spectralSpread: null,
+                    spectralEntropy: null,
+                    lastUpdate: null
+                };
+                
+                // Musical State
+                this.currentPsi = 0;
+                this.psiComponents = {
+                    phiEnergy: 0,
+                    chaos: 0,
+                    rhythmIntegral: 0,
+                    harmonicConnectivity: 0
+                };
+                this.activeVoices = [];
+                this.spectralTokens = [];
+                this.currentHarmonyStyle = 'phi-natural';
+                
+                // Composition Parameters
+                this.targetPsiRange = { min: 0.3, max: 0.7 };
+                this.maxVoices = 8;
+                this.updateRate = 200;  // ms
+                
+                // Initialize
+                this.initAudio();
+            }
+            
+            async initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Create analyzer
+                    this.analyzer = this.audioContext.createAnalyser();
+                    this.analyzer.fftSize = 4096;
+                    this.analyzer.smoothingTimeConstant = 0.8;
+                    
+                    // Create master gain
+                    this.masterGain = this.audioContext.createGain();
+                    this.masterGain.gain.value = 0.4;
+                    this.masterGain.connect(this.audioContext.destination);
+                    
+                    this.log('Audio system initialized successfully', 'success');
+                    this.updateStatus('audioStatus', 'Ready');
+                    this.setIndicatorActive('audioStatusIndicator', true);
+                    
+                } catch (error) {
+                    this.log(`Audio initialization failed: ${error.message}`, 'error');
+                    this.updateStatus('audioStatus', 'Error');
+                }
+            }
+            
+            async calibrateBioSignature() {
+                if (!this.audioContext) {
+                    this.log('Audio system not initialized', 'error');
+                    return;
+                }
+                
+                this.log('🎤 Starting bio-signature calibration...', 'info');
+                this.log('Please speak, hum, or make sound for 3 seconds', 'warning');
+                
+                try {
+                    // Request microphone access
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false
+                        } 
+                    });
+                    
+                    this.microphone = this.audioContext.createMediaStreamSource(stream);
+                    this.microphone.connect(this.analyzer);
+                    
+                    // Capture and analyze
+                    await this.analyzeBioSignature();
+                    
+                    this.log('✅ Bio-signature calibration complete!', 'success');
+                    this.log(`Your fundamental frequency: ${this.bioSignature.fundamental.toFixed(2)} Hz`, 'music');
+                    this.log(`Spectral centroid: ${this.bioSignature.spectralCentroid.toFixed(2)} Hz`, 'music');
+                    
+                    // Generate initial harmonic series
+                    const harmonics = this.generatePhiHarmonics(this.bioSignature.fundamental);
+                    this.log(`Generated ${harmonics.length} φ-spaced resonant frequencies`, 'music');
+                    
+                } catch (error) {
+                    this.log(`Calibration failed: ${error.message}`, 'error');
+                }
+            }
+            
+            async analyzeBioSignature() {
+                return new Promise((resolve) => {
+                    const bufferLength = this.analyzer.frequencyBinCount;
+                    const samples = [];
+                    const sampleCount = 15;  // Collect 15 samples over 3 seconds
+                    let collected = 0;
+                    
+                    const collectSample = () => {
+                        const dataArray = new Float32Array(bufferLength);
+                        this.analyzer.getFloatFrequencyData(dataArray);
+                        samples.push(new Float32Array(dataArray));
+                        collected++;
+                        
+                        this.log(`Capturing... ${collected}/${sampleCount}`, 'info');
+                        
+                        if (collected < sampleCount) {
+                            setTimeout(collectSample, 200);
+                        } else {
+                            this.processBioSignature(samples);
+                            resolve();
+                        }
+                    };
+                    
+                    collectSample();
+                });
+            }
+            
+            processBioSignature(samples) {
+                const bufferLength = samples[0].length;
+                const avgSpectrum = new Float32Array(bufferLength);
+                
+                // Average all samples
+                for (let i = 0; i < bufferLength; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < samples.length; j++) {
+                        sum += samples[j][i];
+                    }
+                    avgSpectrum[i] = sum / samples.length;
+                }
+                
+                const sampleRate = this.audioContext.sampleRate;
+                const nyquist = sampleRate / 2;
+                const freqStep = nyquist / bufferLength;
+                
+                // Find fundamental frequency (peak in human voice range)
+                let maxMagnitude = -Infinity;
+                let peakIndex = 0;
+                
+                const minIndex = Math.floor(80 / freqStep);
+                const maxIndex = Math.floor(500 / freqStep);
+                
+                for (let i = minIndex; i < maxIndex; i++) {
+                    if (avgSpectrum[i] > maxMagnitude) {
+                        maxMagnitude = avgSpectrum[i];
+                        peakIndex = i;
+                    }
+                }
+                
+                this.bioSignature.fundamental = peakIndex * freqStep;
+                
+                // Calculate spectral centroid (brightness)
+                let numerator = 0;
+                let denominator = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    const magnitude = Math.pow(10, avgSpectrum[i] / 20);
+                    const freq = i * freqStep;
+                    numerator += freq * magnitude;
+                    denominator += magnitude;
+                }
+                
+                this.bioSignature.spectralCentroid = numerator / (denominator || 1);
+                
+                // Calculate spectral spread (richness)
+                let spreadNumerator = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    const magnitude = Math.pow(10, avgSpectrum[i] / 20);
+                    const freq = i * freqStep;
+                    const deviation = freq - this.bioSignature.spectralCentroid;
+                    spreadNumerator += (deviation * deviation) * magnitude;
+                }
+                
+                this.bioSignature.spectralSpread = Math.sqrt(spreadNumerator / (denominator || 1));
+                
+                // Calculate spectral entropy (complexity)
+                const magnitudeSum = avgSpectrum.reduce((sum, val) => {
+                    return sum + Math.pow(10, val / 20);
+                }, 0);
+                
+                let entropy = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    const magnitude = Math.pow(10, avgSpectrum[i] / 20);
+                    const probability = magnitude / (magnitudeSum || 1);
+                    if (probability > 0) {
+                        entropy -= probability * Math.log2(probability);
+                    }
+                }
+                
+                this.bioSignature.spectralEntropy = entropy;
+                this.bioSignature.lastUpdate = Date.now();
+                
+                this.updateBioSignatureDisplay();
+            }
+            
+            updateBioSignatureDisplay() {
+                document.getElementById('bioFrequency').textContent = 
+                    this.bioSignature.fundamental ? this.bioSignature.fundamental.toFixed(2) + ' Hz' : '-- Hz';
+                
+                document.getElementById('spectralCentroid').textContent = 
+                    this.bioSignature.spectralCentroid ? this.bioSignature.spectralCentroid.toFixed(2) + ' Hz' : '-- Hz';
+                
+                document.getElementById('spectralSpread').textContent = 
+                    this.bioSignature.spectralSpread ? this.bioSignature.spectralSpread.toFixed(2) : '--';
+                
+                document.getElementById('spectralEntropy').textContent = 
+                    this.bioSignature.spectralEntropy ? this.bioSignature.spectralEntropy.toFixed(3) : '--';
+            }
+            
+            async startConductor() {
+                if (!this.bioSignature.fundamental) {
+                    this.log('⚠️  Please calibrate bio-signature first!', 'warning');
+                    return;
+                }
+                
+                if (this.isActive) {
+                    this.log('Conductor already active', 'warning');
+                    return;
+                }
+                
+                this.isActive = true;
+                this.log('🎼 AI Conductor activated', 'success');
+                this.log(`Generating ${this.currentHarmonyStyle} harmonic structure...`, 'music');
+                
+                this.updateStatus('compositionStatus', 'Active');
+                this.setIndicatorActive('compositionStatusIndicator', true);
+                
+                // Generate initial voices
+                this.initializeVoices();
+                
+                // Start composition loop
+                this.compositionLoop();
+                
+                // Start visualization
+                this.visualizationLoop();
+            }
+            
+            initializeVoices() {
+                const harmonics = this.generateHarmonicSeries(
+                    this.bioSignature.fundamental, 
+                    this.currentHarmonyStyle
+                );
+                
+                // Start with 2-3 voices
+                const initialVoices = Math.min(3, harmonics.length);
+                
+                for (let i = 0; i < initialVoices; i++) {
+                    this.addVoice(harmonics[i]);
+                }
+            }
+            
+            generateHarmonicSeries(fundamental, style = 'phi-natural') {
+                const harmonics = [];
+                const numHarmonics = 12;
+                
+                switch(style) {
+                    case 'phi-natural':
+                        // Golden ratio spacing
+                        for (let i = 0; i < numHarmonics; i++) {
+                            const exponent = i - (numHarmonics / 2);
+                            let freq = fundamental * Math.pow(this.PHI, exponent);
+                            freq = this.foldToAudibleRange(freq, fundamental);
+                            harmonics.push(freq);
+                        }
+                        break;
+                    
+                    case 'fibonacci':
+                        // Fibonacci series
+                        const fib = [1, 1];
+                        for (let i = 2; i < numHarmonics; i++) {
+                            fib.push(fib[i-1] + fib[i-2]);
+                        }
+                        for (let ratio of fib) {
+                            let freq = fundamental * ratio;
+                            freq = this.foldToAudibleRange(freq, fundamental);
+                            harmonics.push(freq);
+                        }
+                        break;
+                    
+                    case 'lorenz':
+                        // Chaotic intervals
+                        for (let i = 0; i < numHarmonics; i++) {
+                            const chaos = this.lorenzValue(i / numHarmonics);
+                            let freq = fundamental * (1 + chaos);
+                            freq = this.foldToAudibleRange(freq, fundamental);
+                            harmonics.push(freq);
+                        }
+                        break;
+                    
+                    case 'resonant':
+                        // Stochastic resonance
+                        for (let i = 1; i <= numHarmonics; i++) {
+                            const noise = (Math.random() - 0.5) * 0.15;
+                            let freq = fundamental * i * (1 + noise);
+                            freq = this.foldToAudibleRange(freq, fundamental);
+                            harmonics.push(freq);
+                        }
+                        break;
+                    
+                    case 'cosmic':
+                        // Based on cosmic microwave background peaks
+                        const cosmicRatios = [1, 1.414, 1.732, 2, 2.236, 2.449, 2.646, 2.828];
+                        for (let ratio of cosmicRatios) {
+                            let freq = fundamental * ratio;
+                            freq = this.foldToAudibleRange(freq, fundamental);
+                            harmonics.push(freq);
+                        }
+                        break;
+                    
+                    case 'quantum':
+                        // Quantum harmonic oscillator
+                        for (let n = 0; n < numHarmonics; n++) {
+                            let freq = fundamental * (n + 0.5);
+                            freq = this.foldToAudibleRange(freq, fundamental);
+                            harmonics.push(freq);
+                        }
+                        break;
+                }
+                
+                return harmonics.sort((a, b) => a - b);
+            }
+            
+            foldToAudibleRange(freq, fundamental) {
+                // Keep frequencies within reasonable range
+                while (freq > fundamental * 4) freq /= 2;
+                while (freq < fundamental / 2) freq *= 2;
+                
+                // Quantize to 12-TET for musical coherence
+                const midi = 69 + 12 * Math.log2(freq / 440.0);
+                const quantizedMidi = Math.round(midi);
+                return 440.0 * Math.pow(2, (quantizedMidi - 69) / 12);
+            }
+            
+            lorenzValue(t) {
+                // Simplified Lorenz system value
+                const sigma = 10;
+                const rho = 28;
+                const beta = 8/3;
+                
+                // Approximate chaotic value
+                return 0.5 * Math.sin(t * rho) + 0.3 * Math.cos(t * sigma);
+            }
+            
+            generatePhiHarmonics(fundamental) {
+                return this.generateHarmonicSeries(fundamental, 'phi-natural');
+            }
+            
+            compositionLoop() {
+                if (!this.isActive) return;
+                
+                // Calculate ψ (psi) information density
+                this.calculatePsi();
+                
+                // Make compositional decisions
+                if (this.currentPsi < this.targetPsiRange.min) {
+                    // Too sparse - add complexity
+                    if (this.activeVoices.length < this.maxVoices) {
+                        const harmonics = this.generateHarmonicSeries(
+                            this.bioSignature.fundamental,
+                            this.currentHarmonyStyle
+                        );
+                        const unusedFreq = harmonics.find(f => 
+                            !this.activeVoices.some(v => Math.abs(v.frequency - f) < 1)
+                        );
+                        if (unusedFreq) {
+                            this.addVoice(unusedFreq);
+                        }
+                    }
+                } else if (this.currentPsi > this.targetPsiRange.max) {
+                    // Too dense - simplify
+                    if (this.activeVoices.length > 1) {
+                        this.removeVoice();
+                    }
+                } else {
+                    // Balanced - apply stochastic variation
+                    this.modulateVoices();
+                }
+                
+                // Continue loop
+                setTimeout(() => this.compositionLoop(), this.updateRate);
+            }
+            
+            calculatePsi() {
+                // ψ = [(φ × E)/c² + λ + ∫rhythm + Ω×E] / ρ_ref
+                
+                // Get current RMS energy
+                const bufferLength = this.analyzer.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                this.analyzer.getByteFrequencyData(dataArray);
+                
+                const rmsEnergy = Math.sqrt(
+                    dataArray.reduce((sum, val) => sum + val * val, 0) / bufferLength
+                ) / 255.0;
+                
+                // Component 1: φ-scaled energy
+                const phiEnergy = (this.PHI * rmsEnergy) / (this.C_SOUND * this.C_SOUND);
+                this.psiComponents.phiEnergy = phiEnergy;
+                
+                // Component 2: Chaos parameter (varies with style)
+                const chaosBase = this.currentHarmonyStyle === 'lorenz' ? 0.5 : 0.2;
+                const chaosParam = chaosBase * (0.5 + 0.5 * Math.random());
+                this.psiComponents.chaos = chaosParam;
+                
+                // Component 3: Rhythm integral (accumulated momentum)
+                this.psiComponents.rhythmIntegral += this.activeVoices.length * 0.02;
+                this.psiComponents.rhythmIntegral *= 0.98;  // Decay
+                
+                // Component 4: Harmonic connectivity
+                const harmonicConnectivity = (this.activeVoices.length / this.maxVoices) * rmsEnergy;
+                this.psiComponents.harmonicConnectivity = harmonicConnectivity;
+                
+                // Total ψ
+                this.currentPsi = 
+                    phiEnergy + 
+                    chaosParam + 
+                    this.psiComponents.rhythmIntegral + 
+                    harmonicConnectivity;
+                
+                // Update UI
+                this.updatePsiDisplay();
+            }
+            
+            updatePsiDisplay() {
+                document.getElementById('psiValue').textContent = this.currentPsi.toFixed(3);
+                document.getElementById('phiEnergy').textContent = this.psiComponents.phiEnergy.toFixed(4);
+                document.getElementById('chaosParam').textContent = this.psiComponents.chaos.toFixed(3);
+                document.getElementById('rhythmIntegral').textContent = this.psiComponents.rhythmIntegral.toFixed(3);
+                document.getElementById('harmonicConnectivity').textContent = this.psiComponents.harmonicConnectivity.toFixed(3);
+                
+                // Update bar
+                const percentage = Math.min(100, (this.currentPsi / 1.5) * 100);
+                document.getElementById('psiBar').style.width = percentage + '%';
+            }
+            
+            addVoice(frequency) {
+                if (this.activeVoices.length >= this.maxVoices) return;
+                
+                // Create oscillator
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                
+                osc.frequency.value = frequency;
+                osc.type = 'sine';
+                
+                // Fade in
+                gain.gain.setValueAtTime(0, this.audioContext.currentTime);
+                gain.gain.linearRampToValueAtTime(0.08, this.audioContext.currentTime + 0.5);
+                
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                
+                osc.start();
+                
+                const voice = {
+                    oscillator: osc,
+                    gain: gain,
+                    frequency: frequency,
+                    id: Math.random().toString(36).substr(2, 9)
+                };
+                
+                this.activeVoices.push(voice);
+                
+                // Create spectral token
+                this.spectralTokens.push({
+                    frequency: frequency,
+                    timestamp: Date.now(),
+                    harmonicStyle: this.currentHarmonyStyle
+                });
+                
+                this.log(`🎵 Voice added: ${frequency.toFixed(2)} Hz`, 'music');
+                this.updateVoiceCount();
+            }
+            
+            removeVoice() {
+                if (this.activeVoices.length === 0) return;
+                
+                const voice = this.activeVoices.pop();
+                
+                // Fade out
+                voice.gain.gain.setValueAtTime(voice.gain.gain.value, this.audioContext.currentTime);
+                voice.gain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.5);
+                
+                // Stop and disconnect after fade
+                setTimeout(() => {
+                    try {
+                        voice.oscillator.stop();
+                        voice.oscillator.disconnect();
+                        voice.gain.disconnect();
+                    } catch(e) {}
+                }, 600);
+                
+                this.log('🎵 Voice removed - simplifying texture', 'info');
+                this.updateVoiceCount();
+            }
+            
+            modulateVoices() {
+                // Apply stochastic resonance modulation
+                this.activeVoices.forEach(voice => {
+                    // Small frequency modulation
+                    const noise = (Math.random() - 0.5) * 0.08;
+                    let newFreq = voice.frequency * (1 + noise);
+                    
+                    // Quantize to maintain musicality
+                    newFreq = this.foldToAudibleRange(newFreq, this.bioSignature.fundamental);
+                    
+                    voice.oscillator.frequency.setValueAtTime(
+                        newFreq,
+                        this.audioContext.currentTime
+                    );
+                });
+            }
+            
+            updateVoiceCount() {
+                document.getElementById('memoryStatus').textContent = this.activeVoices.length;
+                document.getElementById('spectralTokens').textContent = this.spectralTokens.length;
+                
+                if (this.activeVoices.length > 0) {
+                    this.setIndicatorActive('memoryStatusIndicator', true);
+                    this.setIndicatorActive('spectralStatusIndicator', true);
+                } else {
+                    this.setIndicatorActive('memoryStatusIndicator', false);
+                    this.setIndicatorActive('spectralStatusIndicator', false);
+                }
+            }
+            
+            visualizationLoop() {
+                if (!this.isActive) return;
+                
+                this.drawSpectrum();
+                this.drawWaveform();
+                
+                requestAnimationFrame(() => this.visualizationLoop());
+            }
+            
+            drawSpectrum() {
+                const canvas = document.getElementById('spectrumCanvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = canvas.offsetWidth;
+                canvas.height = 200;
+                
+                const bufferLength = this.analyzer.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                this.analyzer.getByteFrequencyData(dataArray);
+                
+                // Clear
+                ctx.fillStyle = 'rgb(0, 0, 0)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw bars
+                const barWidth = (canvas.width / bufferLength) * 2.5;
+                let x = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    const barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
+                    
+                    // Gradient color
+                    const hue = (i / bufferLength) * 280 + 200;
+                    const lightness = 40 + (dataArray[i] / 255) * 30;
+                    ctx.fillStyle = `hsl(${hue}, 100%, ${lightness}%)`;
+                    
+                    ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                    x += barWidth + 1;
+                }
+                
+                // Draw bio-frequency marker
+                if (this.bioSignature.fundamental) {
+                    const nyquist = this.audioContext.sampleRate / 2;
+                    const freqIndex = (this.bioSignature.fundamental / nyquist) * bufferLength;
+                    const markerX = (freqIndex / bufferLength) * canvas.width;
+                    
+                    ctx.strokeStyle = '#4ade80';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(markerX, 0);
+                    ctx.lineTo(markerX, canvas.height);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#4ade80';
+                    ctx.font = '12px monospace';
+                    ctx.fillText(`${this.bioSignature.fundamental.toFixed(1)}Hz`, markerX + 5, 15);
+                }
+            }
+            
+            drawWaveform() {
+                const canvas = document.getElementById('waveformCanvas');
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = canvas.offsetWidth;
+                canvas.height = 200;
+                
+                const bufferLength = this.analyzer.fftSize;
+                const dataArray = new Uint8Array(bufferLength);
+                this.analyzer.getByteTimeDomainData(dataArray);
+                
+                // Clear
+                ctx.fillStyle = 'rgb(0, 0, 0)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw waveform
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgb(102, 126, 234)';
+                ctx.beginPath();
+                
+                const sliceWidth = canvas.width / bufferLength;
+                let x = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * canvas.height / 2;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    x += sliceWidth;
+                }
+                
+                ctx.stroke();
+                
+                // Draw center line
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height / 2);
+                ctx.lineTo(canvas.width, canvas.height / 2);
+                ctx.stroke();
+            }
+            
+            stopConductor() {
+                this.isActive = false;
+                this.log('⏹ AI Conductor stopped', 'warning');
+                
+                this.updateStatus('compositionStatus', 'Standby');
+                this.setIndicatorActive('compositionStatusIndicator', false);
+                
+                // Stop all voices
+                this.activeVoices.forEach(voice => {
+                    try {
+                        voice.oscillator.stop();
+                        voice.oscillator.disconnect();
+                        voice.gain.disconnect();
+                    } catch(e) {}
+                });
+                
+                this.activeVoices = [];
+                this.updateVoiceCount();
+                
+                // Reset psi
+                this.currentPsi = 0;
+                this.psiComponents = { phiEnergy: 0, chaos: 0, rhythmIntegral: 0, harmonicConnectivity: 0 };
+                this.updatePsiDisplay();
+            }
+            
+            testAudio() {
+                if (!this.audioContext) {
+                    this.log('Audio system not ready', 'error');
+                    return;
+                }
+                
+                this.log('🔊 Testing audio system...', 'info');
+                
+                // Create test tone (A4 = 440 Hz)
+                const testOsc = this.audioContext.createOscillator();
+                const testGain = this.audioContext.createGain();
+                
+                testOsc.frequency.value = 440;
+                testOsc.type = 'sine';
+                
+                testGain.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                
+                testOsc.connect(testGain);
+                testGain.connect(this.masterGain);
+                
+                testOsc.start();
+                
+                setTimeout(() => {
+                    testOsc.stop();
+                    testGain.disconnect();
+                    this.log('✅ Audio test completed', 'success');
+                }, 1000);
+            }
+            
+            resetSystem() {
+                this.stopConductor();
+                
+                this.bioSignature = {
+                    fundamental: null,
+                    spectralCentroid: null,
+                    spectralSpread: null,
+                    spectralEntropy: null,
+                    lastUpdate: null
+                };
+                
+                this.spectralTokens = [];
+                this.currentHarmonyStyle = 'phi-natural';
+                
+                this.updateBioSignatureDisplay();
+                this.updateVoiceCount();
+                
+                this.log('🔄 System reset complete', 'success');
+            }
+            
+            selectHarmonyStyle(style) {
+                this.currentHarmonyStyle = style;
+                this.log(`Harmony style changed to: ${style}`, 'info');
+            }
+            
+            // Utility methods
+            updateStatus(elementId, text) {
+                document.getElementById(elementId).textContent = text;
+            }
+            
+            setIndicatorActive(elementId, active) {
+                const indicator = document.getElementById(elementId);
+                if (active) {
+                    indicator.classList.remove('inactive');
+                } else {
+                    indicator.classList.add('inactive');
+                }
+            }
+            
+            log(message, type = 'info') {
+                const logContainer = document.getElementById('logContainer');
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                
+                logContainer.appendChild(entry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                // Keep last 100 entries
+                while (logContainer.children.length > 100) {
+                    logContainer.removeChild(logContainer.firstChild);
+                }
+            }
+        }
+        
+        // =================================================================
+        // GLOBAL INITIALIZATION AND CONTROLS
+        // =================================================================
+        
+        let conductor;
+        
+        window.addEventListener('load', () => {
+            conductor = new HarmonicResonanceConductor();
+        });
+        
+        // Global control functions
+        function calibrateBioSignature() {
+            conductor.calibrateBioSignature();
+        }
+        
+        function startConductor() {
+            conductor.startConductor();
+        }
+        
+        function stopConductor() {
+            conductor.stopConductor();
+        }
+        
+        function testAudio() {
+            conductor.testAudio();
+        }
+        
+        function resetSystem() {
+            conductor.resetSystem();
+        }
+        
+        function selectHarmonyStyle(style) {
+            // Update UI
+            document.querySelectorAll('.harmony-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update conductor
+            conductor.selectHarmonyStyle(style);
+            
+            // If conducting, regenerate voices with new style
+            if (conductor.isActive) {
+                conductor.stopConductor();
+                setTimeout(() => conductor.startConductor(), 500);
+            }
+        }
+    </script>
+</body>
+</html>
