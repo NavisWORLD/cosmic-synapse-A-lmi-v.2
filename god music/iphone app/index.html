@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="God Music">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    
+    <title>God Music - AI Music Conductor</title>
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-152x152.png">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../src/styles/main.css">
+    <link rel="stylesheet" href="../src/styles/components.css">
+    <link rel="stylesheet" href="../src/styles/mobile.css">
+    
+    <!-- iOS Safari Splash Screens -->
+    <link rel="apple-touch-startup-image" href="icons/splash-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" href="icons/splash-1668x2224.png" media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" href="icons/splash-1536x2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" href="icons/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" href="icons/splash-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+    <link rel="apple-touch-startup-image" href="icons/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+    
+    <style>
+        /* iOS-specific styles */
+        @supports (-webkit-touch-callout: none) {
+            body {
+                /* Prevent iOS Safari bounce */
+                position: fixed;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+            }
+            
+            .container {
+                height: 100vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Hide Safari UI elements */
+            @media screen and (display-mode: standalone) {
+                body {
+                    padding-top: env(safe-area-inset-top);
+                    padding-bottom: env(safe-area-inset-bottom);
+                }
+            }
+        }
+        
+        /* Prevent text selection on buttons (iOS) */
+        .btn, .toggle-btn {
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        
+        /* Better touch targets for iOS */
+        @media (max-width: 768px) {
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            .toggle-btn {
+                min-height: 44px;
+                padding: 12px 20px;
+            }
+            
+            .volume-slider {
+                height: 44px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <h1>🎵 God Music - AI Music Conductor</h1>
+            <div class="hero-subtitle">PREDICTIVE STUDIO INTELLIGENCE</div>
+            <div class="hero-description">
+                The world's first AI band that <strong>predicts and anticipates</strong> your musical movements.
+                Built on the Unified Theory of Vibrational Information Architecture.
+            </div>
+            <div id="micStatus" class="mic-status">
+                🎤 Microphone: Analysis Only ✓ (Never outputs to speakers)
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- Bio-Signature Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="status-dot"></span>
+                        Bio-Frequency Signature
+                    </div>
+                </div>
+                <div class="bio-display" id="bioDisplay">
+                    <div>Your Fundamental Frequency:</div>
+                    <div class="frequency-value" id="bioFreq">-- Hz</div>
+                    <div class="metric-row">
+                        <span class="metric-label">Key Detected:</span>
+                        <span class="metric-value" id="keyDetected">--</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Tempo (BPM):</span>
+                        <span class="metric-value" id="tempoDetected">--</span>
+                    </div>
+                </div>
+                <button class="btn" id="calibrateBtn">🎤 Calibrate</button>
+            </div>
+
+            <!-- Main Controls -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        🎛️ Band Controls
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 20px;">
+                    <button class="btn btn-primary" id="startBtn">🎼 START BAND</button>
+                    <button class="btn btn-stop" id="stopBtn" disabled>⏹ STOP</button>
+                    <button class="btn btn-test" id="testBtn">🧪 TEST</button>
+                </div>
+            </div>
+
+            <!-- Instrument Controls -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🎚️ Instrument Mix</div>
+                </div>
+                <div class="instrument-grid" id="instrumentGrid">
+                    <!-- Instruments will be added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualizers -->
+        <div class="visualizer-container">
+            <div class="card-title">Spectral Analysis</div>
+            <canvas id="spectrumCanvas"></canvas>
+        </div>
+        
+        <div class="visualizer-container">
+            <div class="card-title">Waveform</div>
+            <canvas id="waveformCanvas"></canvas>
+        </div>
+
+        <!-- Log -->
+        <div class="card">
+            <div class="card-title">System Log</div>
+            <div class="log-container" id="logPanel">
+                <div class="log-entry info">[SYSTEM] Professional AI Band Conductor initialized</div>
+                <div class="log-entry info">[IOS] Running as Progressive Web App</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered:', registration);
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+        
+        // iOS-specific: Prevent zoom on double tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (event) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+    
+    <script type="module" src="../src/main.js"></script>
+</body>
+</html>
+

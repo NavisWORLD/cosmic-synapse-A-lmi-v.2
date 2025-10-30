@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>God Music - Professional AI Music Conductor</title>
+    <link rel="stylesheet" href="./src/styles/main.css">
+    <link rel="stylesheet" href="./src/styles/components.css">
+    <link rel="stylesheet" href="./src/styles/mobile.css">
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <h1>🎵 God Music - Professional AI Music Conductor</h1>
+            <div class="hero-subtitle">PREDICTIVE STUDIO INTELLIGENCE</div>
+            <div class="hero-description">
+                The world's first AI band that <strong>predicts and anticipates</strong> your musical movements.
+                Built on the Unified Theory of Vibrational Information Architecture.
+            </div>
+            <div id="micStatus" class="mic-status">
+                🎤 Microphone: Analysis Only ✓ (Never outputs to speakers)
+            </div>
+            <div id="statusIndicator" class="status-indicator">
+                <div id="statusText">Ready to initialize...</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- Bio-Signature Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="status-dot"></span>
+                        🧬 Bio-Frequency Signature
+                    </div>
+                </div>
+                <div class="bio-display">
+                    <div>Your Fundamental Frequency:</div>
+                    <div class="frequency-value" id="bioFreq">-- Hz</div>
+                    <div class="metric-row">
+                        <span class="metric-label">Key Detected:</span>
+                        <span class="metric-value" id="keyDetected">--</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Tempo (BPM):</span>
+                        <span class="metric-value" id="tempoDetected">--</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Energy Level:</span>
+                        <span class="metric-value" id="energyLevel">--</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Spectral Centroid:</span>
+                        <span class="metric-value" id="spectralCentroid">-- Hz</span>
+                    </div>
+                </div>
+                <button class="btn" id="calibrateBtn">🎤 Calibrate (Speak/Hum/Sing)</button>
+            </div>
+
+            <!-- Predictive Engine Status -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="status-dot"></span>
+                        🤖 Predictive Engine Status
+                    </div>
+                </div>
+                <div class="prediction-indicator" id="predictionIndicator">
+                    <div class="prediction-text">
+                        <div class="spinner" id="predictionSpinner"></div>
+                        <span id="predictionText">Ready to predict your next move...</span>
+                    </div>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Active Predictions:</span>
+                    <span class="metric-value" id="activePredictions">0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Phrase Position:</span>
+                    <span class="metric-value" id="phrasePosition">-- / --</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Next Change In:</span>
+                    <span class="metric-value" id="nextChangeIn">--</span>
+                </div>
+                <div class="metric-row" style="border: none;">
+                    <span class="metric-label">Groove Lock:</span>
+                    <span class="metric-value" id="grooveLock">Inactive</span>
+                </div>
+            </div>
+
+            <!-- Psi Information Density -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        ψ (Psi) Musical Information Density
+                    </div>
+                </div>
+                <div class="psi-display">
+                    <div class="huge-value" id="psiValue">0.000</div>
+                    <div style="text-align: center; opacity: 0.8; margin-bottom: 15px;">Musical Complexity Measure</div>
+
+                    <div class="psi-meter">
+                        <div class="psi-fill" id="psiFill" style="width: 0%"></div>
+                    </div>
+
+                    <div class="metric-row">
+                        <span class="metric-label">φ-Energy:</span>
+                        <span class="metric-value" id="phiEnergy">--</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Chaos (λ):</span>
+                        <span class="metric-value" id="chaosParam">--</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Rhythm ∫:</span>
+                        <span class="metric-value" id="rhythmIntegral">--</span>
+                    </div>
+                    <div class="metric-row" style="border: none;">
+                        <span class="metric-label">Connectivity (Ω):</span>
+                        <span class="metric-value" id="connectivity">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Controls -->
+        <div class="card" style="text-align: center; padding: 40px;">
+            <button class="btn" id="startBtn" style="font-size: 1.3em; padding: 20px 50px;">
+                🎼 START PROFESSIONAL BAND
+            </button>
+            <button class="btn btn-stop" id="stopBtn" disabled>⏹ STOP</button>
+            <button class="btn btn-test" id="testBtn">🧪 TEST ALL INSTRUMENTS</button>
+        </div>
+
+        <!-- Genre Selection -->
+        <div class="card">
+            <div class="card-title">Genre & Style</div>
+            <div class="genre-selector" id="genreSelector">
+                <button class="genre-btn active" onclick="selectGenre('jazz')">🎷 Jazz</button>
+                <button class="genre-btn" onclick="selectGenre('rock')">🎸 Rock</button>
+                <button class="genre-btn" onclick="selectGenre('pop')">🎤 Pop</button>
+                <button class="genre-btn" onclick="selectGenre('funk')">🕺 Funk</button>
+                <button class="genre-btn" onclick="selectGenre('ambient')">🌊 Ambient</button>
+                <button class="genre-btn" onclick="selectGenre('electronic')">🎹 Electronic</button>
+            </div>
+        </div>
+
+        <!-- Instrument Controls -->
+        <div class="card">
+            <div class="card-title">Professional Instrument Mix</div>
+            <div class="instrument-grid" id="instrumentGrid">
+                <div class="instrument-control">
+                    <div class="instrument-name">
+                        🥁 Drums
+                        <button class="toggle-btn" id="drums-toggle">ON</button>
+                    </div>
+                    <input type="range" class="volume-slider" min="0" max="100" value="80" id="drums-vol">
+                </div>
+
+                <div class="instrument-control">
+                    <div class="instrument-name">
+                        🎸 Bass
+                        <button class="toggle-btn" id="bass-toggle">ON</button>
+                    </div>
+                    <input type="range" class="volume-slider" min="0" max="100" value="75" id="bass-vol">
+                </div>
+
+                <div class="instrument-control">
+                    <div class="instrument-name">
+                        🎸 Guitar
+                        <button class="toggle-btn" id="guitar-toggle">ON</button>
+                    </div>
+                    <input type="range" class="volume-slider" min="0" max="100" value="70" id="guitar-vol">
+                </div>
+
+                <div class="instrument-control">
+                    <div class="instrument-name">
+                        🎹 Piano
+                        <button class="toggle-btn" id="piano-toggle">ON</button>
+                    </div>
+                    <input type="range" class="volume-slider" min="0" max="100" value="65" id="piano-vol">
+                </div>
+
+                <div class="instrument-control">
+                    <div class="instrument-name">
+                        🎻 Strings
+                        <button class="toggle-btn" id="strings-toggle">ON</button>
+                    </div>
+                    <input type="range" class="volume-slider" min="0" max="100" value="60" id="strings-vol">
+                </div>
+
+                <div class="instrument-control">
+                    <div class="instrument-name">
+                        🎵 Pads
+                        <button class="toggle-btn" id="pads-toggle">ON</button>
+                    </div>
+                    <input type="range" class="volume-slider" min="0" max="100" value="50" id="pads-vol">
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualizers -->
+        <div class="visualizer-container">
+            <div class="card-title">Spectral Analysis</div>
+            <canvas id="spectrumCanvas"></canvas>
+        </div>
+
+        <div class="visualizer-container">
+            <div class="card-title">Waveform</div>
+            <canvas id="waveformCanvas"></canvas>
+        </div>
+
+        <!-- Log -->
+        <div class="card">
+            <div class="card-title">System Log</div>
+            <div class="log-container" id="logPanel">
+                <div class="log-entry info">[SYSTEM] Professional AI Band Conductor initialized</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global functions for HTML onclick handlers
+        window.selectGenre = function(genre) {
+            if (window.conductor) {
+                window.conductor.setGenre(genre);
+                // Update UI
+                document.querySelectorAll('.genre-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                event.target.classList.add('active');
+            }
+        };
+
+        window.toggleMute = function(instrument) {
+            if (window.conductor && window.conductor.instruments) {
+                const inst = window.conductor.instruments[instrument];
+                if (inst) {
+                    const btn = document.getElementById(`${instrument}-toggle`);
+                    if (inst.isEnabled()) {
+                        inst.disable();
+                        btn.textContent = 'OFF';
+                        btn.classList.add('muted');
+                    } else {
+                        inst.enable();
+                        btn.textContent = 'ON';
+                        btn.classList.remove('muted');
+                    }
+                }
+            }
+        };
+
+        // Volume controls
+        window.addEventListener('load', () => {
+            ['drums', 'bass', 'guitar', 'piano', 'strings', 'pads'].forEach(inst => {
+                const slider = document.getElementById(`${inst}-vol`);
+                if (slider) {
+                    slider.addEventListener('input', (e) => {
+                        if (window.conductor && window.conductor.instruments) {
+                            const instObj = window.conductor.instruments[inst];
+                            if (instObj) {
+                                const volume = parseInt(e.target.value) / 100;
+                                instObj.setVolume(volume);
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
+

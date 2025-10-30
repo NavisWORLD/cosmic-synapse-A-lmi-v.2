@@ -1,0 +1,17 @@
+{
+  "name": "god-music",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Professional AI Music Conductor with Predictive Intelligence",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "author": "Cory Shane Davis",
+  "license": "MIT"
+}
+
