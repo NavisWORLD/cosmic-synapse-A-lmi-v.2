@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12D Cosmic Synapse Theory - Live Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            max-width: 350px;
+            z-index: 1000;
+        }
+
+        #stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #ff00ff;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+            max-width: 350px;
+            z-index: 1000;
+            font-size: 14px;
+        }
+
+        #equation-display {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            max-width: 600px;
+            z-index: 1000;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        h2 {
+            color: #00ffff;
+            margin-bottom: 15px;
+            font-size: 18px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        h3 {
+            color: #ff00ff;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 5px 0;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+
+        .stat-label {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .stat-value {
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+
+        .warning {
+            color: #ffaa00;
+            font-size: 12px;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 170, 0, 0.1);
+            border-radius: 5px;
+            border: 1px solid #ffaa00;
+        }
+
+        .equation {
+            color: #00ff00;
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+
+        .particle-info {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            z-index: 2000;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">Initializing 12D Cosmic Synapse Engine...</div>
+    
+    <div id="canvas-container"></div>
+
+    <div id="controls">
+        <h2>🎵 12D CST Controls</h2>
+        
+        <button id="audioToggle">🎤 Start Audio Input</button>
+        <button id="resetBtn">🔄 Reset Simulation</button>
+        
+        <h3>Particle Settings</h3>
+        <label>Particles: <span id="numParticlesValue">100</span></label>
+        <input type="range" id="numParticles" min="50" max="500" value="100" step="50">
+        
+        <label>Interaction Radius: <span id="radiusValue">5000</span></label>
+        <input type="range" id="interactionRadius" min="1000" max="10000" value="5000" step="500">
+        
+        <h3>12D Parameters</h3>
+        <label>k (State Rate): <span id="kValue">0.1</span></label>
+        <input type="range" id="k" min="0.01" max="1.0" value="0.1" step="0.01">
+        
+        <label>γ (Decay): <span id="gammaValue">0.2</span></label>
+        <input type="range" id="gamma" min="0.01" max="1.0" value="0.2" step="0.01">
+        
+        <label>α (Memory): <span id="alphaValue">0.5</span></label>
+        <input type="range" id="alpha" min="0.1" max="2.0" value="0.5" step="0.1">
+        
+        <label>σ (Similarity): <span id="sigmaValue">1.0</span></label>
+        <input type="range" id="sigma" min="0.1" max="5.0" value="1.0" step="0.1">
+        
+        <div class="warning">
+            ⚠️ Enable microphone to see audio-driven dynamics
+        </div>
+    </div>
+
+    <div id="stats">
+        <h2>📊 System Metrics</h2>
+        <div class="stat-row">
+            <span class="stat-label">FPS:</span>
+            <span class="stat-value" id="fps">60</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Active Particles:</span>
+            <span class="stat-value" id="activeParticles">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Avg ψ:</span>
+            <span class="stat-value" id="avgPsi">0.000</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Avg x₁₂:</span>
+            <span class="stat-value" id="avgX12">0.000</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Avg Ω:</span>
+            <span class="stat-value" id="avgOmega">0.000</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Audio RMS:</span>
+            <span class="stat-value" id="audioRMS">0.000</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Dominant Freq:</span>
+            <span class="stat-value" id="domFreq">0 Hz</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Total Energy:</span>
+            <span class="stat-value" id="totalEnergy">0.00e+0 J</span>
+        </div>
+        
+        <h3 style="margin-top: 15px;">Selected Particle</h3>
+        <div class="particle-info" id="particleInfo">
+            Hover over particles to see details
+        </div>
+    </div>
+
+    <div id="equation-display">
+        <h2 style="color: #00ff00;">🔬 Core 12D CST Equation</h2>
+        <div class="equation">
+            ψ = (φ·Eᶜ)/c² + λ + ∫[Σ(dxᵢ/dt)²]dt + ∫|dx₁₂/dt|dt + Ω·Eᶜ + U¹¹ᴰ_grav
+        </div>
+        <div class="equation">
+            dx₁₂/dt = k·Ω - γ·x₁₂
+        </div>
+        <div class="equation">
+            dm₁₂/dt = α·(x₁₂ - m₁₂)
+        </div>
+        <div class="equation">
+            Ω = Σ[(G·mᵢ·mⱼ)/(r²ᵢⱼ·a₀·m₀)]·exp[-(x₁₂,ᵢ - x₁₂,ⱼ)²/(2σ²)]
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ========================================
+        // CONSTANTS
+        // ========================================
+        const PHI = 1.618033988749895;
+        const G = 6.67430e-11;
+        const c = 3.0e8;
+        const h = 6.626e-34;
+        const a0 = 9.81;
+        const m0 = 1.0;
+
+        // ========================================
+        // PARTICLE CLASS (12D)
+        // ========================================
+        class Particle12D {
+            constructor(id, mass, position, velocity) {
+                this.id = id;
+                this.mass = mass;
+                this.position = position.clone();
+                this.velocity = velocity.clone();
+                
+                // 12D specific properties
+                this.x12 = Math.random() * 0.1; // Internal state (dimensionless)
+                this.m12 = 0.0; // Memory of internal state
+                this.Ec = 0.5 * mass * velocity.lengthSq(); // Cosmic energy
+                this.Omega = 0.0; // Synaptic strength
+                this.psi = 0.0; // State function
+                
+                // Trajectory integration
+                this.pathIntegral = 0.0;
+                this.x12Integral = 0.0;
+                
+                // Visualization
+                this.color = new THREE.Color();
+                this.updateColor();
+            }
+
+            updateColor() {
+                // Color based on x12 state
+                const hue = (this.x12 % 1.0) * 360;
+                this.color.setHSL(hue / 360, 1.0, 0.5);
+            }
+
+            computePsi(dt) {
+                // ψ = (φ·Ec)/c² + λ + ∫[Σ(dxi/dt)²]dt + ∫|dx12/dt|dt + Ω·Ec + Ugrav
+                
+                const term1 = (PHI * this.Ec) / (c * c);
+                const term2 = 0.001; // λ constant
+                const term3 = this.pathIntegral;
+                const term4 = this.x12Integral;
+                const term5 = this.Omega * this.Ec;
+                const term6 = this.Ugrav || 0.0;
+                
+                // Normalize to dimensionless
+                this.psi = (term1 / m0 + term2 + term3 / 1e6 + term4 + term5 / 1e10 + term6 / 1e10);
+                
+                return this.psi;
+            }
+
+            updateInternalState(k, gamma, dt) {
+                // dx12/dt = k·Ω - γ·x12
+                const dx12dt = k * this.Omega - gamma * this.x12;
+                this.x12 += dx12dt * dt;
+                
+                // Accumulate integral
+                this.x12Integral += Math.abs(dx12dt) * dt;
+                
+                // Keep x12 bounded
+                this.x12 = Math.max(-1.0, Math.min(1.0, this.x12));
+            }
+
+            updateMemory(alpha, dt) {
+                // dm12/dt = α·(x12 - m12)
+                const dm12dt = alpha * (this.x12 - this.m12);
+                this.m12 += dm12dt * dt;
+            }
+
+            updatePosition(forces, dt) {
+                const acceleration = forces.clone().multiplyScalar(1.0 / this.mass);
+                this.velocity.add(acceleration.multiplyScalar(dt));
+                this.position.add(this.velocity.clone().multiplyScalar(dt));
+                
+                // Update path integral
+                const velocitySq = this.velocity.lengthSq();
+                this.pathIntegral += velocitySq * dt;
+                
+                // Update energy
+                this.Ec = 0.5 * this.mass * velocitySq;
+            }
+        }
+
+        // ========================================
+        // 12D COSMIC SYNAPSE SIMULATOR
+        // ========================================
+        class CosmicSynapse12D {
+            constructor() {
+                this.particles = [];
+                this.dt = 0.016; // 60 FPS
+                
+                // Parameters (will be controlled by UI)
+                this.k = 0.1;
+                this.gamma = 0.2;
+                this.alpha = 0.5;
+                this.sigma = 1.0;
+                this.interactionRadius = 5000;
+                
+                // Audio
+                this.audioContext = null;
+                this.analyser = null;
+                this.audioData = null;
+                this.audioRMS = 0.0;
+                this.dominantFreq = 0.0;
+                
+                // Metrics
+                this.frameCount = 0;
+                this.lastFrameTime = performance.now();
+                this.fps = 60;
+            }
+
+            initParticles(count) {
+                this.particles = [];
+                
+                for (let i = 0; i < count; i++) {
+                    const mass = 1e20 + Math.random() * 1e21;
+                    const position = new THREE.Vector3(
+                        (Math.random() - 0.5) * 10000,
+                        (Math.random() - 0.5) * 10000,
+                        (Math.random() - 0.5) * 10000
+                    );
+                    const velocity = new THREE.Vector3(
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 100
+                    );
+                    
+                    this.particles.push(new Particle12D(i, mass, position, velocity));
+                }
+            }
+
+            async initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const source = this.audioContext.createMediaStreamSource(stream);
+                    
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 2048;
+                    this.analyser.smoothingTimeConstant = 0.8;
+                    
+                    source.connect(this.analyser);
+                    
+                    this.audioData = new Uint8Array(this.analyser.frequencyBinCount);
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Audio initialization failed:', error);
+                    return false;
+                }
+            }
+
+            processAudio() {
+                if (!this.analyser) return;
+                
+                this.analyser.getByteFrequencyData(this.audioData);
+                
+                // Compute RMS
+                let sum = 0;
+                for (let i = 0; i < this.audioData.length; i++) {
+                    sum += this.audioData[i] * this.audioData[i];
+                }
+                this.audioRMS = Math.sqrt(sum / this.audioData.length) / 255.0;
+                
+                // Find dominant frequency
+                let maxIndex = 0;
+                let maxValue = 0;
+                for (let i = 0; i < this.audioData.length; i++) {
+                    if (this.audioData[i] > maxValue) {
+                        maxValue = this.audioData[i];
+                        maxIndex = i;
+                    }
+                }
+                
+                const nyquist = this.audioContext.sampleRate / 2;
+                this.dominantFreq = (maxIndex / this.audioData.length) * nyquist;
+                
+                // Map audio to particle properties
+                this.applyAudioToParticles();
+            }
+
+            applyAudioToParticles() {
+                // Top 5 frequencies affect top 5 particles by energy
+                const sorted = [...this.particles].sort((a, b) => b.Ec - a.Ec);
+                
+                for (let i = 0; i < Math.min(5, sorted.length); i++) {
+                    const particle = sorted[i];
+                    
+                    // Audio modulates internal state
+                    particle.x12 += this.audioRMS * 0.1 * Math.sin(this.dominantFreq / 1000);
+                    particle.x12 = Math.max(-1.0, Math.min(1.0, particle.x12));
+                    
+                    // Audio adds energy
+                    particle.Ec *= (1.0 + this.audioRMS * 0.05);
+                }
+            }
+
+            computeOmega(particle) {
+                // Ω = Σ[(G·mi·mj)/(r²ij·a0·m0)]·exp[-(x12,i - x12,j)²/(2σ²)]
+                
+                let omega = 0.0;
+                
+                for (const other of this.particles) {
+                    if (other.id === particle.id) continue;
+                    
+                    const distance = particle.position.distanceTo(other.position);
+                    if (distance > this.interactionRadius) continue;
+                    
+                    // Gravitational term
+                    const gravTerm = (G * particle.mass * other.mass) / (distance * distance * a0 * m0);
+                    
+                    // Gaussian similarity based on x12 difference
+                    const x12Diff = particle.x12 - other.x12;
+                    const similarity = Math.exp(-(x12Diff * x12Diff) / (2 * this.sigma * this.sigma));
+                    
+                    omega += gravTerm * similarity;
+                }
+                
+                return omega;
+            }
+
+            computeForces(particle) {
+                const force = new THREE.Vector3(0, 0, 0);
+                let Ugrav = 0.0;
+                
+                for (const other of this.particles) {
+                    if (other.id === particle.id) continue;
+                    
+                    const distance = particle.position.distanceTo(other.position);
+                    if (distance > this.interactionRadius) continue;
+                    
+                    // Gravitational force
+                    const direction = new THREE.Vector3()
+                        .subVectors(other.position, particle.position)
+                        .normalize();
+                    
+                    const forceMagnitude = G * particle.mass * other.mass / ((distance * distance) + 1e-10);
+                    force.add(direction.multiplyScalar(forceMagnitude));
+                    
+                    // Potential energy
+                    Ugrav -= G * particle.mass * other.mass / (distance + 1e-10);
+                }
+                
+                particle.Ugrav = Ugrav;
+                
+                return force;
+            }
+
+            update() {
+                // Process audio
+                this.processAudio();
+                
+                // Update Omega for all particles
+                for (const particle of this.particles) {
+                    particle.Omega = this.computeOmega(particle);
+                }
+                
+                // Update internal states
+                for (const particle of this.particles) {
+                    particle.updateInternalState(this.k, this.gamma, this.dt);
+                    particle.updateMemory(this.alpha, this.dt);
+                    particle.computePsi(this.dt);
+                    particle.updateColor();
+                }
+                
+                // Compute forces and update positions
+                for (const particle of this.particles) {
+                    const force = this.computeForces(particle);
+                    particle.updatePosition(force, this.dt);
+                }
+                
+                // Update FPS
+                this.frameCount++;
+                const now = performance.now();
+                if (now - this.lastFrameTime >= 1000) {
+                    this.fps = this.frameCount;
+                    this.frameCount = 0;
+                    this.lastFrameTime = now;
+                }
+            }
+
+            getMetrics() {
+                if (this.particles.length === 0) return {};
+                
+                let sumPsi = 0, sumX12 = 0, sumOmega = 0, sumEnergy = 0;
+                
+                for (const particle of this.particles) {
+                    sumPsi += particle.psi;
+                    sumX12 += particle.x12;
+                    sumOmega += particle.Omega;
+                    sumEnergy += particle.Ec;
+                }
+                
+                return {
+                    avgPsi: sumPsi / this.particles.length,
+                    avgX12: sumX12 / this.particles.length,
+                    avgOmega: sumOmega / this.particles.length,
+                    totalEnergy: sumEnergy,
+                    fps: this.fps,
+                    audioRMS: this.audioRMS,
+                    dominantFreq: this.dominantFreq
+                };
+            }
+        }
+
+        // ========================================
+        // VISUALIZATION
+        // ========================================
+        class Visualizer {
+            constructor(simulator) {
+                this.simulator = simulator;
+                this.selectedParticle = null;
+                
+                // Scene setup
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x000000);
+                
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(
+                    75,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    1000000
+                );
+                this.camera.position.z = 20000;
+                
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+                
+                // Particles
+                this.particleGeometry = new THREE.BufferGeometry();
+                this.positions = null;
+                this.colors = null;
+                this.particleMaterial = new THREE.PointsMaterial({
+                    size: 150,
+                    vertexColors: true,
+                    blending: THREE.AdditiveBlending,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                this.particleSystem = null;
+                
+                // Raycaster for selection
+                this.raycaster = new THREE.Raycaster();
+                this.raycaster.params.Points.threshold = 200;
+                this.mouse = new THREE.Vector2();
+                
+                // Controls
+                this.autoRotate = true;
+                this.rotationSpeed = 0.001;
+                
+                window.addEventListener('resize', () => this.onWindowResize());
+                window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+            }
+
+            initParticles(count) {
+                if (this.particleSystem) {
+                    this.scene.remove(this.particleSystem);
+                }
+                
+                this.positions = new Float32Array(count * 3);
+                this.colors = new Float32Array(count * 3);
+                
+                this.particleGeometry.setAttribute('position', 
+                    new THREE.BufferAttribute(this.positions, 3));
+                this.particleGeometry.setAttribute('color', 
+                    new THREE.BufferAttribute(this.colors, 3));
+                
+                this.particleSystem = new THREE.Points(this.particleGeometry, this.particleMaterial);
+                this.scene.add(this.particleSystem);
+            }
+
+            update() {
+                const particles = this.simulator.particles;
+                
+                for (let i = 0; i < particles.length; i++) {
+                    const particle = particles[i];
+                    
+                    // Update positions
+                    this.positions[i * 3] = particle.position.x;
+                    this.positions[i * 3 + 1] = particle.position.y;
+                    this.positions[i * 3 + 2] = particle.position.z;
+                    
+                    // Update colors
+                    this.colors[i * 3] = particle.color.r;
+                    this.colors[i * 3 + 1] = particle.color.g;
+                    this.colors[i * 3 + 2] = particle.color.b;
+                }
+                
+                this.particleGeometry.attributes.position.needsUpdate = true;
+                this.particleGeometry.attributes.color.needsUpdate = true;
+                
+                // Auto-rotate camera
+                if (this.autoRotate) {
+                    this.camera.position.x = Math.cos(performance.now() * this.rotationSpeed) * 20000;
+                    this.camera.position.z = Math.sin(performance.now() * this.rotationSpeed) * 20000;
+                    this.camera.lookAt(0, 0, 0);
+                }
+            }
+
+            render() {
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            onMouseMove(event) {
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                
+                // Raycast to find selected particle
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                const intersects = this.raycaster.intersectObject(this.particleSystem);
+                
+                if (intersects.length > 0) {
+                    const index = intersects[0].index;
+                    this.selectedParticle = this.simulator.particles[index];
+                    this.updateParticleInfo();
+                }
+            }
+
+            updateParticleInfo() {
+                if (!this.selectedParticle) return;
+                
+                const p = this.selectedParticle;
+                const info = `
+                    <div style="color: #00ffff;"><b>Particle ${p.id}</b></div>
+                    <div>Mass: ${p.mass.toExponential(2)} kg</div>
+                    <div>x₁₂: ${p.x12.toFixed(4)}</div>
+                    <div>m₁₂: ${p.m12.toFixed(4)}</div>
+                    <div>Ω: ${p.Omega.toExponential(2)}</div>
+                    <div>ψ: ${p.psi.toFixed(6)}</div>
+                    <div>Eᶜ: ${p.Ec.toExponential(2)} J</div>
+                    <div>v: ${p.velocity.length().toFixed(2)} m/s</div>
+                    <div>pos: (${p.position.x.toFixed(0)}, ${p.position.y.toFixed(0)}, ${p.position.z.toFixed(0)})</div>
+                `;
+                document.getElementById('particleInfo').innerHTML = info;
+            }
+        }
+
+        // ========================================
+        // UI CONTROLS
+        // ========================================
+        class UIController {
+            constructor(simulator, visualizer) {
+                this.simulator = simulator;
+                this.visualizer = visualizer;
+                
+                this.setupEventListeners();
+                this.updateLoop();
+            }
+
+            setupEventListeners() {
+                // Audio toggle
+                document.getElementById('audioToggle').addEventListener('click', async (e) => {
+                    const button = e.target;
+                    if (button.textContent.includes('Start')) {
+                        const success = await this.simulator.initAudio();
+                        if (success) {
+                            button.textContent = '🔊 Audio Active';
+                            button.classList.add('active');
+                        } else {
+                            alert('Failed to initialize audio. Please check microphone permissions.');
+                        }
+                    }
+                });
+                
+                // Reset
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    const count = parseInt(document.getElementById('numParticles').value);
+                    this.simulator.initParticles(count);
+                    this.visualizer.initParticles(count);
+                });
+                
+                // Parameter controls
+                this.addSliderControl('numParticles', (value) => {
+                    document.getElementById('numParticlesValue').textContent = value;
+                });
+                
+                this.addSliderControl('interactionRadius', (value) => {
+                    document.getElementById('radiusValue').textContent = value;
+                    this.simulator.interactionRadius = parseFloat(value);
+                });
+                
+                this.addSliderControl('k', (value) => {
+                    document.getElementById('kValue').textContent = value;
+                    this.simulator.k = parseFloat(value);
+                });
+                
+                this.addSliderControl('gamma', (value) => {
+                    document.getElementById('gammaValue').textContent = value;
+                    this.simulator.gamma = parseFloat(value);
+                });
+                
+                this.addSliderControl('alpha', (value) => {
+                    document.getElementById('alphaValue').textContent = value;
+                    this.simulator.alpha = parseFloat(value);
+                });
+                
+                this.addSliderControl('sigma', (value) => {
+                    document.getElementById('sigmaValue').textContent = value;
+                    this.simulator.sigma = parseFloat(value);
+                });
+            }
+
+            addSliderControl(id, callback) {
+                document.getElementById(id).addEventListener('input', (e) => {
+                    callback(e.target.value);
+                });
+            }
+
+            updateMetrics() {
+                const metrics = this.simulator.getMetrics();
+                
+                document.getElementById('fps').textContent = metrics.fps || 0;
+                document.getElementById('activeParticles').textContent = this.simulator.particles.length;
+                document.getElementById('avgPsi').textContent = (metrics.avgPsi || 0).toFixed(6);
+                document.getElementById('avgX12').textContent = (metrics.avgX12 || 0).toFixed(4);
+                document.getElementById('avgOmega').textContent = (metrics.avgOmega || 0).toExponential(2);
+                document.getElementById('audioRMS').textContent = (metrics.audioRMS || 0).toFixed(3);
+                document.getElementById('domFreq').textContent = Math.round(metrics.dominantFreq || 0) + ' Hz';
+                document.getElementById('totalEnergy').textContent = (metrics.totalEnergy || 0).toExponential(2) + ' J';
+            }
+
+            updateLoop() {
+                this.updateMetrics();
+                requestAnimationFrame(() => this.updateLoop());
+            }
+        }
+
+        // ========================================
+        // MAIN INITIALIZATION
+        // ========================================
+        async function init() {
+            // Create simulator
+            const simulator = new CosmicSynapse12D();
+            simulator.initParticles(100);
+            
+            // Create visualizer
+            const visualizer = new Visualizer(simulator);
+            visualizer.initParticles(100);
+            
+            // Create UI controller
+            const ui = new UIController(simulator, visualizer);
+            
+            // Hide loading
+            document.getElementById('loading').style.display = 'none';
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                simulator.update();
+                visualizer.update();
+                visualizer.render();
+            }
+            
+            animate();
+        }
+
+        // Start when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12D Cosmic Synapse Theory - Advanced Hybrid Demo</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Additional inline styles if needed */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0ff;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #threejs-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border: 1px solid #0ff;
+            border-radius: 10px;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        
+        #controls.collapsed {
+            transform: translateX(-380px);
+        }
+        
+        .toggle-panel {
+            position: absolute;
+            right: -40px;
+            top: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #0ff;
+            border-left: none;
+            border-radius: 0 5px 5px 0;
+            padding: 10px 5px;
+            cursor: pointer;
+            color: #0ff;
+            font-size: 1.2em;
+        }
+        
+        .section {
+            margin-bottom: 15px;
+        }
+        
+        .section-header {
+            cursor: pointer;
+            user-select: none;
+            padding: 5px;
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .section-header:hover {
+            background: rgba(0, 255, 255, 0.2);
+        }
+        
+        .section-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .section-content.collapsed {
+            max-height: 0;
+            overflow: hidden;
+        }
+        
+        #shortcuts-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 600px;
+            z-index: 2000;
+            display: none;
+        }
+        
+        #shortcuts-overlay.visible {
+            display: block;
+        }
+        
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+        }
+        
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .preset-btn {
+            padding: 5px 10px;
+            font-size: 0.85em;
+        }
+        
+        #camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 1px solid #0ff;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+        
+        h1 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #0ff;
+            background: linear-gradient(45deg, #0ff, #f0f);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+        
+        h2 {
+            font-size: 1.2em;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            color: #f0f;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #0ff, #00f);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-size: 0.9em;
+        }
+        
+        .info-panel {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 5px;
+            font-size: 0.85em;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        
+        .metric-value {
+            color: #fff;
+            font-weight: bold;
+        }
+        
+        #equation {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 0, 255, 0.1);
+            border-radius: 5px;
+            font-size: 0.8em;
+            word-wrap: break-word;
+            font-family: 'Times New Roman', serif;
+            color: #fff;
+        }
+        
+        #frequency-viz {
+            width: 100%;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #0ff;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .particle-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 1px solid #f0f;
+            border-radius: 10px;
+            font-size: 0.85em;
+            max-width: 300px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .dimension-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin: 0 2px;
+            background: #0ff;
+            opacity: 0.3;
+        }
+        
+        .dimension-indicator.active {
+            opacity: 1;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+        
+        .golden-ratio {
+            color: #ffd700;
+            font-weight: bold;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5em;
+            text-align: center;
+            z-index: 2000;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Note: Main styles are in css/styles.css */
+    </style>
+</head>
+<body>
+    <div id="threejs-container"></div>
+    <canvas id="canvas" style="display: none;"></canvas>
+    
+    <div id="loading">
+        <div>Initializing 12D Cosmic Synapse...</div>
+        <div style="margin-top: 10px; font-size: 0.8em;">Loading quantum fields...</div>
+    </div>
+    
+    <div id="controls">
+        <div class="toggle-panel" id="toggleControls">◀</div>
+        <h1>12D Cosmic Synapse Theory</h1>
+        <div style="font-size: 0.8em; margin-bottom: 15px; opacity: 0.8;">
+            By Cory Shane Davis • 2018-2025
+        </div>
+        
+        <div class="section">
+            <div class="section-header" data-section="main">
+                <strong>▶ Main Controls</strong>
+            </div>
+            <div class="section-content">
+        <div>
+            <button id="startAudio">🎤 Start Audio Input</button>
+            <button id="stopAudio" disabled>⏹ Stop Audio</button>
+            <button id="reset">🔄 Reset System</button>
+                </div>
+                <div class="preset-buttons">
+                    <button class="preset-btn" data-preset="default">Default</button>
+                    <button class="preset-btn" data-preset="performance">Performance</button>
+                    <button class="preset-btn" data-preset="visual">Visual</button>
+                    <button class="preset-btn" data-preset="chaos">Chaos</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-header" data-section="parameters">
+                <strong>▶ System Parameters</strong>
+            </div>
+            <div class="section-content">
+        <label>
+            Particles: <span id="particleCount">100</span>
+            <input type="range" id="particles" min="10" max="500" value="100">
+        </label>
+        
+        <label>
+            Interaction Radius: <span id="radiusValue">100</span>
+            <input type="range" id="radius" min="50" max="500" value="100">
+        </label>
+        
+        <label>
+            Golden Ratio (φ): <span class="golden-ratio">1.618</span>
+        </label>
+        
+        <label>
+            12th Dimension Parameters:
+        </label>
+        <label style="margin-left: 20px;">
+            k (adaptation rate): <span id="kValue">0.1</span>
+            <input type="range" id="kParam" min="0.01" max="1" value="0.1" step="0.01">
+        </label>
+        <label style="margin-left: 20px;">
+            γ (decay): <span id="gammaValue">0.05</span>
+            <input type="range" id="gammaParam" min="0.01" max="0.5" value="0.05" step="0.01">
+        </label>
+        <label style="margin-left: 20px;">
+            α (memory): <span id="alphaValue">0.2</span>
+            <input type="range" id="alphaParam" min="0.01" max="1" value="0.2" step="0.01">
+        </label>
+        <label style="margin-left: 20px;">
+            σ (similarity): <span id="sigmaValue">1.0</span>
+            <input type="range" id="sigmaParam" min="0.1" max="5" value="1.0" step="0.1">
+        </label>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-header" data-section="visualization">
+                <strong>▶ Visualization</strong>
+            </div>
+            <div class="section-content">
+                <label>
+                    <input type="checkbox" id="showTrails" checked> Show Trails
+                </label>
+                <label>
+                    <input type="checkbox" id="showConnections" checked> Show Connections
+                </label>
+                <label>
+                    <input type="checkbox" id="wireframeMode"> Wireframe Mode
+                </label>
+                <label>
+                    Visualization Mode:
+                    <select id="vizMode">
+                        <option value="default">Default</option>
+                        <option value="energy">Energy Density</option>
+                        <option value="connectivity">Connectivity</option>
+                        <option value="x12">Internal State (x₁₂)</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+        
+        <canvas id="frequency-viz"></canvas>
+        
+        <div class="info-panel">
+            <h2>System Metrics</h2>
+            <div class="metric">
+                <span>FPS:</span>
+                <span class="metric-value" id="fps">0</span>
+            </div>
+            <div class="metric">
+                <span>Total Energy (ψ):</span>
+                <span class="metric-value" id="totalEnergy">0</span>
+            </div>
+            <div class="metric">
+                <span>Avg Connectivity (Ω):</span>
+                <span class="metric-value" id="avgConnectivity">0</span>
+            </div>
+            <div class="metric">
+                <span>Entropy (S):</span>
+                <span class="metric-value" id="entropy">0</span>
+            </div>
+            <div class="metric">
+                <span>Audio Frequency:</span>
+                <span class="metric-value" id="audioFreq">0 Hz</span>
+            </div>
+            <div class="metric">
+                <span>Active Dimensions:</span>
+                <span class="metric-value">
+                    <span class="dimension-indicator active"></span>
+                    <span class="dimension-indicator active"></span>
+                    <span class="dimension-indicator active"></span>
+                    <span class="dimension-indicator active"></span>
+                    <span class="dimension-indicator"></span>
+                    <span class="dimension-indicator"></span>
+                    <span class="dimension-indicator"></span>
+                    <span class="dimension-indicator"></span>
+                    <span class="dimension-indicator"></span>
+                    <span class="dimension-indicator"></span>
+                    <span class="dimension-indicator"></span>
+                    <span class="dimension-indicator active" style="background: #ffd700;"></span>
+                </span>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-header" data-section="equation">
+                <strong>▶ Equation</strong>
+            </div>
+            <div class="section-content">
+        <div id="equation">
+            <strong>12D State Function:</strong><br>
+                    ψᵢ = (φ·Eᶜ,ᵢ)/c² + λ + ∫₀ᵗ Σₖ₌₁¹¹(dxᵢ,ₖ/dt)² dt + ∫₀ᵗ|dx₁₂,ᵢ/dt|dt + Ωᵢ·Eᶜ,ᵢ + U¹¹ᴰ_grav,i
+                </div>
+        </div>
+        </div>
+        
+        <button id="showShortcuts" style="width: 100%; margin-top: 10px;">⌨ Keyboard Shortcuts</button>
+    </div>
+    
+    <div id="camera-controls">
+        <h3 style="margin-bottom: 10px; color: #0ff;">Camera</h3>
+        <button data-camera-preset="default">Default</button>
+        <button data-camera-preset="top">Top</button>
+        <button data-camera-preset="side">Side</button>
+        <button data-camera-preset="isometric">Isometric</button>
+        <button id="followBtn">Follow Particle: Off</button>
+    </div>
+    
+    <div id="shortcuts-overlay">
+        <h2 style="color: #0ff; margin-bottom: 20px;">Keyboard Shortcuts</h2>
+        <div class="shortcut-item">
+            <span>Space</span>
+            <span>Toggle Audio</span>
+        </div>
+        <div class="shortcut-item">
+            <span>Arrow Up/Down</span>
+            <span>Zoom In/Out</span>
+        </div>
+        <div class="shortcut-item">
+            <span>H</span>
+            <span>Show/Hide Help</span>
+        </div>
+        <div class="shortcut-item">
+            <span>C</span>
+            <span>Toggle Controls Panel</span>
+        </div>
+        <div class="shortcut-item">
+            <span>1-4</span>
+            <span>Camera Presets</span>
+        </div>
+        <div class="shortcut-item">
+            <span>F</span>
+            <span>Toggle Follow Particle</span>
+        </div>
+        <div class="shortcut-item">
+            <span>W</span>
+            <span>Toggle Wireframe</span>
+        </div>
+        <div class="shortcut-item">
+            <span>T</span>
+            <span>Toggle Trails</span>
+        </div>
+        <button id="closeShortcuts" style="width: 100%; margin-top: 20px;">Close</button>
+    </div>
+    
+    <div class="particle-info hidden" id="particleInfo">
+        <h2>Selected Particle</h2>
+        <div id="selectedParticleData"></div>
+    </div>
+
+    <script type="module">
+        // 12D Cosmic Synapse Theory Implementation
+        // Author: Cory Shane Davis
+        
+        // Import Three.js as ES module
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+        
+        // Make THREE available globally for compatibility
+        window.THREE = THREE;
+        
+        // UI Helper Functions - make them globally available
+        window.toggleSection = function(header) {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector('strong');
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                content.style.maxHeight = '1000px';
+                arrow.textContent = arrow.textContent.replace('▶', '▼');
+            } else {
+                content.classList.add('collapsed');
+                content.style.maxHeight = '0';
+                arrow.textContent = arrow.textContent.replace('▼', '▶');
+            }
+        };
+        
+        window.toggleShortcuts = function() {
+            const overlay = document.getElementById('shortcuts-overlay');
+            if (overlay) overlay.classList.toggle('visible');
+        };
+        
+        window.toggleControls = function() {
+            const controls = document.getElementById('controls');
+            const toggleBtn = document.getElementById('toggleControls');
+            if (controls) {
+                controls.classList.toggle('collapsed');
+                if (toggleBtn) {
+                    toggleBtn.textContent = controls.classList.contains('collapsed') ? '▶' : '◀';
+                }
+            }
+        };
+        
+        window.applyPreset = function(presetName) {
+            if (!window.system) return;
+            
+            const presets = {
+                'default': {
+                    particles: 100,
+                    radius: 100,
+                    k: 0.1,
+                    gamma: 0.05,
+                    alpha: 0.2,
+                    sigma: 1.0
+                },
+                'performance': {
+                    particles: 50,
+                    radius: 80,
+                    k: 0.08,
+                    gamma: 0.06,
+                    alpha: 0.15,
+                    sigma: 0.8
+                },
+                'visual': {
+                    particles: 200,
+                    radius: 150,
+                    k: 0.15,
+                    gamma: 0.03,
+                    alpha: 0.3,
+                    sigma: 1.5
+                },
+                'chaos': {
+                    particles: 150,
+                    radius: 120,
+                    k: 0.5,
+                    gamma: 0.02,
+                    alpha: 0.4,
+                    sigma: 2.0
+                }
+            };
+            
+            const preset = presets[presetName];
+            if (!preset) return;
+            
+            const system = window.system;
+            if (!system) return;
+            
+            const particlesInput = document.getElementById('particles');
+            if (particlesInput) {
+                particlesInput.value = preset.particles;
+                const countEl = document.getElementById('particleCount');
+                if (countEl) countEl.textContent = preset.particles;
+                system.numParticles = preset.particles;
+                system.initParticles();
+            }
+            
+            const radiusInput = document.getElementById('radius');
+            if (radiusInput) {
+                radiusInput.value = preset.radius;
+                const radiusValueEl = document.getElementById('radiusValue');
+                if (radiusValueEl) radiusValueEl.textContent = preset.radius;
+                system.interactionRadius = preset.radius;
+            }
+            
+            const kParamInput = document.getElementById('kParam');
+            if (kParamInput) {
+                kParamInput.value = preset.k;
+                const kValueEl = document.getElementById('kValue');
+                if (kValueEl) kValueEl.textContent = preset.k;
+                system.k = preset.k;
+            }
+            
+            const gammaParamInput = document.getElementById('gammaParam');
+            if (gammaParamInput) {
+                gammaParamInput.value = preset.gamma;
+                const gammaValueEl = document.getElementById('gammaValue');
+                if (gammaValueEl) gammaValueEl.textContent = preset.gamma;
+                system.gamma = preset.gamma;
+            }
+            
+            const alphaParamInput = document.getElementById('alphaParam');
+            if (alphaParamInput) {
+                alphaParamInput.value = preset.alpha;
+                const alphaValueEl = document.getElementById('alphaValue');
+                if (alphaValueEl) alphaValueEl.textContent = preset.alpha;
+                system.alpha = preset.alpha;
+            }
+            
+            const sigmaParamInput = document.getElementById('sigmaParam');
+            if (sigmaParamInput) {
+                sigmaParamInput.value = preset.sigma;
+                const sigmaValueEl = document.getElementById('sigmaValue');
+                if (sigmaValueEl) sigmaValueEl.textContent = preset.sigma;
+                system.sigma = preset.sigma;
+            }
+        };
+        
+        window.setCameraPreset = function(preset) {
+            if (!window.system || !window.system.camera) return;
+            
+            const presets = {
+                'default': { x: 0, y: 0, z: 500 },
+                'top': { x: 0, y: 500, z: 0 },
+                'side': { x: 500, y: 0, z: 0 },
+                'isometric': { x: 400, y: 400, z: 400 }
+            };
+            
+            const pos = presets[preset];
+            if (pos) {
+                window.system.camera.position.set(pos.x, pos.y, pos.z);
+                window.system.camera.lookAt(0, 0, 0);
+            }
+        };
+        
+        window.followingParticle = false;
+        window.toggleFollowParticle = function() {
+            window.followingParticle = !window.followingParticle;
+            const btn = document.getElementById('followBtn');
+            if (btn) {
+                btn.textContent = `Follow Particle: ${window.followingParticle ? 'On' : 'Off'}`;
+            }
+        };
+        
+        const PHI = 1.618033988749895; // Golden Ratio
+        const G = 6.674e-11; // Gravitational constant
+        const c = 299792458; // Speed of light
+        const h = 6.626e-34; // Planck constant
+        const k_B = 1.381e-23; // Boltzmann constant
+        const a0 = 5.29177210903e-11; // Bohr radius (m)
+        const m0 = 9.1093837015e-31; // Electron mass (kg) - reference mass
+        
+        class Particle12D {
+            constructor(id, position = null) {
+                this.id = id;
+                
+                // Physical dimensions (1-11)
+                this.position = position || new Float32Array([
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200,
+                    (Math.random() - 0.5) * 200
+                ]);
+                
+                this.velocity = new Float32Array([
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2
+                ]);
+                
+                this.mass = 1e20 + Math.random() * 1e20;
+                this.energy = 0.5 * this.mass * (
+                    this.velocity[0]**2 + 
+                    this.velocity[1]**2 + 
+                    this.velocity[2]**2
+                );
+                
+                // Higher dimensions
+                this.entropy = Math.random() * 10;
+                this.frequency = 440 + Math.random() * 880;
+                this.phase = Math.random() * Math.PI * 2;
+                
+                // 12th dimension - Internal adaptive state
+                this.x12 = (Math.random() - 0.5) * 2; // [-1, 1]
+                this.memory12 = 0; // Memory of x12
+                
+                // Network properties
+                this.omega = 0; // Synaptic strength
+                this.connections = [];
+                this.lyapunov = 0.1 + Math.random() * 0.1;
+                
+                // Additional dimensions (4-11) tracking
+                this.dimensions = {
+                    dim4: this.velocity[0], // vx (dimension 4)
+                    dim5: this.velocity[1], // vy (dimension 5)
+                    dim6: this.velocity[2], // vz (dimension 6)
+                    dim7: 0, // Time dimension (tracked externally)
+                    dim8: 0, // Cosmic energy Eᶜ (calculated)
+                    dim9: 0, // Entropy S (calculated)
+                    dim10: 0, // Frequency ν (calculated)
+                    dim11: 0 // Connectivity phase Θ (calculated)
+                };
+                
+                // Integration accumulators for proper time integration
+                this.integratedVelocityPath = 0; // ∫₀ᵗ Σₖ₌₁¹¹(dxᵢ,ₖ/dt)² dt
+                this.integratedX12Change = 0; // ∫₀ᵗ|dx₁₂,ᵢ/dt|dt
+                
+                // Cosmic energy (dimension 8) - separate from kinetic
+                this.cosmicEnergy = 0;
+                
+                // 11D gravitational potential
+                this.gravitationalPotential11D = 0;
+                
+                // Visualization
+                this.color = new Float32Array(3);
+                this.updateColor();
+                
+                // History for trail effect
+                this.trail = [];
+                this.maxTrailLength = 20;
+            }
+            
+            updateColor() {
+                // Color based on internal state x12
+                const hue = (this.x12 + 1) * 180; // Map [-1,1] to [0,360]
+                const rgb = this.hslToRgb(hue / 360, 0.8, 0.5 + this.energy / 1e30);
+                this.color[0] = rgb[0];
+                this.color[1] = rgb[1];
+                this.color[2] = rgb[2];
+            }
+            
+            hslToRgb(h, s, l) {
+                let r, g, b;
+                if (s === 0) {
+                    r = g = b = l;
+                } else {
+                    const hue2rgb = (p, q, t) => {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    };
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+                return [r, g, b];
+            }
+            
+            computeOmega(particles, radius, sigma) {
+                this.omega = 0;
+                this.connections = [];
+                
+                for (let other of particles) {
+                    if (other.id === this.id) continue;
+                    
+                    const dx = other.position[0] - this.position[0];
+                    const dy = other.position[1] - this.position[1];
+                    const dz = other.position[2] - this.position[2];
+                    const r = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                    
+                    if (r < radius) {
+                        // Complete synaptic strength formula: Ωᵢⱼ = [G·mᵢ·mⱼ/(r²ᵢⱼ·a₀·m₀)] · exp[-(x₁₂,ᵢ - x₁₂,ⱼ)²/(2σ²)]
+                        const r2 = r * r + 1e-10; // Softening
+                        const gravCoupling = (G * this.mass * other.mass) / (r2 * a0 * m0);
+                        
+                        // Internal state similarity (12th dimension)
+                        const stateDiff = this.x12 - other.x12;
+                        const similarity = Math.exp(-stateDiff*stateDiff / (2*sigma*sigma));
+                        
+                        const omega_ij = gravCoupling * similarity;
+                        this.omega += omega_ij;
+                        this.connections.push({
+                            particle: other,
+                            strength: omega_ij
+                        });
+                    }
+                }
+                
+                return this.omega;
+            }
+            
+            updateInternalState(k, gamma, dt) {
+                // 12th dimension evolution: dx12/dt = k·Ω - γ·x12
+                const dx12_dt = k * this.omega - gamma * this.x12;
+                
+                // Accumulate integrated x12 change: ∫₀ᵗ|dx₁₂,ᵢ/dt|dt
+                this.integratedX12Change += Math.abs(dx12_dt) * dt;
+                
+                this.x12 += dx12_dt * dt;
+                
+                // Bound to [-1, 1]
+                this.x12 = Math.max(-1, Math.min(1, this.x12));
+            }
+            
+            updateMemory(alpha, dt) {
+                // Memory tracks internal state: dm12/dt = α(x12 - m12)
+                const dm12 = alpha * (this.x12 - this.memory12);
+                this.memory12 += dm12 * dt;
+            }
+            
+            applyForces(particles, dt) {
+                const forces = [0, 0, 0];
+                
+                for (let other of particles) {
+                    if (other.id === this.id) continue;
+                    
+                    const dx = other.position[0] - this.position[0];
+                    const dy = other.position[1] - this.position[1];
+                    const dz = other.position[2] - this.position[2];
+                    const r = Math.sqrt(dx*dx + dy*dy + dz*dz + 1e-10);
+                    
+                    // Gravitational force
+                    const F = G * this.mass * other.mass / (r*r + 1e-10);
+                    
+                    forces[0] += F * dx / r;
+                    forces[1] += F * dy / r;
+                    forces[2] += F * dz / r;
+                }
+                
+                // Connectivity force (based on synaptic strength)
+                for (let conn of this.connections) {
+                    const other = conn.particle;
+                    const dx = other.position[0] - this.position[0];
+                    const dy = other.position[1] - this.position[1];
+                    const dz = other.position[2] - this.position[2];
+                    const r = Math.sqrt(dx*dx + dy*dy + dz*dz + 1e-10);
+                    
+                    const F = conn.strength * 0.001; // Scale factor
+                    
+                    forces[0] += F * dx / r;
+                    forces[1] += F * dy / r;
+                    forces[2] += F * dz / r;
+                }
+                
+                // Update velocity
+                this.velocity[0] += (forces[0] / this.mass) * dt;
+                this.velocity[1] += (forces[1] / this.mass) * dt;
+                this.velocity[2] += (forces[2] / this.mass) * dt;
+                
+                // Damping
+                const damping = 0.99;
+                this.velocity[0] *= damping;
+                this.velocity[1] *= damping;
+                this.velocity[2] *= damping;
+            }
+            
+            updatePosition(dt) {
+                // Accumulate integrated velocity path: ∫₀ᵗ Σₖ₌₁¹¹(dxᵢ,ₖ/dt)² dt
+                // For now, we have 3D positions, but structure for 11D expansion
+                const v2_sum = this.velocity[0]**2 + this.velocity[1]**2 + this.velocity[2]**2;
+                // In full 11D: would include all 11 dimensions
+                // For now, we use the 3D velocity components
+                this.integratedVelocityPath += v2_sum * dt;
+                
+                // Update dimensions tracking
+                this.dimensions.dim4 = this.velocity[0];
+                this.dimensions.dim5 = this.velocity[1];
+                this.dimensions.dim6 = this.velocity[2];
+                
+                // Update trail
+                this.trail.push([...this.position]);
+                if (this.trail.length > this.maxTrailLength) {
+                    this.trail.shift();
+                }
+                
+                // Update position
+                this.position[0] += this.velocity[0] * dt;
+                this.position[1] += this.velocity[1] * dt;
+                this.position[2] += this.velocity[2] * dt;
+                
+                // Boundary conditions
+                const boundary = 300;
+                for (let i = 0; i < 3; i++) {
+                    if (Math.abs(this.position[i]) > boundary) {
+                        this.position[i] = Math.sign(this.position[i]) * boundary;
+                        this.velocity[i] *= -0.5;
+                    }
+                }
+            }
+            
+            updateEnergy(particles) {
+                const v2 = this.velocity[0]**2 + this.velocity[1]**2 + this.velocity[2]**2;
+                const kineticEnergy = 0.5 * this.mass * v2;
+                
+                // Internal state contribution (12th dimension)
+                const internalEnergy = Math.abs(this.x12) * this.mass * c * c * 1e-10;
+                
+                // Connectivity contribution
+                const connectivityEnergy = this.omega * kineticEnergy * 1e-10;
+                
+                // Cosmic energy (dimension 8): Eᶜ = kinetic + internal + connectivity
+                this.cosmicEnergy = kineticEnergy + internalEnergy + connectivityEnergy;
+                this.energy = this.cosmicEnergy;
+                
+                // Update dimension 8
+                this.dimensions.dim8 = this.cosmicEnergy;
+                
+                // Calculate 11D gravitational potential: U_grav^11D = -Σⱼ≠ᵢ G·mᵢ·mⱼ/rᵢⱼ
+                // In full 11D, r would be 11D distance, but we use 3D for now
+                this.gravitationalPotential11D = 0;
+                for (let other of particles) {
+                    if (other.id === this.id) continue;
+                    const dx = other.position[0] - this.position[0];
+                    const dy = other.position[1] - this.position[1];
+                    const dz = other.position[2] - this.position[2];
+                    const r = Math.sqrt(dx*dx + dy*dy + dz*dz + 1e-10);
+                    this.gravitationalPotential11D -= G * this.mass * other.mass / r;
+                }
+                
+                // Update frequency (dimension 10) based on energy
+                this.frequency = this.energy / h * 1e-20;
+                this.dimensions.dim10 = this.frequency;
+            }
+            
+            updateEntropy() {
+                // S = k_B * ln(Ω + 1) - dimension 9
+                if (this.omega > 0) {
+                    this.entropy = k_B * Math.log(this.omega + 1);
+                    this.dimensions.dim9 = this.entropy;
+                } else {
+                    this.entropy = 0;
+                    this.dimensions.dim9 = 0;
+                }
+            }
+            
+            computeConnectivityPhase() {
+                // Dimension 11: Connectivity phase Θ = arctan2(ΣΩ·sin(φ), ΣΩ·cos(φ))
+                // For each connection, we use the connection strength and phase
+                let sinSum = 0;
+                let cosSum = 0;
+                
+                for (let conn of this.connections) {
+                    const phase = conn.particle.phase || 0;
+                    sinSum += conn.strength * Math.sin(phase);
+                    cosSum += conn.strength * Math.cos(phase);
+                }
+                
+                this.dimensions.dim11 = Math.atan2(sinSum, cosSum);
+                return this.dimensions.dim11;
+            }
+            
+            computePsi() {
+                // Complete 12D state function:
+                // ψᵢ = (φ·Eᶜ,ᵢ)/c² + λ + ∫₀ᵗ Σₖ₌₁¹¹(dxᵢ,ₖ/dt)² dt + ∫₀ᵗ|dx₁₂,ᵢ/dt|dt + Ωᵢ·Eᶜ,ᵢ + U¹¹ᴰ_grav,i
+                
+                // Term 1: φ·Eᶜ/c² (golden ratio scaled cosmic energy)
+                const term1 = PHI * this.cosmicEnergy / (c * c);
+                
+                // Term 2: λ (Lyapunov exponent / chaos parameter)
+                const term2 = this.lyapunov;
+                
+                // Term 3: ∫₀ᵗ Σₖ₌₁¹¹(dxᵢ,ₖ/dt)² dt (integrated velocity path - properly accumulated)
+                const term3 = this.integratedVelocityPath;
+                
+                // Term 4: ∫₀ᵗ|dx₁₂,ᵢ/dt|dt (integrated x12 change - properly accumulated)
+                const term4 = this.integratedX12Change;
+                
+                // Term 5: Ωᵢ·Eᶜ,ᵢ (synaptic strength times cosmic energy)
+                const term5 = this.omega * this.cosmicEnergy;
+                
+                // Term 6: U¹¹ᴰ_grav,i (11D gravitational potential)
+                const term6 = this.gravitationalPotential11D / (c * c); // Normalize to energy units
+                
+                // Sum all terms
+                // Note: For dimensionless result, terms should be normalized consistently
+                // The result represents informational energy density
+                return term1 + term2 + term3 + term4 + term5 + term6;
+            }
+            
+            applyAudioFrequency(frequency, magnitude) {
+                // Map audio frequency to particle properties
+                const freqRatio = frequency / 440; // A4 reference
+                
+                // Generate phi harmonics
+                const harmonic = Math.pow(PHI, Math.floor(freqRatio));
+                
+                // Modulate internal state
+                this.x12 += magnitude * 0.01 * Math.sin(harmonic * this.phase);
+                this.x12 = Math.max(-1, Math.min(1, this.x12));
+                
+                // Modulate energy
+                this.energy *= (1 + magnitude * 0.1 * harmonic);
+                
+                // Update phase
+                this.phase += frequency * 0.001;
+                if (this.phase > Math.PI * 2) this.phase -= Math.PI * 2;
+                
+                // Update visualization
+                this.updateColor();
+            }
+        }
+        
+        class CosmicSynapseSystem {
+            constructor(containerElement) {
+                this.container = containerElement;
+                this.particles = [];
+                this.numParticles = 100;
+                
+                // System parameters
+                this.interactionRadius = 100;
+                this.k = 0.1; // Internal state adaptation rate
+                this.gamma = 0.05; // Internal state decay
+                this.alpha = 0.2; // Memory adaptation rate
+                this.sigma = 1.0; // State similarity spread
+                
+                // Audio context
+                this.audioContext = null;
+                this.analyser = null;
+                this.microphone = null;
+                this.audioData = null;
+                this.audioStarted = false;
+                this.audioWorker = null;
+                
+                // Three.js setup
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+                this.particleMeshes = [];
+                this.connectionLines = [];
+                this.trailLines = [];
+                
+                // Visualization settings
+                this.showTrails = true;
+                this.showConnections = true;
+                this.vizMode = 'default';
+                
+                // Web Workers
+                this.physicsWorkers = [];
+                this.useWorkers = false;
+                this.workerPoolSize = navigator.hardwareConcurrency || 4;
+                
+                // Performance
+                this.fps = 0;
+                this.frameCount = 0;
+                this.lastTime = performance.now();
+                
+                // Mouse interaction
+                this.selectedParticle = null;
+                this.raycaster = null;
+                this.mouse = new THREE.Vector2();
+                
+                // Initialize Three.js
+                this.initThreeJS();
+                this.initParticles();
+                this.setupEventListeners();
+                this.initAudioWorker();
+                this.initPhysicsWorkers();
+            }
+            
+            initPhysicsWorkers() {
+                // Check if workers can be used (not available in file:// protocol)
+                if (window.location.protocol === 'file:') {
+                    // Silently fall back to main thread for file:// protocol
+                    this.physicsWorkers = [];
+                    return;
+                }
+                
+                try {
+                    // Initialize worker pool (optional - can enable for large particle counts)
+                    // For now, we'll keep it available but not enabled by default
+                    // Enable with: system.useWorkers = true;
+                    for (let i = 0; i < Math.min(this.workerPoolSize, 2); i++) {
+                        const workerUrl = new URL('workers/physics-worker.js', window.location.href);
+                        const worker = new Worker(workerUrl);
+                        worker.addEventListener('message', (e) => {
+                            this.handlePhysicsWorkerMessage(i, e.data);
+                        });
+                        worker.postMessage({
+                            type: 'init',
+                            data: {
+                                constants: {
+                                    G: G,
+                                    a0: a0,
+                                    m0: m0
+                                }
+                            }
+                        });
+                        this.physicsWorkers.push(worker);
+                    }
+                } catch (error) {
+                    console.warn('Physics workers not available:', error);
+                    this.physicsWorkers = [];
+                }
+            }
+            
+            handlePhysicsWorkerMessage(workerId, message) {
+                const { type, data } = message;
+                // Handle results from workers (implementation depends on async pattern)
+                // For now, workers are optional and main thread processing is used
+            }
+            
+            initAudioWorker() {
+                // Check if workers can be used (not available in file:// protocol)
+                if (window.location.protocol === 'file:') {
+                    // Silently fall back to main thread for file:// protocol
+                    this.audioWorker = null;
+                    return;
+                }
+                
+                try {
+                    const workerUrl = new URL('workers/audio-worker.js', window.location.href);
+                    this.audioWorker = new Worker(workerUrl);
+                    this.audioWorker.addEventListener('message', (e) => {
+                        const { type, data } = e.data;
+                        if (type === 'audioData') {
+                            this.processedAudioData = data;
+                        } else if (type === 'error') {
+                            console.error('Audio worker error:', data.error);
+                        }
+                    });
+                    this.audioWorker.postMessage({ type: 'init', data: {} });
+                } catch (error) {
+                    console.warn('Audio worker not available, using main thread processing:', error);
+                    this.audioWorker = null;
+                }
+            }
+            
+            initThreeJS() {
+                // Ensure THREE is loaded
+                if (typeof THREE === 'undefined' || !THREE.Scene) {
+                    console.error('Three.js not loaded. Please check your internet connection.');
+                    return;
+                }
+                
+                // Scene
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x000000);
+                
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(
+                    75,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    10000
+                );
+                this.camera.position.set(0, 0, 500);
+                
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ 
+                    antialias: true,
+                    alpha: true 
+                });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                this.container.appendChild(this.renderer.domElement);
+                
+                // OrbitControls - define inline camera controls
+                {
+                    // Simple orbit controls if OrbitControls not available
+                    let isDragging = false;
+                    let previousMousePosition = { x: 0, y: 0 };
+                    
+                    this.renderer.domElement.addEventListener('mousedown', (e) => {
+                        isDragging = true;
+                        previousMousePosition = { x: e.clientX, y: e.clientY };
+                    });
+                    
+                    this.renderer.domElement.addEventListener('mousemove', (e) => {
+                        if (isDragging) {
+                            const deltaMove = {
+                                x: e.clientX - previousMousePosition.x,
+                                y: e.clientY - previousMousePosition.y
+                            };
+                            
+                            const spherical = new THREE.Spherical();
+                            spherical.setFromVector3(this.camera.position);
+                            spherical.theta -= deltaMove.x * 0.01;
+                            spherical.phi += deltaMove.y * 0.01;
+                            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+                            
+                            this.camera.position.setFromSpherical(spherical);
+                            this.camera.lookAt(0, 0, 0);
+                            
+                            previousMousePosition = { x: e.clientX, y: e.clientY };
+                        }
+                    });
+                    
+                    this.renderer.domElement.addEventListener('mouseup', () => {
+                        isDragging = false;
+                    });
+                    
+                    this.renderer.domElement.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                        const scale = e.deltaY > 0 ? 1.1 : 0.9;
+                        this.camera.position.multiplyScalar(scale);
+                    });
+                }
+                
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0x00ffff, 0.8);
+                directionalLight.position.set(1, 1, 1);
+                this.scene.add(directionalLight);
+                
+                // Raycaster for mouse picking
+                this.raycaster = new THREE.Raycaster();
+                
+                // Grid helper (optional)
+                const gridHelper = new THREE.GridHelper(600, 20, 0x00ffff, 0x003333);
+                this.scene.add(gridHelper);
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+            
+            initParticles() {
+                this.particles = [];
+                this.particleMeshes = [];
+                
+                // Clear existing meshes
+                if (this.scene) {
+                    this.particleMeshes.forEach(mesh => this.scene.remove(mesh));
+                    this.connectionLines.forEach(line => this.scene.remove(line));
+                    this.trailLines.forEach(line => this.scene.remove(line));
+                }
+                
+                this.particleMeshes = [];
+                this.connectionLines = [];
+                this.trailLines = [];
+                
+                // Create particles and their visual representations
+                for (let i = 0; i < this.numParticles; i++) {
+                    const particle = new Particle12D(i);
+                    this.particles.push(particle);
+                    
+                    // Create Three.js mesh for particle
+                    const geometry = new THREE.SphereGeometry(1, 16, 16);
+                    const initialColor = new THREE.Color();
+                    initialColor.setHSL((particle.x12 + 1) * 0.5, 0.8, 0.5 + particle.energy / 1e30);
+                    const material = new THREE.MeshBasicMaterial({
+                        color: initialColor,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.userData.particle = particle;
+                    this.scene.add(mesh);
+                    this.particleMeshes.push(mesh);
+                }
+            }
+            
+            setupEventListeners() {
+                // Click to select particle using raycasting
+                this.renderer.domElement.addEventListener('click', (e) => {
+                    this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                    this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                    this.selectParticle();
+                });
+            }
+            
+            async startAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.microphone = this.audioContext.createMediaStreamSource(stream);
+                    
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 2048;
+                    this.analyser.smoothingTimeConstant = 0.8;
+                    
+                    this.microphone.connect(this.analyser);
+                    
+                    this.audioData = new Uint8Array(this.analyser.frequencyBinCount);
+                    this.processedAudioData = null;
+                    this.audioStarted = true;
+                    
+                    // Notify worker of initialization
+                    if (this.audioWorker) {
+                        this.audioWorker.postMessage({
+                            type: 'init',
+                            data: {
+                                sampleRate: this.audioContext.sampleRate,
+                                fftSize: this.analyser.fftSize
+                            }
+                        });
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Audio initialization failed:', error);
+                    return false;
+                }
+            }
+            
+            stopAudio() {
+                if (this.microphone) {
+                    this.microphone.disconnect();
+                    this.microphone = null;
+                }
+                if (this.audioContext) {
+                    this.audioContext.close();
+                    this.audioContext = null;
+                }
+                if (this.audioWorker) {
+                    this.audioWorker.postMessage({ type: 'close' });
+                }
+                this.audioStarted = false;
+            }
+            
+            processAudio() {
+                if (!this.audioStarted || !this.analyser) return null;
+                
+                this.analyser.getByteFrequencyData(this.audioData);
+                
+                // If worker is available, send data for processing
+                if (this.audioWorker) {
+                    // Get time domain data for worker processing
+                    const timeData = new Float32Array(this.analyser.fftSize);
+                    this.analyser.getFloatTimeDomainData(timeData);
+                    
+                    this.audioWorker.postMessage({
+                        type: 'process',
+                        data: {
+                            buffer: timeData,
+                            sampleRate: this.audioContext.sampleRate,
+                            frequencyData: Array.from(this.audioData)
+                        }
+                    }, [timeData.buffer]);
+                    
+                    // Use processed data if available, otherwise fallback
+                    if (this.processedAudioData) {
+                        return {
+                            frequency: this.processedAudioData.frequency,
+                            magnitude: this.processedAudioData.magnitude,
+                            spectrum: this.processedAudioData.spectrum,
+                            harmonics: this.processedAudioData.harmonics
+                        };
+                    }
+                }
+                
+                // Fallback to main thread processing
+                let maxMagnitude = 0;
+                let dominantBin = 0;
+                
+                for (let i = 0; i < this.audioData.length; i++) {
+                    if (this.audioData[i] > maxMagnitude) {
+                        maxMagnitude = this.audioData[i];
+                        dominantBin = i;
+                    }
+                }
+                
+                const nyquist = this.audioContext.sampleRate / 2;
+                const frequency = (dominantBin / this.audioData.length) * nyquist;
+                const magnitude = maxMagnitude / 255;
+                
+                return { frequency, magnitude, spectrum: this.audioData };
+            }
+            
+            selectParticle() {
+                // Use raycasting to select particle
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                const intersects = this.raycaster.intersectObjects(this.particleMeshes);
+                
+                if (intersects.length > 0) {
+                    this.selectedParticle = intersects[0].object.userData.particle;
+                    this.updateParticleInfo(this.selectedParticle);
+                    document.getElementById('particleInfo').classList.remove('hidden');
+                } else {
+                    this.selectedParticle = null;
+                    document.getElementById('particleInfo').classList.add('hidden');
+                }
+            }
+            
+            updateParticleInfo(particle) {
+                const info = `
+                    <div class="metric"><span>ID:</span><span class="metric-value">${particle.id}</span></div>
+                    <div class="metric"><span>Mass:</span><span class="metric-value">${particle.mass.toExponential(2)} kg</span></div>
+                    <div class="metric"><span>Energy:</span><span class="metric-value">${particle.energy.toExponential(2)} J</span></div>
+                    <div class="metric"><span>x₁₂:</span><span class="metric-value">${particle.x12.toFixed(3)}</span></div>
+                    <div class="metric"><span>Memory:</span><span class="metric-value">${particle.memory12.toFixed(3)}</span></div>
+                    <div class="metric"><span>Ω:</span><span class="metric-value">${particle.omega.toExponential(2)}</span></div>
+                    <div class="metric"><span>Connections:</span><span class="metric-value">${particle.connections.length}</span></div>
+                    <div class="metric"><span>ψ:</span><span class="metric-value">${particle.computePsi().toExponential(2)}</span></div>
+                `;
+                document.getElementById('selectedParticleData').innerHTML = info;
+            }
+            
+            // project3D removed - Three.js handles 3D projection automatically
+            
+            update(dt) {
+                // Process audio input
+                const audioData = this.processAudio();
+                
+                // Update connectivity matrix
+                for (let particle of this.particles) {
+                    particle.computeOmega(this.particles, this.interactionRadius, this.sigma);
+                }
+                
+                // Update particle dynamics
+                for (let particle of this.particles) {
+                    // Apply forces
+                    particle.applyForces(this.particles, dt);
+                    
+                    // Update position
+                    particle.updatePosition(dt);
+                    
+                    // Update 12th dimension
+                    particle.updateInternalState(this.k, this.gamma, dt);
+                    particle.updateMemory(this.alpha, dt);
+                    
+                    // Update energy, entropy, and dimensions
+                    particle.updateEnergy(this.particles);
+                    particle.updateEntropy();
+                    particle.computeConnectivityPhase();
+                    
+                    // Apply audio influence
+                    if (audioData && audioData.magnitude > 0.1) {
+                        particle.applyAudioFrequency(audioData.frequency, audioData.magnitude);
+                    }
+                    
+                    // Update color based on internal state
+                    particle.updateColor();
+                }
+                
+                // Update Three.js meshes to match particle positions
+                this.updateVisualization();
+                
+                // Update OrbitControls
+                if (this.controls) {
+                    this.controls.update();
+                }
+                
+                // Update metrics
+                this.updateMetrics(audioData);
+            }
+            
+            updateVisualization() {
+                // Remove old connection lines
+                if (this.showConnections) {
+                    this.connectionLines.forEach(line => this.scene.remove(line));
+                    this.connectionLines = [];
+                } else {
+                    this.connectionLines.forEach(line => this.scene.remove(line));
+                    this.connectionLines = [];
+                }
+                
+                // Remove old trail lines
+                if (this.showTrails) {
+                    this.trailLines.forEach(line => this.scene.remove(line));
+                    this.trailLines = [];
+                } else {
+                    this.trailLines.forEach(line => this.scene.remove(line));
+                    this.trailLines = [];
+                }
+                
+                // Handle follow particle mode
+                if (window.followingParticle && this.selectedParticle) {
+                    const particle = this.selectedParticle;
+                    this.camera.position.lerp(
+                        new THREE.Vector3(
+                            particle.position[0] + 100,
+                            particle.position[1] + 100,
+                            particle.position[2] + 100
+                        ),
+                        0.1
+                    );
+                    this.camera.lookAt(
+                        particle.position[0],
+                        particle.position[1],
+                        particle.position[2]
+                    );
+                }
+                
+                // Update particle meshes
+                for (let i = 0; i < this.particles.length; i++) {
+                    const particle = this.particles[i];
+                    const mesh = this.particleMeshes[i];
+                    
+                    // Update position
+                    mesh.position.set(
+                        particle.position[0],
+                        particle.position[1],
+                        particle.position[2]
+                    );
+                    
+                    // Update size based on mass
+                    const baseSize = Math.log10(particle.mass) * 0.5;
+                    // Store baseSize in userData for highlighting
+                    mesh.userData.baseSize = baseSize;
+                    mesh.scale.set(baseSize, baseSize, baseSize);
+                    
+                    // Update color based on visualization mode
+                    let hue, saturation, lightness;
+                    switch(this.vizMode) {
+                        case 'energy':
+                            hue = 0.5; // Blue
+                            saturation = 0.8;
+                            lightness = 0.2 + Math.min(particle.cosmicEnergy / 1e25, 0.6);
+                            break;
+                        case 'connectivity':
+                            hue = 0.55; // Cyan
+                            saturation = 0.8;
+                            lightness = 0.2 + Math.min(particle.omega / 1e15, 0.6);
+                            break;
+                        case 'x12':
+                            hue = (particle.x12 + 1) * 0.5; // Map [-1,1] to [0,1]
+                            saturation = 0.9;
+                            lightness = 0.4 + Math.abs(particle.x12) * 0.3;
+                            break;
+                        default:
+                            hue = (particle.x12 + 1) * 0.5;
+                            saturation = 0.8;
+                            lightness = 0.3 + Math.min(particle.energy / 1e30, 0.4);
+                    }
+                    
+                    // Ensure material and color exist before updating
+                    if (mesh.material && mesh.material.color) {
+                        mesh.material.color.setHSL(hue, saturation, lightness);
+                        mesh.material.opacity = 0.7 + Math.min(particle.omega / 1e15, 0.3);
+                    } else if (mesh.material) {
+                        // Recreate material if corrupted
+                        const newColor = new THREE.Color();
+                        newColor.setHSL(hue, saturation, lightness);
+                        mesh.material = new THREE.MeshBasicMaterial({
+                            color: newColor,
+                            transparent: true,
+                            opacity: 0.7 + Math.min(particle.omega / 1e15, 0.3)
+                        });
+                    }
+                    
+                    // Highlight selected particle (using scale and opacity since MeshBasicMaterial doesn't support emissive)
+                    if (mesh.material) {
+                        const currentBaseSize = mesh.userData.baseSize || baseSize;
+                        if (particle === this.selectedParticle) {
+                            // Make selected particle larger and brighter
+                            const scale = 1.5;
+                            mesh.scale.set(currentBaseSize * scale, currentBaseSize * scale, currentBaseSize * scale);
+                            mesh.material.opacity = Math.min(mesh.material.opacity * 1.5, 1.0);
+                        } else {
+                            // Restore normal size
+                            mesh.scale.set(currentBaseSize, currentBaseSize, currentBaseSize);
+                        }
+                    }
+                    
+                    // Draw connections
+                    if (this.showConnections) {
+                        for (let conn of particle.connections) {
+                            const otherMesh = this.particleMeshes[conn.particle.id];
+                            if (otherMesh) {
+                                const geometry = new THREE.BufferGeometry().setFromPoints([
+                                    mesh.position,
+                                    otherMesh.position
+                                ]);
+                                const opacity = Math.min(conn.strength * 1e10, 0.5);
+                                const lineColor = new THREE.Color(0x00ffff);
+                                const material = new THREE.LineBasicMaterial({
+                                    color: lineColor,
+                                    transparent: true,
+                                    opacity: Math.max(0, Math.min(opacity, 1))
+                                });
+                                const line = new THREE.Line(geometry, material);
+                                this.scene.add(line);
+                                this.connectionLines.push(line);
+                            }
+                        }
+                    }
+                    
+                    // Draw trails
+                    if (this.showTrails && particle.trail.length > 1) {
+                        const trailPoints = particle.trail.map(p => 
+                            new THREE.Vector3(p[0], p[1], p[2])
+                        );
+                        const trailGeometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
+                        const trailColor = new THREE.Color();
+                        trailColor.setHSL((particle.x12 + 1) * 0.5, 0.8, 0.5);
+                        const trailMaterial = new THREE.LineBasicMaterial({
+                            color: trailColor,
+                            transparent: true,
+                            opacity: 0.3
+                        });
+                        const trailLine = new THREE.Line(trailGeometry, trailMaterial);
+                        this.scene.add(trailLine);
+                        this.trailLines.push(trailLine);
+                    }
+                }
+            }
+            
+            updateMetrics(audioData) {
+                // Calculate FPS
+                this.frameCount++;
+                const currentTime = performance.now();
+                if (currentTime - this.lastTime > 1000) {
+                    this.fps = this.frameCount;
+                    this.frameCount = 0;
+                    this.lastTime = currentTime;
+                }
+                
+                // Calculate system metrics
+                let totalEnergy = 0;
+                let totalOmega = 0;
+                let totalEntropy = 0;
+                
+                for (let particle of this.particles) {
+                    totalEnergy += particle.computePsi();
+                    totalOmega += particle.omega;
+                    totalEntropy += particle.entropy;
+                }
+                
+                // Update display
+                document.getElementById('fps').textContent = this.fps;
+                document.getElementById('totalEnergy').textContent = totalEnergy.toExponential(2);
+                document.getElementById('avgConnectivity').textContent = (totalOmega / this.particles.length).toExponential(2);
+                document.getElementById('entropy').textContent = totalEntropy.toExponential(2);
+                
+                if (audioData) {
+                    document.getElementById('audioFreq').textContent = `${audioData.frequency.toFixed(1)} Hz`;
+                }
+            }
+            
+            render() {
+                // Three.js render
+                this.renderer.render(this.scene, this.camera);
+                
+                // Draw frequency visualization (still using 2D canvas)
+                this.drawFrequencyViz();
+            }
+            
+            drawFrequencyViz() {
+                if (!this.audioData) return;
+                
+                const vizCanvas = document.getElementById('frequency-viz');
+                if (!vizCanvas || !(vizCanvas instanceof HTMLCanvasElement)) return;
+                
+                const vizCtx = vizCanvas.getContext('2d');
+                if (!vizCtx) return;
+                
+                // Get parent dimensions if canvas doesn't have explicit size
+                const parent = vizCanvas.parentElement;
+                const width = vizCanvas.width || parent?.offsetWidth || 400;
+                const height = vizCanvas.height || parent?.offsetHeight || 60;
+                
+                vizCanvas.width = width;
+                vizCanvas.height = height;
+                
+                vizCtx.clearRect(0, 0, vizCanvas.width, vizCanvas.height);
+                
+                const barWidth = vizCanvas.width / this.audioData.length;
+                
+                vizCtx.fillStyle = '#0ff';
+                for (let i = 0; i < this.audioData.length; i++) {
+                    const barHeight = (this.audioData[i] / 255) * vizCanvas.height;
+                    vizCtx.fillRect(i * barWidth, vizCanvas.height - barHeight, barWidth, barHeight);
+                }
+            }
+            
+            run() {
+                const dt = 0.016; // 60 FPS target
+                
+                this.update(dt);
+                this.render();
+                
+                requestAnimationFrame(() => this.run());
+            }
+        }
+        
+        // Initialize system
+        let system;
+        
+        // Wait for DOM and ensure THREE is available
+        async function initializeSystem() {
+            // Wait a moment for ES module to load
+            let attempts = 0;
+            while (typeof THREE === 'undefined' && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (typeof THREE === 'undefined' || !THREE.Scene) {
+                console.error('Three.js failed to load');
+                const loadingEl = document.getElementById('loading');
+                if (loadingEl) {
+                    loadingEl.innerHTML = '<div>Error: Three.js failed to load. Please check your connection and refresh.</div>';
+                }
+                return;
+            }
+            
+            const container = document.getElementById('threejs-container');
+            if (!container) {
+                console.error('Container element not found');
+                return;
+            }
+            
+            window.system = new CosmicSynapseSystem(container);
+            system = window.system; // Also keep local reference
+            
+            // Hide loading screen
+            setTimeout(() => {
+                const loadingEl = document.getElementById('loading');
+                if (loadingEl) {
+                    loadingEl.classList.add('hidden');
+                }
+                if (system && system.run) {
+                system.run();
+                }
+            }, 1500);
+        }
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeSystem();
+            
+            // Setup UI event listeners (defer until system is ready)
+            setTimeout(() => {
+                // Event delegation for section headers
+                document.querySelectorAll('.section-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        window.toggleSection(header);
+                    });
+                });
+                
+                // Event delegation for preset buttons
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const preset = e.target.getAttribute('data-preset');
+                        if (preset) {
+                            window.applyPreset(preset);
+                        }
+                    });
+                });
+                
+                // Event delegation for camera preset buttons
+                document.querySelectorAll('[data-camera-preset]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const preset = e.target.getAttribute('data-camera-preset');
+                        if (preset) {
+                            window.setCameraPreset(preset);
+                        }
+                    });
+                });
+                
+                // Follow particle button
+                const followBtn = document.getElementById('followBtn');
+                if (followBtn) {
+                    followBtn.addEventListener('click', window.toggleFollowParticle);
+                }
+                
+                // Close shortcuts button
+                const closeShortcuts = document.getElementById('closeShortcuts');
+                if (closeShortcuts) {
+                    closeShortcuts.addEventListener('click', window.toggleShortcuts);
+                }
+                
+                const toggleBtn = document.getElementById('toggleControls');
+                if (toggleBtn) toggleBtn.addEventListener('click', window.toggleControls);
+                
+                const shortcutsBtn = document.getElementById('showShortcuts');
+                if (shortcutsBtn) shortcutsBtn.addEventListener('click', window.toggleShortcuts);
+                
+                const showTrails = document.getElementById('showTrails');
+                if (showTrails) {
+                    showTrails.addEventListener('change', (e) => {
+                        if (window.system) window.system.showTrails = e.target.checked;
+                    });
+                }
+                
+                const showConnections = document.getElementById('showConnections');
+                if (showConnections) {
+                    showConnections.addEventListener('change', (e) => {
+                        if (window.system) window.system.showConnections = e.target.checked;
+                    });
+                }
+                
+                const wireframeMode = document.getElementById('wireframeMode');
+                if (wireframeMode) {
+                    wireframeMode.addEventListener('change', (e) => {
+                        if (window.system && window.system.particleMeshes) {
+                            window.system.particleMeshes.forEach(mesh => {
+                                if (mesh.material) {
+                                    mesh.material.wireframe = e.target.checked;
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                const vizMode = document.getElementById('vizMode');
+                if (vizMode) {
+                    vizMode.addEventListener('change', (e) => {
+                        if (window.system) {
+                            window.currentVizMode = e.target.value;
+                            window.system.vizMode = window.currentVizMode;
+                        }
+                    });
+                }
+            }, 100);
+            
+            // Setup control handlers (defer until system is ready)
+            setTimeout(() => {
+                const startAudioBtn = document.getElementById('startAudio');
+                if (startAudioBtn) {
+                    startAudioBtn.addEventListener('click', async () => {
+                        if (!window.system) return;
+                        const success = await window.system.startAudio();
+                if (success) {
+                            startAudioBtn.disabled = true;
+                            const stopAudioBtn = document.getElementById('stopAudio');
+                            if (stopAudioBtn) stopAudioBtn.disabled = false;
+                        }
+                    });
+                }
+                
+                const stopAudioBtn = document.getElementById('stopAudio');
+                if (stopAudioBtn) {
+                    stopAudioBtn.addEventListener('click', () => {
+                        if (!window.system) return;
+                        window.system.stopAudio();
+                        const startAudioBtn = document.getElementById('startAudio');
+                        if (startAudioBtn) startAudioBtn.disabled = false;
+                        stopAudioBtn.disabled = true;
+                    });
+                }
+                
+                const resetBtn = document.getElementById('reset');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', () => {
+                        if (!window.system) return;
+                        window.system.initParticles();
+                    });
+                }
+            }, 200);
+            
+            // Parameter controls (defer until system is ready)
+            setTimeout(() => {
+                const particlesInput = document.getElementById('particles');
+                if (particlesInput) {
+                    particlesInput.addEventListener('input', (e) => {
+                        if (!window.system) return;
+                const value = parseInt(e.target.value);
+                        const countEl = document.getElementById('particleCount');
+                        if (countEl) countEl.textContent = value;
+                        window.system.numParticles = value;
+                        window.system.initParticles();
+                    });
+                }
+                
+                const radiusInput = document.getElementById('radius');
+                if (radiusInput) {
+                    radiusInput.addEventListener('input', (e) => {
+                        if (!window.system) return;
+                const value = parseInt(e.target.value);
+                        const radiusValueEl = document.getElementById('radiusValue');
+                        if (radiusValueEl) radiusValueEl.textContent = value;
+                        window.system.interactionRadius = value;
+            });
+                }
+            
+                const kParamInput = document.getElementById('kParam');
+                if (kParamInput) {
+                    kParamInput.addEventListener('input', (e) => {
+                        if (!window.system) return;
+                const value = parseFloat(e.target.value);
+                        const kValueEl = document.getElementById('kValue');
+                        if (kValueEl) kValueEl.textContent = value;
+                        window.system.k = value;
+            });
+                }
+            
+                const gammaParamInput = document.getElementById('gammaParam');
+                if (gammaParamInput) {
+                    gammaParamInput.addEventListener('input', (e) => {
+                        if (!window.system) return;
+                const value = parseFloat(e.target.value);
+                        const gammaValueEl = document.getElementById('gammaValue');
+                        if (gammaValueEl) gammaValueEl.textContent = value;
+                        window.system.gamma = value;
+            });
+                }
+            
+                const alphaParamInput = document.getElementById('alphaParam');
+                if (alphaParamInput) {
+                    alphaParamInput.addEventListener('input', (e) => {
+                        if (!window.system) return;
+                const value = parseFloat(e.target.value);
+                        const alphaValueEl = document.getElementById('alphaValue');
+                        if (alphaValueEl) alphaValueEl.textContent = value;
+                        window.system.alpha = value;
+            });
+                }
+            
+                const sigmaParamInput = document.getElementById('sigmaParam');
+                if (sigmaParamInput) {
+                    sigmaParamInput.addEventListener('input', (e) => {
+                        if (!window.system) return;
+                const value = parseFloat(e.target.value);
+                        const sigmaValueEl = document.getElementById('sigmaValue');
+                        if (sigmaValueEl) sigmaValueEl.textContent = value;
+                        window.system.sigma = value;
+            });
+                }
+            }, 200);
+        });
+        
+        // Functions are now defined above in global scope
+        
+        // Add visualization mode support
+        window.currentVizMode = 'default';
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            const system = window.system;
+            if (!system) return;
+            
+            switch(e.key.toLowerCase()) {
+                case 'arrowup':
+                    if (system.camera) {
+                        system.camera.position.z -= 10;
+                    }
+                    break;
+                case 'arrowdown':
+                    if (system.camera) {
+                        system.camera.position.z += 10;
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    if (system && system.audioStarted) {
+                        system.stopAudio();
+                        const startBtn = document.getElementById('startAudio');
+                        const stopBtn = document.getElementById('stopAudio');
+                        if (startBtn) startBtn.disabled = false;
+                        if (stopBtn) stopBtn.disabled = true;
+                    } else {
+                        const startBtn = document.getElementById('startAudio');
+                        if (startBtn) startBtn.click();
+                    }
+                    break;
+                case 'h':
+                    if (window.toggleShortcuts) window.toggleShortcuts();
+                    break;
+                case 'c':
+                    if (window.toggleControls) window.toggleControls();
+                    break;
+                case '1':
+                    if (window.setCameraPreset) window.setCameraPreset('default');
+                    break;
+                case '2':
+                    if (window.setCameraPreset) window.setCameraPreset('top');
+                    break;
+                case '3':
+                    if (window.setCameraPreset) window.setCameraPreset('side');
+                    break;
+                case '4':
+                    if (window.setCameraPreset) window.setCameraPreset('isometric');
+                    break;
+                case 'f':
+                    if (window.toggleFollowParticle) window.toggleFollowParticle();
+                    break;
+                case 'w':
+                    const wireframe = document.getElementById('wireframeMode');
+                    if (wireframe) {
+                        wireframe.checked = !wireframe.checked;
+                        // Trigger change event to update visuals
+                        wireframe.dispatchEvent(new Event('change'));
+                    }
+                    break;
+                case 't':
+                    const trails = document.getElementById('showTrails');
+                    if (trails) {
+                        trails.checked = !trails.checked;
+                        // Trigger change event to update visuals
+                        trails.dispatchEvent(new Event('change'));
+                    }
+                    break;
+            }
+        });
+        
+    </script>
+</body>
+</html>
