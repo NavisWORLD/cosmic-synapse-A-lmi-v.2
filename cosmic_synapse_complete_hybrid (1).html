@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Synapse - 12D Complete Hybrid System</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    
+    <style>
+        html, body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020010;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #2d3748; }
+        ::-webkit-scrollbar-thumb { background: #718096; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+        .freq-bar { transition: width 0.3s ease-out; }
+        .token-stream {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.7rem;
+            line-height: 1.2;
+        }
+        .neural-viz {
+            width: 100%;
+            height: 60px;
+            background: #1a202c;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        .neuron-pulse {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.5); }
+        }
+        .metric-card {
+            background: rgba(26, 32, 44, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap">
+</head>
+<body>
+    <canvas id="simulationCanvas"></canvas>
+
+    <!-- Main Control Panel -->
+    <div id="menuPanel" class="absolute top-4 left-4 bg-gray-900 bg-opacity-90 backdrop-blur-md p-6 rounded-lg shadow-lg max-w-md max-h-[95vh] overflow-y-auto transition-all duration-300">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold text-white">🌌 Cosmic Synapse 12D</h1>
+            <button id="menuToggleButton" class="text-gray-400 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div id="menuContent">
+            <!-- System Status -->
+            <div class="metric-card">
+                <h3 class="text-sm font-semibold text-cyan-400 mb-2">System Status</h3>
+                <div class="text-xs text-gray-300 space-y-1">
+                    <div class="flex justify-between">
+                        <span>Mode:</span>
+                        <span id="systemMode" class="text-green-400">Active</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Neural Net:</span>
+                        <span id="neuralStatus" class="text-yellow-400">Ready</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Token DB:</span>
+                        <span id="dbStatus" class="text-blue-400">Connected</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audio Controls -->
+            <div class="metric-card">
+                <h3 class="text-sm font-semibold text-cyan-400 mb-2">Audio Engine</h3>
+                <button id="toggleMicButton" class="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold py-3 px-4 rounded-lg text-lg transition-all shadow-md mb-2">
+                    🎤 Toggle VibraLight
+                </button>
+                <div id="micStatus" class="text-center text-gray-400 text-xs mb-2">Mic OFF - Baseline Chaos</div>
+                
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="bg-gray-800 p-2 rounded">
+                        <div class="text-gray-400">RMS Energy</div>
+                        <div id="rmsValue" class="text-green-400 font-bold">0.00</div>
+                    </div>
+                    <div class="bg-gray-800 p-2 rounded">
+                        <div class="text-gray-400">Spectral Centroid</div>
+                        <div id="centroidValue" class="text-purple-400 font-bold">0 Hz</div>
+                    </div>
+                    <div class="bg-gray-800 p-2 rounded">
+                        <div class="text-gray-400">Dom. Freq</div>
+                        <div id="domFreqHz" class="text-blue-400 font-bold">0 Hz</div>
+                    </div>
+                    <div class="bg-gray-800 p-2 rounded">
+                        <div class="text-gray-400">Ψ (Psi)</div>
+                        <div id="psiValue" class="text-yellow-400 font-bold">0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Token Generation System -->
+            <div class="metric-card">
+                <h3 class="text-sm font-semibold text-cyan-400 mb-2">Token Generation</h3>
+                <div class="text-xs text-gray-300 space-y-1 mb-2">
+                    <div class="flex justify-between">
+                        <span>Total Tokens:</span>
+                        <span id="totalTokens" class="text-green-400 font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Token Rate:</span>
+                        <span id="tokenRate" class="text-blue-400 font-bold">0/sec</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Replications:</span>
+                        <span id="replicationCount" class="text-purple-400 font-bold">0</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="exportTokensBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-3 rounded text-xs transition-all">
+                        💾 Export Tokens
+                    </button>
+                    <button id="clearTokensBtn" class="bg-red-600 hover:bg-red-500 text-white font-semibold py-2 px-3 rounded text-xs transition-all">
+                        🗑️ Clear Tokens
+                    </button>
+                </div>
+            </div>
+
+            <!-- Neural Network Visualization -->
+            <div class="metric-card">
+                <h3 class="text-sm font-semibold text-cyan-400 mb-2">Neural Network</h3>
+                <div class="neural-viz" id="neuralViz">
+                    <div class="neuron-pulse" style="left: 10%; top: 20%;"></div>
+                    <div class="neuron-pulse" style="left: 30%; top: 60%; animation-delay: 0.5s;"></div>
+                    <div class="neuron-pulse" style="left: 50%; top: 30%; animation-delay: 1s;"></div>
+                    <div class="neuron-pulse" style="left: 70%; top: 70%; animation-delay: 1.5s;"></div>
+                    <div class="neuron-pulse" style="left: 90%; top: 40%; animation-delay: 2s;"></div>
+                </div>
+                <div class="text-xs text-gray-300 mt-2 space-y-1">
+                    <div class="flex justify-between">
+                        <span>Predictions:</span>
+                        <span id="predictionCount" class="text-cyan-400">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Avg Loss:</span>
+                        <span id="avgLoss" class="text-yellow-400">N/A</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Particle Controls -->
+            <div class="metric-card">
+                <h3 class="text-sm font-semibold text-cyan-400 mb-2">Particle System</h3>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <button id="addParticlesButton" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg transition-all text-sm">
+                        ➕ Add 10k Dust
+                    </button>
+                    <button id="clearParticlesButton" class="bg-red-700 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-all text-sm">
+                        🧹 Clear Dust
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="addAttractorButton" class="bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2 px-4 rounded-lg transition-all text-sm">
+                        🌀 Add Black Hole
+                    </button>
+                    <button id="clearAllButton" class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-all text-sm">
+                        💥 Clear All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Physics Parameters -->
+            <div class="metric-card">
+                <h3 class="text-sm font-semibold text-cyan-400 mb-2">Physics Engine</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-200">Swirl Ω</label>
+                        <input id="swirlSlider" type="range" min="0" max="1" step="0.01" value="0.3" class="w-full h-2 bg-gray-700 rounded-lg">
+                        <span id="swirlValue" class="text-xs text-gray-400">0.3</span>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-200">Gravity G</label>
+                        <input id="gravitySlider" type="range" min="0" max="10000" step="100" value="3000" class="w-full h-2 bg-gray-700 rounded-lg">
+                        <span id="gravityValue" class="text-xs text-gray-400">3000</span>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-200">Damping ζ</label>
+                        <input id="dampingSlider" type="range" min="0.001" max="0.1" step="0.001" value="0.02" class="w-full h-2 bg-gray-700 rounded-lg">
+                        <span id="dampingValue" class="text-xs text-gray-400">0.02</span>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-200">Replication Threshold</label>
+                        <input id="replicationSlider" type="range" min="1" max="100" step="1" value="50" class="w-full h-2 bg-gray-700 rounded-lg">
+                        <span id="replicationValue" class="text-xs text-gray-400">50</span>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-200">Bloom Intensity</label>
+                        <input id="bloomSlider" type="range" min="0" max="3" step="0.05" value="1.0" class="w-full h-2 bg-gray-700 rounded-lg">
+                        <span id="bloomValue" class="text-xs text-gray-400">1.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Metrics -->
+            <div class="metric-card">
+                <h3 class="text-sm font-semibold text-cyan-400 mb-2">Live Metrics</h3>
+                <div class="text-xs text-gray-300 space-y-1">
+                    <div class="flex justify-between">
+                        <span>Particles:</span>
+                        <span id="particleCount" class="text-green-400">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Attractors:</span>
+                        <span id="attractorCount" class="text-blue-400">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Total Energy:</span>
+                        <span id="totalEnergy" class="text-yellow-400">0.00e0 J</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Avg Entropy:</span>
+                        <span id="avgEntropy" class="text-purple-400">0.00e0 J</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Final Chaos σ:</span>
+                        <span id="sigmaValue" class="text-red-400">0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- A-LMI Memory Matrix -->
+            <div class="metric-card">
+                <h3 class="text-sm font-semibold text-cyan-400 mb-2">A-LMI Memory Matrix</h3>
+                <p class="text-xs text-gray-400 mb-2">Observing Light Tokens by spectral signature</p>
+                <div class="space-y-2">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-blue-500 border border-blue-200 mr-2"></div>
+                        <div class="flex-1 bg-gray-700 rounded-full h-3">
+                            <div id="freqBar_0" class="freq-bar h-3 rounded-full bg-blue-500" style="width: 0%"></div>
+                        </div>
+                        <span id="freqCount_0" class="ml-2 text-xs text-gray-300 w-8 text-right">0</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-cyan-500 border border-cyan-200 mr-2"></div>
+                        <div class="flex-1 bg-gray-700 rounded-full h-3">
+                            <div id="freqBar_1" class="freq-bar h-3 rounded-full bg-cyan-500" style="width: 0%"></div>
+                        </div>
+                        <span id="freqCount_1" class="ml-2 text-xs text-gray-300 w-8 text-right">0</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-purple-500 border border-purple-200 mr-2"></div>
+                        <div class="flex-1 bg-gray-700 rounded-full h-3">
+                            <div id="freqBar_2" class="freq-bar h-3 rounded-full bg-purple-500" style="width: 0%"></div>
+                        </div>
+                        <span id="freqCount_2" class="ml-2 text-xs text-gray-300 w-8 text-right">0</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-fuchsia-500 border border-fuchsia-200 mr-2"></div>
+                        <div class="flex-1 bg-gray-700 rounded-full h-3">
+                            <div id="freqBar_3" class="freq-bar h-3 rounded-full bg-fuchsia-500" style="width: 0%"></div>
+                        </div>
+                        <span id="freqCount_3" class="ml-2 text-xs text-gray-300 w-8 text-right">0</span>
+                    </div>
+                </div>
+                <div class="text-right text-xs text-gray-300 mt-2">
+                    Total Observed: <span id="totalTokenCount" class="font-bold">0</span>
+                </div>
+                <div id="almiActionDisplay" class="text-center text-xs text-gray-500 mt-2">A-LMI: Idle</div>
+            </div>
+
+            <!-- Token Stream Display -->
+            <div class="metric-card">
+                <h3 class="text-sm font-semibold text-cyan-400 mb-2">Recent Token Stream</h3>
+                <div id="tokenStream" class="token-stream bg-gray-800 p-2 rounded text-green-400 font-mono">
+                    <div class="text-gray-500 text-center">Waiting for tokens...</div>
+                </div>
+            </div>
+
+            <!-- Voice Commands -->
+            <div class="metric-card">
+                <h3 class="text-sm font-semibold text-cyan-400 mb-2">Voice Commands</h3>
+                <button id="voiceCommandBtn" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2 px-4 rounded-lg transition-all text-sm">
+                    🎙️ Start Voice Recognition
+                </button>
+                <div id="voiceStatus" class="text-center text-xs text-gray-400 mt-2">Voice: Inactive</div>
+                <div id="lastCommand" class="text-xs text-gray-300 mt-1 text-center italic"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GLSL Shaders -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+        attribute float speed;
+        attribute float internalState;
+        attribute float energy;
+        
+        varying float vSpeed;
+        varying float vInternalState;
+        varying float vEnergy;
+
+        void main() {
+            vSpeed = speed;
+            vInternalState = internalState;
+            vEnergy = energy;
+
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            float shimmer = 0.95 + 0.05 * sin(position.x + position.y);
+            gl_PointSize = (250.0 / -mvPosition.z) * shimmer * (1.0 + vEnergy * 0.3);
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+    
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        varying float vSpeed;
+        varying float vInternalState;
+        varying float vEnergy;
+
+        void main() {
+            float d = distance(gl_PointCoord, vec2(0.5, 0.5));
+            if (d > 0.5) discard;
+            float alpha = 1.0 - d * 2.0;
+            
+            float hue = 0.66 + vInternalState * 0.17;
+            vec3 baseColor = vec3(1.0);
+            
+            float c = 1.0;
+            float x = c * (1.0 - abs(mod(hue * 6.0, 2.0) - 1.0));
+            if (hue < 0.166) baseColor = vec3(c, x, 0.0);
+            else if (hue < 0.333) baseColor = vec3(x, c, 0.0);
+            else if (hue < 0.5) baseColor = vec3(0.0, c, x);
+            else if (hue < 0.666) baseColor = vec3(0.0, x, c);
+            else if (hue < 0.833) baseColor = vec3(x, 0.0, c);
+            else baseColor = vec3(c, 0.0, x);
+            
+            float intensity = smoothstep(10.0, 40.0, vSpeed);
+            vec3 hotColor = vec3(1.0, 1.0, 0.9);
+            vec3 energyBoost = vec3(1.0, 0.5, 0.1) * vEnergy;
+            vec3 finalColor = mix(baseColor, hotColor, intensity) + energyBoost;
+
+            gl_FragColor = vec4(finalColor, alpha);
+        }
+    </script>
+
+    <!-- Background Shader -->
+    <script id="backgroundVertexShader" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = vec4(position, 1.0);
+        }
+    </script>
+    
+    <script id="backgroundFragmentShader" type="x-shader/x-fragment">
+        uniform float time;
+        uniform vec2 resolution;
+        uniform vec2 mouse;
+        varying vec2 vUv;
+        
+        vec3 mod289(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
+        vec4 mod289(vec4 x){return x - floor(x*(1.0/289.0))*289.0;}
+        vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+        vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
+        
+        float snoise(vec3 v){
+            const vec2 C=vec2(1.0/6.0,1.0/3.0); 
+            const vec4 D=vec4(0.0,0.5,1.0,2.0);
+            vec3 i=floor(v+dot(v,C.yyy)); 
+            vec3 x0=v-i+dot(i,C.xxx);
+            vec3 g=step(x0.yzx,x0.xyz); 
+            vec3 l=1.0-g; 
+            vec3 i1=min(g.xyz,l.zxy); 
+            vec3 i2=max(g.xyz,l.zxy);
+            vec3 x1=x0-i1+C.xxx; 
+            vec3 x2=x0-i2+C.yyy; 
+            vec3 x3=x0-D.yyy;
+            i=mod289(i);
+            vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+            float n_=0.142857142857; 
+            vec3 ns=n_*D.wyz-D.xzx;
+            vec4 j=p-49.0*floor(p*ns.z*ns.z);
+            vec4 x_=floor(j*ns.z); 
+            vec4 y_=floor(j-7.0*x_);
+            vec4 x=x_*ns.x+ns.yyyy; 
+            vec4 y=y_*ns.x+ns.yyyy; 
+            vec4 h=1.0-abs(x)-abs(y);
+            vec4 b0=vec4(x.xy,y.xy); 
+            vec4 b1=vec4(x.zw,y.zw);
+            vec4 s0=floor(b0)*2.0+1.0; 
+            vec4 s1=floor(b1)*2.0+1.0; 
+            vec4 sh=-step(h,vec4(0.0));
+            vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; 
+            vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+            vec3 p0=vec3(a0.xy,h.x); 
+            vec3 p1=vec3(a0.zw,h.y); 
+            vec3 p2=vec3(a1.xy,h.z); 
+            vec3 p3=vec3(a1.zw,h.w);
+            vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+            p0*=norm.x; 
+            p1*=norm.y; 
+            p2*=norm.z; 
+            p3*=norm.w;
+            vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); 
+            m=m*m;
+            return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+        }
+
+        mat2 rot(float a) {
+            float s = sin(a); 
+            float c = cos(a); 
+            return mat2(c, -s, s, c);
+        }
+        
+        void main() {
+            vec2 FC = vUv * resolution.xy; 
+            vec2 r = resolution;
+            float t = time * 0.5; 
+            vec4 o = vec4(0.0);
+            
+            vec2 uv = (FC * 2.0 - r.xy) / r.y; 
+            vec3 rayDir = normalize(vec3(uv, 1.0));
+
+            for(float i = 0.0; i < 18.0; i++) { 
+                float z = i * 0.55 + 0.1; 
+                vec3 p = z * rayDir;
+                vec2 mouseOffset = (mouse - 0.5) * 0.8; 
+                
+                p.xz *= rot(t * 0.12 + mouseOffset.x); 
+                p.yz *= rot(t * 0.09 + mouseOffset.y);
+                vec3 a = p;
+                
+                float d;
+                for(d = 1.0; d < 3.5; d += 1.0) { 
+                    float n = snoise(a * 0.5 + t * 0.1) * 0.1; 
+                    a -= sin(a * d + t * (1.0 + n) + i*0.1).yzx / (d * (0.8 + n * 0.2));
+                }
+                
+                vec3 q = abs(a);
+                float mx = max(max(q.x, q.y), q.z);
+                float s = a.z + a.y - t;
+                
+                d = abs(1.9 - mx) + abs(cos(s)) / 7.5; 
+                float z_col = z + d;
+                vec4 colorPhase = vec4(0.0, 2.0 + mouse.y * 2.0, 4.0 - mouse.y * 2.0, 0.0); 
+                o += (cos(s - z_col + colorPhase) + 1.0) / (d*0.55 + 0.015); 
+            }
+            
+            o = o / 18.0; 
+            o = o / (1.0 + o);
+            o = smoothstep(0.12, 0.88, o); 
+            
+            gl_FragColor = o;
+            gl_FragColor.a = 1.0; 
+        }
+    </script>
+
+    <!-- Solaris Core Shaders -->
+    <script id="solarisVertexShader" type="x-shader/x-vertex">
+        uniform float time;
+        uniform float psdNormalized;
+        varying vec3 vNormal;
+        varying float vNoise;
+        
+        vec3 mod289(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
+        vec4 mod289(vec4 x){return x - floor(x*(1.0/289.0))*289.0;}
+        vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+        vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
+        
+        float snoise(vec3 v){ 
+            const vec2 C=vec2(1.0/6.0,1.0/3.0); 
+            const vec4 D=vec4(0.0,0.5,1.0,2.0); 
+            vec3 i=floor(v+dot(v,C.yyy)); 
+            vec3 x0=v-i+dot(i,C.xxx); 
+            vec3 g=step(x0.yzx,x0.xyz); 
+            vec3 l=1.0-g; 
+            vec3 i1=min(g.xyz,l.zxy); 
+            vec3 i2=max(g.xyz,l.zxy); 
+            vec3 x1=x0-i1+C.xxx; 
+            vec3 x2=x0-i2+C.yyy; 
+            vec3 x3=x0-D.yyy; 
+            i=mod289(i); 
+            vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0)); 
+            float n_=0.142857142857; 
+            vec3 ns=n_*D.wyz-D.xzx; 
+            vec4 j=p-49.0*floor(p*ns.z*ns.z); 
+            vec4 x_=floor(j*ns.z); 
+            vec4 y_=floor(j-7.0*x_); 
+            vec4 x=x_*ns.x+ns.yyyy; 
+            vec4 y=y_*ns.x+ns.yyyy; 
+            vec4 h=1.0-abs(x)-abs(y); 
+            vec4 b0=vec4(x.xy,y.xy); 
+            vec4 b1=vec4(x.zw,y.zw); 
+            vec4 s0=floor(b0)*2.0+1.0; 
+            vec4 s1=floor(b1)*2.0+1.0; 
+            vec4 sh=-step(h,vec4(0.0)); 
+            vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; 
+            vec4 a1=b1.xzyw+s1.xzyw*sh.zzww; 
+            vec3 p0=vec3(a0.xy,h.x); 
+            vec3 p1=vec3(a0.zw,h.y); 
+            vec3 p2=vec3(a1.xy,h.z); 
+            vec3 p3=vec3(a1.zw,h.w); 
+            vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3))); 
+            p0*=norm.x; 
+            p1*=norm.y; 
+            p2*=norm.z; 
+            p3*=norm.w; 
+            vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); 
+            m=m*m; 
+            return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3))); 
+        }
+        
+        void main() {
+            vNormal = normalize(normal);
+            float pulse = 0.9 + 0.1 * sin(time * 3.0 + position.y);
+            float soundPulse = 1.0 + psdNormalized * 0.4;
+            vNoise = snoise(normal * (4.0 + psdNormalized * 6.0) + time * 0.6);
+            vec3 displacedPosition = position * pulse * soundPulse * (1.0 + vNoise * 0.1);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPosition, 1.0);
+        }
+    </script>
+    
+    <script id="solarisFragmentShader" type="x-shader/x-fragment">
+        uniform float psdNormalized;
+        uniform vec3 baseColor;
+        varying vec3 vNormal;
+        varying float vNoise;
+        
+        void main() {
+            float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
+            float soundGlow = 0.6 + psdNormalized * 1.8;
+            gl_FragColor = vec4(baseColor * (intensity * 1.5 + vNoise * 0.6 + 0.4) * soundGlow, 1.0);
+        }
+    </script>
+
+    <!-- Main JavaScript -->
+    <script>
+        // ===== CONSTANTS =====
+        const PHI = 1.61803398875;
+        const GOLDEN_ANGLE = Math.PI * (3.0 - Math.sqrt(5.0));
+        const G_CONST_PHYS = 6.67430e-11;
+        const C_LIGHT = 3.0e8;
+        const H_PLANCK = 6.626e-34;
+        const K_BOLTZMANN = 1.381e-23;
+        const E_0 = 1.0e3;
+        
+        const K_HARMONIC = 0.01;
+        const SOFTENING = 100;
+        const SIGMA_LAMBDA = 1.0;
+        const SIGMA_PSD = 80.0;
+        const GALAXY_RADIUS = 2000;
+        const PARTICLE_MASS = 1.0;
+        const SWIRL_AXIS = new THREE.Vector3(0, 1, 0);
+        const MAX_TRAIL_SEGMENTS = 10000;
+        const CYMATIC_SPAWN_COUNT = 100;
+        const CYMATIC_RADIUS_MIN = 50;
+        const CYMATIC_RADIUS_MAX = 500;
+        
+        // ===== GLOBAL STATE =====
+        let G_CONST = 3000;
+        let SWIRL_CONST = 0.3;
+        let DAMPING = 0.02;
+        let LAMBDA_CONST = 3.0;
+        let SIGMA_FINAL = 0;
+        let BLOOM_STRENGTH = 1.0;
+        let REPLICATION_THRESHOLD = 50;
+        
+        let scene, camera, renderer, controls, clock;
+        let composer, bloomPass;
+        let points, attractors = [], attractorMeshes;
+        let particleCount = 0;
+        let backgroundMesh, backgroundMaterial;
+        let solarisCore, solarisCoreGroup;
+        
+        let positions, velocities, speeds, internalStates, internalAmplitudes, energies;
+        let prevPositions;
+        
+        let trailGroup, trailGeometry, trailMaterial, trailLines;
+        let trailPositions, trailColors;
+        let trailSegmentCount = 0;
+        
+        // Audio
+        let audioContext = null;
+        let analyser = null;
+        let micOn = false;
+        let psdNormalized = 0.0;
+        let dominantFrequencyNorm = 0.0;
+        let dominantFrequencyHz = 0.0;
+        let rmsEnergy = 0.0;
+        let spectralCentroid = 0.0;
+        let psiValue = 0.0;
+        let fftDataArray = null;
+        let harmonics = [];
+        
+        // Token System
+        let tokenGenerator = null;
+        let tokenDatabase = null;
+        let tokenStream = [];
+        let maxTokenStreamDisplay = 20;
+        
+        // Neural Network
+        let neuralModel = null;
+        let predictionCount = 0;
+        let avgLoss = 0;
+        let lossHistory = [];
+        
+        // A-LMI
+        let almiMemory = [0, 0, 0, 0];
+        let almiTotalTokens = 0;
+        let almiScanTimer = 0;
+        let almiActionTimer = 0;
+        const ALMI_SCAN_INTERVAL = 3.0;
+        const ALMI_ACTION_INTERVAL = 10.0;
+        const ALMI_SCAN_RADIUS = 300.0;
+        let lightTokenBeams;
+        
+        // Voice Recognition
+        let recognition = null;
+        let voiceActive = false;
+        
+        // Performance
+        let totalEnergy = 0;
+        let avgEntropy = 0;
+        
+        // ===== TOKEN GENERATOR CLASS =====
+        class TokenGenerator {
+            constructor() {
+                this.tokens = [];
+                this.tokenCount = 0;
+                this.replicationCount = 0;
+                this.lastTokenTime = Date.now();
+                this.lastTokenCount = 0;
+                this.tokenGenerationRate = 0;
+            }
+            
+            generateUUID() {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+            
+            generateAudioSeed(frequencyData, rmsEnergy) {
+                let seedValue = 0;
+                for (let i = 0; i < frequencyData.length; i++) {
+                    const freq = frequencyData[i].frequency || 0;
+                    const mag = frequencyData[i].magnitude || 0;
+                    seedValue += freq * mag * (i + 1);
+                }
+                seedValue += rmsEnergy * 10000;
+                return Math.floor(seedValue) % 1000000;
+            }
+            
+            frequencyToColor(frequency) {
+                const hue = (frequency / 20000) * 360;
+                return `hsl(${Math.floor(hue)}, 100%, 50%)`;
+            }
+            
+            calculatePsi(frequencyData, rmsEnergy, spectralCentroid) {
+                const mass = 1;
+                const energyComponent = (PHI * mass * C_LIGHT * C_LIGHT * rmsEnergy) / (C_LIGHT * C_LIGHT);
+                const lambdaComponent = Math.log(spectralCentroid + 1) / 100;
+                const frequencyIntegral = frequencyData.reduce((sum, f) => 
+                    sum + (f.frequency || 0) * (f.magnitude || 0), 0) / 1000;
+                const omegaComponent = frequencyData.length * rmsEnergy * PHI;
+                
+                return energyComponent + PHI + lambdaComponent + frequencyIntegral + omegaComponent;
+            }
+            
+            generateAudioFrameToken(frequencyData, rmsEnergy, spectralCentroid, harmonics) {
+                const token = {
+                    id: this.generateUUID(),
+                    type: 'audio_frame',
+                    timestamp: Date.now(),
+                    frequency_data: frequencyData,
+                    rms_energy: rmsEnergy,
+                    spectral_centroid: spectralCentroid,
+                    psi: this.calculatePsi(frequencyData, rmsEnergy, spectralCentroid),
+                    harmonics: harmonics,
+                    seed: this.generateAudioSeed(frequencyData, rmsEnergy),
+                    color: this.frequencyToColor(spectralCentroid)
+                };
+                
+                this.tokens.push(token);
+                this.tokenCount++;
+                this.updateTokenRate();
+                this.displayToken(token);
+                this.saveTokenToDatabase(token);
+                
+                return token;
+            }
+            
+            generateParticleToken(particleData, audioContext) {
+                const token = {
+                    id: this.generateUUID(),
+                    type: 'particle',
+                    timestamp: Date.now(),
+                    position: particleData.position,
+                    velocity: particleData.velocity,
+                    energy: particleData.energy,
+                    internal_state: particleData.internalState,
+                    audio_seed: audioContext ? this.generateAudioSeed(audioContext.frequencyData, audioContext.rmsEnergy) : 0,
+                    psi: audioContext ? this.calculatePsi(audioContext.frequencyData, audioContext.rmsEnergy, audioContext.spectralCentroid) : 0
+                };
+                
+                this.tokens.push(token);
+                this.tokenCount++;
+                this.updateTokenRate();
+                this.displayToken(token);
+                this.saveTokenToDatabase(token);
+                
+                return token;
+            }
+            
+            generateReplicationToken(parentToken, childParticles) {
+                const token = {
+                    id: this.generateUUID(),
+                    type: 'replication',
+                    timestamp: Date.now(),
+                    parent_id: parentToken.id,
+                    child_count: childParticles.length,
+                    child_particles: childParticles,
+                    generation: (parentToken.generation || 0) + 1
+                };
+                
+                this.tokens.push(token);
+                this.tokenCount++;
+                this.replicationCount++;
+                this.updateTokenRate();
+                this.displayToken(token);
+                this.saveTokenToDatabase(token);
+                
+                return token;
+            }
+            
+            updateTokenRate() {
+                const now = Date.now();
+                const deltaTime = (now - this.lastTokenTime) / 1000;
+                if (deltaTime > 0) {
+                    const deltaTokens = this.tokenCount - this.lastTokenCount;
+                    this.tokenGenerationRate = deltaTokens / deltaTime;
+                    this.lastTokenTime = now;
+                    this.lastTokenCount = this.tokenCount;
+                }
+            }
+            
+            displayToken(token) {
+                const streamDiv = document.getElementById('tokenStream');
+                const tokenDiv = document.createElement('div');
+                tokenDiv.className = 'text-xs mb-1 border-l-2 border-green-500 pl-2';
+                
+                let content = `[${token.type.toUpperCase()}] `;
+                if (token.type === 'audio_frame') {
+                    content += `ψ=${token.psi.toFixed(2)} RMS=${token.rms_energy.toFixed(3)} SC=${Math.floor(token.spectral_centroid)}Hz`;
+                } else if (token.type === 'particle') {
+                    content += `E=${token.energy.toFixed(2)} Pos=[${token.position.x.toFixed(1)},${token.position.y.toFixed(1)},${token.position.z.toFixed(1)}]`;
+                } else if (token.type === 'replication') {
+                    content += `Gen=${token.generation} Children=${token.child_count}`;
+                }
+                
+                tokenDiv.textContent = content;
+                streamDiv.insertBefore(tokenDiv, streamDiv.firstChild);
+                
+                // Keep only last N tokens
+                while (streamDiv.children.length > maxTokenStreamDisplay) {
+                    streamDiv.removeChild(streamDiv.lastChild);
+                }
+            }
+            
+            async saveTokenToDatabase(token) {
+                if (tokenDatabase) {
+                    try {
+                        await tokenDatabase.saveToken(token);
+                    } catch (e) {
+                        console.error('Failed to save token to database:', e);
+                    }
+                }
+            }
+            
+            clearTokens() {
+                this.tokens = [];
+                this.tokenCount = 0;
+                this.replicationCount = 0;
+                document.getElementById('tokenStream').innerHTML = '<div class="text-gray-500 text-center">Tokens cleared</div>';
+            }
+            
+            exportTokens() {
+                const dataStr = JSON.stringify(this.tokens, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `cosmic_tokens_${Date.now()}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+        
+        // ===== TOKEN DATABASE (IndexedDB) =====
+        class TokenDatabase {
+            constructor() {
+                this.db = null;
+                this.dbName = 'CosmicSynapseDB';
+                this.version = 1;
+            }
+            
+            async init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, this.version);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => {
+                        this.db = request.result;
+                        document.getElementById('dbStatus').textContent = 'Connected';
+                        document.getElementById('dbStatus').className = 'text-green-400';
+                        resolve();
+                    };
+                    
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains('tokens')) {
+                            const objectStore = db.createObjectStore('tokens', { keyPath: 'id' });
+                            objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+                            objectStore.createIndex('type', 'type', { unique: false });
+                        }
+                    };
+                });
+            }
+            
+            async saveToken(token) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['tokens'], 'readwrite');
+                    const objectStore = transaction.objectStore('tokens');
+                    const request = objectStore.add(token);
+                    
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async getTokens(limit = 100) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['tokens'], 'readonly');
+                    const objectStore = transaction.objectStore('tokens');
+                    const request = objectStore.getAll(null, limit);
+                    
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            
+            async clearTokens() {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['tokens'], 'readwrite');
+                    const objectStore = transaction.objectStore('tokens');
+                    const request = objectStore.clear();
+                    
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+        }
+        
+        // ===== NEURAL NETWORK (TensorFlow.js) =====
+        async function createNeuralNetwork() {
+            const model = tf.sequential({
+                layers: [
+                    tf.layers.dense({ inputShape: [9], units: 64, activation: 'relu' }),
+                    tf.layers.dropout({ rate: 0.2 }),
+                    tf.layers.dense({ units: 128, activation: 'relu' }),
+                    tf.layers.dropout({ rate: 0.2 }),
+                    tf.layers.dense({ units: 64, activation: 'relu' }),
+                    tf.layers.dense({ units: 3, activation: 'linear' })
+                ]
+            });
+            
+            model.compile({
+                optimizer: tf.train.adam(0.001),
+                loss: 'meanSquaredError',
+                metrics: ['mae']
+            });
+            
+            document.getElementById('neuralStatus').textContent = 'Initialized';
+            document.getElementById('neuralStatus').className = 'text-green-400';
+            
+            return model;
+        }
+        
+        async function predictParticleTrajectory(particleData, attractorData) {
+            if (!neuralModel) return null;
+            
+            try {
+                const input = tf.tensor2d([[
+                    particleData.position.x / 1000,
+                    particleData.position.y / 1000,
+                    particleData.position.z / 1000,
+                    particleData.velocity.x / 10,
+                    particleData.velocity.y / 10,
+                    particleData.velocity.z / 10,
+                    attractorData.position.x / 1000,
+                    attractorData.position.y / 1000,
+                    attractorData.position.z / 1000
+                ]]);
+                
+                const prediction = neuralModel.predict(input);
+                const result = await prediction.array();
+                
+                input.dispose();
+                prediction.dispose();
+                
+                predictionCount++;
+                
+                return {
+                    x: result[0][0] * 1000,
+                    y: result[0][1] * 1000,
+                    z: result[0][2] * 1000
+                };
+            } catch (e) {
+                console.error('Neural prediction error:', e);
+                return null;
+            }
+        }
+        
+        // ===== 3D INITIALIZATION =====
+        function init3D() {
+            const canvas = document.getElementById('simulationCanvas');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.001);
+            clock = new THREE.Clock();
+            
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 10000);
+            camera.position.set(0, 400, 900);
+            camera.lookAt(scene.position);
+            
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            
+            // Background
+            backgroundMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    resolution: { value: new THREE.Vector2(width, height) },
+                    mouse: { value: new THREE.Vector2(0.5, 0.5) }
+                },
+                vertexShader: document.getElementById('backgroundVertexShader').textContent,
+                fragmentShader: document.getElementById('backgroundFragmentShader').textContent,
+                depthWrite: false,
+                depthTest: false
+            });
+            const backgroundGeometry = new THREE.PlaneGeometry(2, 2);
+            backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+            backgroundMesh.renderOrder = -1;
+            scene.add(backgroundMesh);
+            
+            // Post-processing
+            const renderPass = new THREE.RenderPass(scene, camera);
+            bloomPass = new THREE.UnrealBloomPass(
+                new THREE.Vector2(width, height),
+                BLOOM_STRENGTH, 0.2, 0.1
+            );
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(renderPass);
+            composer.addPass(bloomPass);
+            
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 10;
+            controls.maxDistance = 5000;
+            
+            attractorMeshes = new THREE.Group();
+            scene.add(attractorMeshes);
+            
+            lightTokenBeams = new THREE.Group();
+            scene.add(lightTokenBeams);
+            
+            trailGroup = new THREE.Group();
+            scene.add(trailGroup);
+            initTrails();
+            
+            // Solaris Core
+            solarisCoreGroup = new THREE.Group();
+            scene.add(solarisCoreGroup);
+            initSolarisCore();
+            
+            // Add central attractor
+            addAttractor(new THREE.Vector3(0, 0, 0), 1000, true);
+            
+            // Initial particles
+            addParticles(10000);
+        }
+        
+        function initTrails() {
+            trailPositions = new Float32Array(MAX_TRAIL_SEGMENTS * 2 * 3);
+            trailColors = new Float32Array(MAX_TRAIL_SEGMENTS * 2 * 3);
+            
+            trailGeometry = new THREE.BufferGeometry();
+            trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+            trailGeometry.setAttribute('color', new THREE.BufferAttribute(trailColors, 3));
+            
+            trailMaterial = new THREE.LineBasicMaterial({ 
+                vertexColors: true, 
+                transparent: true, 
+                opacity: 0.5 
+            });
+            
+            trailLines = new THREE.LineSegments(trailGeometry, trailMaterial);
+            trailGroup.add(trailLines);
+            trailGeometry.setDrawRange(0, 0);
+        }
+        
+        function initSolarisCore() {
+            const coreGeom = new THREE.IcosahedronGeometry(15, 5);
+            const coreMat = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0.0 },
+                    psdNormalized: { value: 0.0 },
+                    baseColor: { value: new THREE.Color(0xffffff) }
+                },
+                vertexShader: document.getElementById('solarisVertexShader').textContent,
+                fragmentShader: document.getElementById('solarisFragmentShader').textContent,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            
+            solarisCore = new THREE.Mesh(coreGeom, coreMat);
+            solarisCore.position.set(0, 0, 0);
+            solarisCoreGroup.add(solarisCore);
+        }
+        
+        // ===== PARTICLE MANAGEMENT =====
+        function addAttractor(position, mass, isCentral = false) {
+            attractors.push({ pos: position, mass: mass, isCentral: isCentral });
+            
+            if (!isCentral) {
+                const geometry = new THREE.SphereGeometry(7, 32, 32);
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0xff00ff,
+                    wireframe: true,
+                    emissive: 0xff00ff,
+                    emissiveIntensity: 1.0
+                });
+                const attractorMesh = new THREE.Mesh(geometry, material);
+                attractorMesh.position.copy(position);
+                attractorMeshes.add(attractorMesh);
+            }
+        }
+        
+        function addParticles(count, spawnConfig = null) {
+            const oldParticleCount = particleCount;
+            particleCount += count;
+            
+            const newPositions = new Float32Array(particleCount * 3);
+            const newVelocities = new Float32Array(particleCount * 3);
+            const newSpeeds = new Float32Array(particleCount);
+            const newInternalStates = new Float32Array(particleCount);
+            const newInternalAmplitudes = new Float32Array(particleCount);
+            const newEnergies = new Float32Array(particleCount);
+            const newPrevPositions = new Float32Array(particleCount * 3);
+            
+            if (positions) newPositions.set(positions);
+            if (velocities) newVelocities.set(velocities);
+            if (speeds) newSpeeds.set(speeds);
+            if (internalStates) newInternalStates.set(internalStates);
+            if (internalAmplitudes) newInternalAmplitudes.set(internalAmplitudes);
+            if (energies) newEnergies.set(energies);
+            if (prevPositions) newPrevPositions.set(prevPositions);
+            
+            positions = newPositions;
+            velocities = newVelocities;
+            speeds = newSpeeds;
+            internalStates = newInternalStates;
+            internalAmplitudes = newInternalAmplitudes;
+            energies = newEnergies;
+            prevPositions = newPrevPositions;
+            
+            for (let i = oldParticleCount; i < particleCount; i++) {
+                let stateValue, amplitudeValue, px, py, pz;
+                
+                if (spawnConfig) {
+                    // Voice-driven spawn
+                    stateValue = spawnConfig.internalState;
+                    amplitudeValue = spawnConfig.internalAmplitude;
+                    const theta = Math.random() * Math.PI * 2;
+                    px = Math.cos(theta) * spawnConfig.radius;
+                    py = 0;
+                    pz = Math.sin(theta) * spawnConfig.radius;
+                    velocities[i * 3] = (Math.random() - 0.5) * 2;
+                    velocities[i * 3 + 1] = (Math.random() - 0.5) * 5;
+                    velocities[i * 3 + 2] = (Math.random() - 0.5) * 2;
+                } else {
+                    // Default spawn
+                    stateValue = Math.random();
+                    amplitudeValue = 0.5 + Math.random() * 0.5;
+                    const r = Math.random() * GALAXY_RADIUS * 0.5 + 100;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    px = Math.sin(phi) * Math.cos(theta) * r;
+                    py = Math.cos(phi) * r;
+                    pz = Math.sin(phi) * Math.sin(theta) * r;
+                    velocities[i * 3] = (Math.random() - 0.5) * 2;
+                    velocities[i * 3 + 1] = (Math.random() - 0.5) * 2;
+                    velocities[i * 3 + 2] = (Math.random() - 0.5) * 2;
+                }
+                
+                positions[i * 3] = px;
+                positions[i * 3 + 1] = py;
+                positions[i * 3 + 2] = pz;
+                prevPositions[i * 3] = px;
+                prevPositions[i * 3 + 1] = py;
+                prevPositions[i * 3 + 2] = pz;
+                internalStates[i] = stateValue;
+                internalAmplitudes[i] = amplitudeValue;
+                energies[i] = Math.random() * 0.5;
+                speeds[i] = Math.sqrt(
+                    velocities[i*3]**2 + 
+                    velocities[i*3+1]**2 + 
+                    velocities[i*3+2]**2
+                );
+                
+                // Generate particle token
+                if (tokenGenerator) {
+                    tokenGenerator.generateParticleToken({
+                        position: { x: px, y: py, z: pz },
+                        velocity: { 
+                            x: velocities[i*3], 
+                            y: velocities[i*3+1], 
+                            z: velocities[i*3+2] 
+                        },
+                        energy: energies[i],
+                        internalState: stateValue
+                    }, micOn ? {
+                        frequencyData: getFrequencyData(),
+                        rmsEnergy: rmsEnergy,
+                        spectralCentroid: spectralCentroid
+                    } : null);
+                }
+            }
+            
+            setupParticlesGeometry();
+        }
+        
+        function setupParticlesGeometry() {
+            if (points) {
+                scene.remove(points);
+                points.geometry.dispose();
+                points.material.dispose();
+            }
+            if (particleCount === 0) return;
+            
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
+            geometry.setAttribute('speed', new THREE.BufferAttribute(speeds, 1));
+            geometry.setAttribute('internalState', new THREE.BufferAttribute(internalStates, 1));
+            geometry.setAttribute('internalAmplitude', new THREE.BufferAttribute(internalAmplitudes, 1));
+            geometry.setAttribute('energy', new THREE.BufferAttribute(energies, 1));
+            
+            const material = new THREE.ShaderMaterial({
+                uniforms: {},
+                vertexShader: document.getElementById('vertexShader').textContent,
+                fragmentShader: document.getElementById('fragmentShader').textContent,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                depthWrite: false
+            });
+            
+            points = new THREE.Points(geometry, material);
+            scene.add(points);
+        }
+        
+        // ===== PHYSICS UPDATE =====
+        function updatePhysics(dt) {
+            if (particleCount === 0 || !points || !points.geometry) return;
+            
+            const posAttr = points.geometry.getAttribute('position');
+            const velAttr = points.geometry.getAttribute('velocity');
+            const speedAttr = points.geometry.getAttribute('speed');
+            const internalStateAttr = points.geometry.getAttribute('internalState');
+            const internalAmpAttr = points.geometry.getAttribute('internalAmplitude');
+            const energyAttr = points.geometry.getAttribute('energy');
+            
+            const trailPosAttr = trailGeometry.getAttribute('position');
+            const trailColorAttr = trailGeometry.getAttribute('color');
+            trailSegmentCount = 0;
+            
+            const time = clock.elapsedTime;
+            totalEnergy = 0;
+            avgEntropy = 0;
+            
+            const particlePos = new THREE.Vector3();
+            const prevParticlePos = new THREE.Vector3();
+            const particleVel = new THREE.Vector3();
+            const force = new THREE.Vector3();
+            const f_harmonic = new THREE.Vector3();
+            const f_grav = new THREE.Vector3();
+            const f_swirl = new THREE.Vector3();
+            const f_damp = new THREE.Vector3();
+            const f_noise = new THREE.Vector3();
+            const f_flutter = new THREE.Vector3();
+            const accel = new THREE.Vector3();
+            
+            for (let i = 0; i < particleCount; i++) {
+                if (internalStates[i] === -1.0) continue;
+                
+                prevParticlePos.fromArray(posAttr.array, i * 3);
+                particlePos.fromArray(posAttr.array, i * 3);
+                particleVel.fromArray(velAttr.array, i * 3);
+                
+                const pOmega = internalStateAttr.getX(i) * 20.0;
+                const pEc = internalAmpAttr.getX(i);
+                const pEnergy = energyAttr.getX(i);
+                
+                force.set(0, 0, 0);
+                
+                // Internal vibration
+                const state_i = (pEc * 2.0 * Math.sin(time * pOmega)) + 
+                              (SIGMA_FINAL * 0.15 * Math.cos(time * pOmega));
+                f_flutter.set(0, state_i, 0);
+                force.add(f_flutter);
+                
+                // Attractor forces
+                for (const a of attractors) {
+                    f_harmonic.subVectors(particlePos, a.pos);
+                    const r_sq = f_harmonic.lengthSq();
+                    const r_sq_eps = r_sq + SOFTENING;
+                    const r = Math.sqrt(r_sq_eps);
+                    const r_cubed = r_sq_eps * r;
+                    
+                    const f_grav_mag = -(G_CONST * a.mass * PARTICLE_MASS) / r_cubed;
+                    f_grav.copy(f_harmonic).multiplyScalar(f_grav_mag);
+                    f_harmonic.multiplyScalar(-K_HARMONIC);
+                    f_swirl.crossVectors(f_harmonic, SWIRL_AXIS).multiplyScalar(SWIRL_CONST * (a.mass / 1000));
+                    
+                    force.add(f_harmonic).add(f_grav).add(f_swirl);
+                }
+                
+                // Damping
+                f_damp.copy(particleVel).multiplyScalar(-DAMPING);
+                force.add(f_damp);
+                
+                // Noise
+                f_noise.set(
+                    Math.random() - 0.5,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5
+                ).multiplyScalar(SIGMA_FINAL * 0.5);
+                force.add(f_noise);
+                
+                // Update velocity and position
+                accel.copy(force).divideScalar(PARTICLE_MASS);
+                particleVel.add(accel.multiplyScalar(dt));
+                particlePos.add(particleVel.clone().multiplyScalar(dt));
+                
+                const currentSpeed = particleVel.length();
+                speedAttr.setX(i, currentSpeed);
+                
+                // Energy accumulation
+                const energyGain = currentSpeed * dt * 0.01;
+                const newEnergy = Math.min(pEnergy + energyGain, 100);
+                energyAttr.setX(i, newEnergy);
+                
+                totalEnergy += newEnergy;
+                avgEntropy += Math.log(newEnergy + 1);
+                
+                // Particle replication
+                if (newEnergy > REPLICATION_THRESHOLD && Math.random() < 0.01) {
+                    replicateParticle(i, particlePos, particleVel);
+                }
+                
+                // Trail
+                if (trailSegmentCount < MAX_TRAIL_SEGMENTS) {
+                    const trailIndex = trailSegmentCount * 2 * 3;
+                    trailPosAttr.setXYZ(trailIndex / 3, prevParticlePos.x, prevParticlePos.y, prevParticlePos.z);
+                    trailPosAttr.setXYZ(trailIndex / 3 + 1, particlePos.x, particlePos.y, particlePos.z);
+                    
+                    const hue = 0.66 + internalStateAttr.getX(i) * 0.17;
+                    const color = hslToRgb(hue, 1.0, 0.5);
+                    
+                    trailColorAttr.setXYZ(trailIndex / 3, color.r, color.g, color.b);
+                    trailColorAttr.setXYZ(trailIndex / 3 + 1, color.r, color.g, color.b);
+                    trailSegmentCount++;
+                }
+                
+                posAttr.setXYZ(i, particlePos.x, particlePos.y, particlePos.z);
+                velAttr.setXYZ(i, particleVel.x, particleVel.y, particleVel.z);
+                
+                // Recycle escaped particles
+                if (particlePos.lengthSq() > GALAXY_RADIUS * GALAXY_RADIUS) {
+                    resetParticle(i);
+                }
+            }
+            
+            avgEntropy = avgEntropy / Math.max(particleCount, 1);
+            
+            posAttr.needsUpdate = true;
+            velAttr.needsUpdate = true;
+            speedAttr.needsUpdate = true;
+            energyAttr.needsUpdate = true;
+            trailPosAttr.needsUpdate = true;
+            trailColorAttr.needsUpdate = true;
+            trailGeometry.setDrawRange(0, trailSegmentCount * 2);
+        }
+        
+        function replicateParticle(parentIndex, position, velocity) {
+            const childCount = Math.floor(Math.random() * 3) + 2;
+            const children = [];
+            
+            for (let j = 0; j < childCount; j++) {
+                const angle = (j / childCount) * Math.PI * 2;
+                const radius = 20 + Math.random() * 30;
+                const spawnConfig = {
+                    internalState: internalStates[parentIndex],
+                    internalAmplitude: internalAmplitudes[parentIndex] * 0.8,
+                    radius: radius
+                };
+                
+                children.push({
+                    angle: angle,
+                    radius: radius,
+                    state: spawnConfig.internalState
+                });
+            }
+            
+            addParticles(childCount, {
+                internalState: internalStates[parentIndex],
+                internalAmplitude: internalAmplitudes[parentIndex] * 0.8,
+                radius: 30
+            });
+            
+            // Reset parent energy
+            if (points && points.geometry) {
+                const energyAttr = points.geometry.getAttribute('energy');
+                if (energyAttr) {
+                    energyAttr.setX(parentIndex, 0);
+                    energyAttr.needsUpdate = true;
+                }
+            }
+            
+            // Generate replication token
+            if (tokenGenerator) {
+                const parentToken = {
+                    id: tokenGenerator.generateUUID(),
+                    generation: 0
+                };
+                tokenGenerator.generateReplicationToken(parentToken, children);
+            }
+        }
+        
+        function resetParticle(i) {
+            if (i >= particleCount) return;
+            
+            const y = 1 - (i / (particleCount - 1)) * 2;
+            const radius = Math.sqrt(1 - y * y);
+            const theta = GOLDEN_ANGLE * i;
+            const spawnRadius = 20.0;
+            
+            positions[i*3] = Math.cos(theta) * radius * spawnRadius;
+            positions[i*3+1] = y * spawnRadius;
+            positions[i*3+2] = Math.sin(theta) * radius * spawnRadius;
+            
+            velocities[i*3] = (Math.random() - 0.5) * 0.1;
+            velocities[i*3+1] = (Math.random() - 0.5) * 0.1;
+            velocities[i*3+2] = (Math.random() - 0.5) * 0.1;
+            
+            speeds[i] = 0.1;
+            internalStates[i] = Math.random();
+            internalAmplitudes[i] = 0.5 + Math.random() * 0.5;
+            energies[i] = 0;
+            
+            if (points && points.geometry) {
+                const posAttr = points.geometry.getAttribute('position');
+                const velAttr = points.geometry.getAttribute('velocity');
+                const speedAttr = points.geometry.getAttribute('speed');
+                const internalStateAttr = points.geometry.getAttribute('internalState');
+                const internalAmpAttr = points.geometry.getAttribute('internalAmplitude');
+                const energyAttr = points.geometry.getAttribute('energy');
+                
+                if (posAttr) posAttr.needsUpdate = true;
+                if (velAttr) velAttr.needsUpdate = true;
+                if (speedAttr) speedAttr.needsUpdate = true;
+                if (internalStateAttr) internalStateAttr.needsUpdate = true;
+                if (internalAmpAttr) internalAmpAttr.needsUpdate = true;
+                if (energyAttr) energyAttr.needsUpdate = true;
+            }
+        }
+        
+        // ===== AUDIO ENGINE =====
+        function initAudio() {
+            if (micOn) {
+                if (audioContext) audioContext.close();
+                audioContext = null;
+                micOn = false;
+                analyser = null;
+                fftDataArray = null;
+                document.getElementById('micStatus').textContent = "Mic OFF - Baseline Chaos";
+                document.getElementById('toggleMicButton').classList.remove('bg-red-600', 'hover:bg-red-500');
+                document.getElementById('toggleMicButton').classList.add('bg-cyan-500', 'hover:bg-cyan-400');
+                psdNormalized = 0;
+                dominantFrequencyNorm = 0;
+                dominantFrequencyHz = 0;
+                rmsEnergy = 0;
+                spectralCentroid = 0;
+            } else {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        micOn = true;
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        analyser = audioContext.createAnalyser();
+                        const source = audioContext.createMediaStreamSource(stream);
+                        source.connect(analyser);
+                        analyser.fftSize = 2048;
+                        analyser.smoothingTimeConstant = 0.3;
+                        fftDataArray = new Float32Array(analyser.frequencyBinCount);
+                        
+                        document.getElementById('micStatus').textContent = "Mic ON - Creating Universe";
+                        document.getElementById('toggleMicButton').classList.add('bg-red-600', 'hover:bg-red-500');
+                        document.getElementById('toggleMicButton').classList.remove('bg-cyan-500', 'hover:bg-cyan-400');
+                    })
+                    .catch(err => {
+                        console.error('Microphone access denied:', err);
+                        document.getElementById('micStatus').textContent = "Mic Denied - Baseline Chaos";
+                        micOn = false;
+                    });
+            }
+        }
+        
+        function updateVibraLight() {
+            if (micOn && analyser) {
+                const bufferLength = analyser.frequencyBinCount;
+                if (!fftDataArray || fftDataArray.length !== bufferLength) {
+                    fftDataArray = new Float32Array(bufferLength);
+                }
+                
+                analyser.getFloatFrequencyData(fftDataArray);
+                
+                // Calculate metrics
+                let sum = 0;
+                let maxVal = -Infinity;
+                let maxIndex = 0;
+                let weightedSum = 0;
+                let magnitudeSum = 0;
+                
+                const freqData = [];
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    const db = fftDataArray[i];
+                    if (db > maxVal && isFinite(db)) {
+                        maxVal = db;
+                        maxIndex = i;
+                    }
+                    const clamped_db = Math.max(0, (db + 100) / 100);
+                    sum += clamped_db * clamped_db;
+                    
+                    const frequency = (i / bufferLength) * (audioContext.sampleRate / 2);
+                    const magnitude = Math.pow(10, db / 20);
+                    
+                    if (isFinite(magnitude) && magnitude > 0) {
+                        weightedSum += frequency * magnitude;
+                        magnitudeSum += magnitude;
+                    }
+                    
+                    if (i % 10 === 0 && magnitude > 0.001) {
+                        freqData.push({ frequency, magnitude });
+                    }
+                }
+                
+                const avgPower = bufferLength > 0 ? sum / bufferLength : 0;
+                psdNormalized = Math.min(Math.max(0, avgPower * 5), 1.0);
+                SIGMA_FINAL = SIGMA_PSD * psdNormalized;
+                
+                dominantFrequencyNorm = bufferLength > 1 ? maxIndex / (bufferLength - 1) : 0;
+                dominantFrequencyHz = maxIndex * (audioContext.sampleRate / 2) / bufferLength;
+                spectralCentroid = magnitudeSum > 0 ? weightedSum / magnitudeSum : 0;
+                rmsEnergy = Math.sqrt(avgPower);
+                
+                // Calculate φ-harmonics
+                harmonics = [];
+                for (let n = 1; n <= 5; n++) {
+                    const harmonicFreq = dominantFrequencyHz * Math.pow(PHI, n);
+                    harmonics.push(harmonicFreq);
+                }
+                
+                // Calculate Ψ
+                psiValue = tokenGenerator.calculatePsi(freqData, rmsEnergy, spectralCentroid);
+                
+                // Generate audio frame token
+                if (tokenGenerator) {
+                    tokenGenerator.generateAudioFrameToken(freqData, rmsEnergy, spectralCentroid, harmonics);
+                }
+                
+                // Cymatic particle generation
+                const baseSpawnCount = Math.floor(psdNormalized * CYMATIC_SPAWN_COUNT);
+                if (baseSpawnCount > 0) {
+                    const creationRadius = CYMATIC_RADIUS_MIN + dominantFrequencyNorm * (CYMATIC_RADIUS_MAX - CYMATIC_RADIUS_MIN);
+                    const spawnCountPerRing = Math.max(1, Math.floor(baseSpawnCount / 4));
+                    const spawnConfig = {
+                        internalState: dominantFrequencyNorm,
+                        internalAmplitude: psdNormalized
+                    };
+                    
+                    addParticles(spawnCountPerRing, { ...spawnConfig, radius: creationRadius });
+                    addParticles(spawnCountPerRing, { ...spawnConfig, radius: creationRadius / 2 });
+                    addParticles(spawnCountPerRing, { ...spawnConfig, radius: creationRadius / PHI });
+                    addParticles(spawnCountPerRing, { ...spawnConfig, radius: creationRadius * PHI });
+                }
+                
+                // Update UI
+                document.getElementById('rmsValue').textContent = rmsEnergy.toFixed(3);
+                document.getElementById('centroidValue').textContent = Math.floor(spectralCentroid) + ' Hz';
+                document.getElementById('domFreqHz').textContent = Math.floor(dominantFrequencyHz) + ' Hz';
+                document.getElementById('psiValue').textContent = psiValue.toFixed(2);
+            } else {
+                SIGMA_FINAL = SIGMA_LAMBDA * LAMBDA_CONST;
+                psdNormalized = 0;
+                document.getElementById('rmsValue').textContent = 'N/A';
+                document.getElementById('centroidValue').textContent = 'N/A';
+                document.getElementById('domFreqHz').textContent = 'N/A';
+                document.getElementById('psiValue').textContent = 'N/A';
+            }
+            
+            document.getElementById('sigmaValue').textContent = SIGMA_FINAL.toFixed(2);
+        }
+        
+        function getFrequencyData() {
+            if (!micOn || !fftDataArray) return [];
+            
+            const freqData = [];
+            const bufferLength = analyser.frequencyBinCount;
+            
+            for (let i = 0; i < bufferLength; i += 10) {
+                const db = fftDataArray[i];
+                const frequency = (i / bufferLength) * (audioContext.sampleRate / 2);
+                const magnitude = Math.pow(10, db / 20);
+                
+                if (isFinite(magnitude) && magnitude > 0.001) {
+                    freqData.push({ frequency, magnitude });
+                }
+            }
+            
+            return freqData;
+        }
+        
+        // ===== A-LMI LOGIC =====
+        function updateAlmi(dt) {
+            almiScanTimer += dt;
+            almiActionTimer += dt;
+            
+            // Update core
+            if (solarisCore) {
+                solarisCore.rotation.x += 0.001 * dt;
+                solarisCore.rotation.y += 0.003 * dt;
+                if (solarisCore.material.uniforms) {
+                    solarisCore.material.uniforms.time.value = clock.elapsedTime;
+                    solarisCore.material.uniforms.psdNormalized.value = psdNormalized;
+                }
+            }
+            
+            // Fade beams
+            for (let i = lightTokenBeams.children.length - 1; i >= 0; i--) {
+                const beam = lightTokenBeams.children[i];
+                beam.material.opacity -= 0.04 * dt;
+                if (beam.material.opacity <= 0) {
+                    beam.geometry.dispose();
+                    beam.material.dispose();
+                    lightTokenBeams.remove(beam);
+                }
+            }
+            
+            // Autonomous observation
+            if (almiScanTimer > ALMI_SCAN_INTERVAL && particleCount > 0 && positions) {
+                almiScanTimer = 0;
+                const scanIndex = Math.floor(Math.random() * particleCount);
+                
+                if (scanIndex * 3 + 2 < positions.length && scanIndex < internalStates.length) {
+                    const particlePos = new THREE.Vector3(
+                        positions[scanIndex * 3],
+                        positions[scanIndex * 3 + 1],
+                        positions[scanIndex * 3 + 2]
+                    );
+                    
+                    if (particlePos.lengthSq() < ALMI_SCAN_RADIUS * ALMI_SCAN_RADIUS) {
+                        const internalState = internalStates[scanIndex];
+                        if (internalState >= 0.0) {
+                            processLightToken(particlePos, internalState, scanIndex);
+                        }
+                    }
+                }
+            }
+            
+            // Autonomous action
+            if (almiActionTimer > ALMI_ACTION_INTERVAL) {
+                almiActionTimer = 0;
+                performAlmiAction();
+            }
+        }
+        
+        function processLightToken(particlePos, internalState, particleIndex) {
+            // Fire beam
+            const beamMat = new THREE.LineBasicMaterial({
+                color: 0xffffff,
+                linewidth: 1,
+                transparent: true,
+                opacity: 1.0
+            });
+            const beamGeom = new THREE.BufferGeometry().setFromPoints([
+                particlePos,
+                new THREE.Vector3(0, 0, 0)
+            ]);
+            const beam = new THREE.Line(beamGeom, beamMat);
+            lightTokenBeams.add(beam);
+            
+            // Update memory
+            const freqBand = Math.min(3, Math.floor(internalState * 4));
+            almiMemory[freqBand]++;
+            almiTotalTokens++;
+            updateAlmiMemoryUI();
+            
+            // Mark processed
+            if (particleIndex < internalStates.length) {
+                internalStates[particleIndex] = -1.0;
+                resetParticle(particleIndex);
+            }
+        }
+        
+        function updateAlmiMemoryUI() {
+            document.getElementById('totalTokenCount').textContent = almiTotalTokens;
+            
+            let maxTokensInBand = 1;
+            for (let i = 0; i < 4; i++) {
+                if (almiMemory[i] > maxTokensInBand) maxTokensInBand = almiMemory[i];
+            }
+            
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`freqCount_${i}`).textContent = almiMemory[i];
+                const percent = maxTokensInBand > 0 ? (almiMemory[i] / maxTokensInBand) * 100 : 0;
+                document.getElementById(`freqBar_${i}`).style.width = `${percent}%`;
+            }
+        }
+        
+        function performAlmiAction() {
+            if (almiTotalTokens === 0) {
+                document.getElementById('almiActionDisplay').textContent = "A-LMI: Observing...";
+                return;
+            }
+            
+            const lowFreqCount = almiMemory[0] + almiMemory[1];
+            const highFreqCount = almiMemory[2] + almiMemory[3];
+            const SWIRL_ADJUST_RATE = 0.01;
+            const MAX_SWIRL = 0.8;
+            const MIN_SWIRL = 0.1;
+            
+            if (lowFreqCount > highFreqCount * 1.2) {
+                SWIRL_CONST = Math.min(MAX_SWIRL, SWIRL_CONST + SWIRL_ADJUST_RATE);
+                document.getElementById('almiActionDisplay').textContent = 
+                    `A-LMI: Low freq dominant. Swirl=${SWIRL_CONST.toFixed(2)}`;
+            } else if (highFreqCount > lowFreqCount * 1.2) {
+                SWIRL_CONST = Math.max(MIN_SWIRL, SWIRL_CONST - SWIRL_ADJUST_RATE);
+                document.getElementById('almiActionDisplay').textContent = 
+                    `A-LMI: High freq dominant. Swirl=${SWIRL_CONST.toFixed(2)}`;
+            } else {
+                document.getElementById('almiActionDisplay').textContent = 
+                    "A-LMI: Balanced. Swirl stable.";
+            }
+            
+            document.getElementById('swirlSlider').value = SWIRL_CONST;
+            document.getElementById('swirlValue').textContent = SWIRL_CONST.toFixed(2);
+        }
+        
+        // ===== VOICE RECOGNITION =====
+        function initVoiceRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                document.getElementById('voiceStatus').textContent = 'Voice: Not supported';
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+            
+            recognition.onresult = (event) => {
+                const last = event.results.length - 1;
+                const command = event.results[last][0].transcript.toLowerCase();
+                
+                document.getElementById('lastCommand').textContent = `"${command}"`;
+                processVoiceCommand(command);
+            };
+            
+            recognition.onerror = (event) => {
+                console.error('Voice recognition error:', event.error);
+                document.getElementById('voiceStatus').textContent = `Voice: Error (${event.error})`;
+            };
+            
+            recognition.onend = () => {
+                if (voiceActive) {
+                    recognition.start();
+                }
+            };
+        }
+        
+        function toggleVoiceRecognition() {
+            if (!recognition) return;
+            
+            if (voiceActive) {
+                recognition.stop();
+                voiceActive = false;
+                document.getElementById('voiceStatus').textContent = 'Voice: Inactive';
+                document.getElementById('voiceCommandBtn').textContent = '🎙️ Start Voice Recognition';
+            } else {
+                recognition.start();
+                voiceActive = true;
+                document.getElementById('voiceStatus').textContent = 'Voice: Listening...';
+                document.getElementById('voiceCommandBtn').textContent = '🔴 Stop Voice Recognition';
+            }
+        }
+        
+        function processVoiceCommand(command) {
+            if (command.includes('add particles') || command.includes('create particles')) {
+                addParticles(10000);
+                speak('Adding 10,000 particles');
+            } else if (command.includes('clear particles') || command.includes('remove particles')) {
+                particleCount = 0;
+                setupParticlesGeometry();
+                speak('Particles cleared');
+            } else if (command.includes('add attractor') || command.includes('black hole')) {
+                const pos = new THREE.Vector3(
+                    (Math.random() - 0.5) * GALAXY_RADIUS,
+                    (Math.random() - 0.5) * (GALAXY_RADIUS * 0.2),
+                    (Math.random() - 0.5) * GALAXY_RADIUS
+                );
+                addAttractor(pos, Math.random() * 2000 + 500, false);
+                speak('Attractor added');
+            } else if (command.includes('export tokens') || command.includes('save tokens')) {
+                tokenGenerator.exportTokens();
+                speak('Tokens exported');
+            } else if (command.includes('reset') || command.includes('clear all')) {
+                particleCount = 0;
+                setupParticlesGeometry();
+                attractors = attractors.filter(a => a.isCentral);
+                while (attractorMeshes.children.length > 0) {
+                    const mesh = attractorMeshes.children[0];
+                    mesh.geometry.dispose();
+                    mesh.material.dispose();
+                    attractorMeshes.remove(mesh);
+                }
+                speak('System reset');
+            } else if (command.includes('increase gravity')) {
+                G_CONST = Math.min(10000, G_CONST + 500);
+                document.getElementById('gravitySlider').value = G_CONST;
+                document.getElementById('gravityValue').textContent = G_CONST;
+                speak(`Gravity increased to ${G_CONST}`);
+            } else if (command.includes('decrease gravity')) {
+                G_CONST = Math.max(0, G_CONST - 500);
+                document.getElementById('gravitySlider').value = G_CONST;
+                document.getElementById('gravityValue').textContent = G_CONST;
+                speak(`Gravity decreased to ${G_CONST}`);
+            }
+        }
+        
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.2;
+                utterance.pitch = 1.0;
+                speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // ===== HELPER FUNCTIONS =====
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            
+            return { r, g, b };
+        }
+        
+        // ===== UI SETUP =====
+        function setupUI() {
+            document.getElementById('toggleMicButton').addEventListener('click', initAudio);
+            document.getElementById('addParticlesButton').addEventListener('click', () => addParticles(10000));
+            document.getElementById('clearParticlesButton').addEventListener('click', () => {
+                particleCount = 0;
+                setupParticlesGeometry();
+                trailSegmentCount = 0;
+                if (trailGeometry) trailGeometry.setDrawRange(0, 0);
+            });
+            document.getElementById('addAttractorButton').addEventListener('click', () => {
+                const pos = new THREE.Vector3(
+                    (Math.random() - 0.5) * GALAXY_RADIUS,
+                    (Math.random() - 0.5) * (GALAXY_RADIUS * 0.2),
+                    (Math.random() - 0.5) * GALAXY_RADIUS
+                );
+                addAttractor(pos, Math.random() * 2000 + 500, false);
+            });
+            document.getElementById('clearAllButton').addEventListener('click', () => {
+                particleCount = 0;
+                setupParticlesGeometry();
+                attractors = attractors.filter(a => a.isCentral);
+                while (attractorMeshes.children.length > 0) {
+                    const mesh = attractorMeshes.children[0];
+                    mesh.geometry.dispose();
+                    mesh.material.dispose();
+                    attractorMeshes.remove(mesh);
+                }
+                trailSegmentCount = 0;
+                if (trailGeometry) trailGeometry.setDrawRange(0, 0);
+                almiMemory = [0, 0, 0, 0];
+                almiTotalTokens = 0;
+                updateAlmiMemoryUI();
+            });
+            
+            // Sliders
+            document.getElementById('swirlSlider').addEventListener('input', (e) => {
+                SWIRL_CONST = parseFloat(e.target.value);
+                document.getElementById('swirlValue').textContent = SWIRL_CONST.toFixed(2);
+            });
+            document.getElementById('gravitySlider').addEventListener('input', (e) => {
+                G_CONST = parseFloat(e.target.value);
+                document.getElementById('gravityValue').textContent = G_CONST.toFixed(0);
+            });
+            document.getElementById('dampingSlider').addEventListener('input', (e) => {
+                DAMPING = parseFloat(e.target.value);
+                document.getElementById('dampingValue').textContent = DAMPING.toFixed(3);
+            });
+            document.getElementById('replicationSlider').addEventListener('input', (e) => {
+                REPLICATION_THRESHOLD = parseFloat(e.target.value);
+                document.getElementById('replicationValue').textContent = REPLICATION_THRESHOLD.toFixed(0);
+            });
+            document.getElementById('bloomSlider').addEventListener('input', (e) => {
+                BLOOM_STRENGTH = parseFloat(e.target.value);
+                document.getElementById('bloomValue').textContent = BLOOM_STRENGTH.toFixed(2);
+                if (bloomPass) bloomPass.strength = BLOOM_STRENGTH;
+            });
+            
+            // Token controls
+            document.getElementById('exportTokensBtn').addEventListener('click', () => {
+                tokenGenerator.exportTokens();
+            });
+            document.getElementById('clearTokensBtn').addEventListener('click', () => {
+                tokenGenerator.clearTokens();
+            });
+            
+            // Voice
+            document.getElementById('voiceCommandBtn').addEventListener('click', toggleVoiceRecognition);
+            
+            // Menu toggle
+            document.getElementById('menuToggleButton').addEventListener('click', () => {
+                const menuContent = document.getElementById('menuContent');
+                menuContent.classList.toggle('hidden');
+            });
+        }
+        
+        // ===== ANIMATION LOOP =====
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const dt = clock.getDelta();
+            const elapsedTime = clock.elapsedTime;
+            
+            // Update background
+            if (backgroundMaterial) {
+                backgroundMaterial.uniforms.time.value = elapsedTime * 0.5;
+            }
+            
+            updateVibraLight();
+            updateAlmi(dt);
+            
+            if (particleCount > 0 && points) {
+                updatePhysics(dt * 10);
+            }
+            
+            // Rotate Solaris core group
+            if (solarisCoreGroup) {
+                solarisCoreGroup.rotation.y += dt * 0.05;
+            }
+            
+            controls.update();
+            composer.render();
+            
+            // Update UI
+            document.getElementById('particleCount').textContent = particleCount.toLocaleString();
+            document.getElementById('attractorCount').textContent = attractors.length;
+            document.getElementById('totalEnergy').textContent = totalEnergy.toExponential(2) + ' J';
+            document.getElementById('avgEntropy').textContent = avgEntropy.toExponential(2) + ' J';
+            document.getElementById('totalTokens').textContent = tokenGenerator.tokenCount.toLocaleString();
+            document.getElementById('tokenRate').textContent = tokenGenerator.tokenGenerationRate.toFixed(1) + '/sec';
+            document.getElementById('replicationCount').textContent = tokenGenerator.replicationCount;
+            document.getElementById('predictionCount').textContent = predictionCount;
+            if (lossHistory.length > 0) {
+                const recentLoss = lossHistory.slice(-10).reduce((a, b) => a + b, 0) / lossHistory.slice(-10).length;
+                document.getElementById('avgLoss').textContent = recentLoss.toFixed(4);
+            }
+        }
+        
+        // ===== INITIALIZATION =====
+        async function init() {
+            console.log('🌌 Initializing Cosmic Synapse 12D Hybrid System...');
+            
+            // Initialize token system
+            tokenGenerator = new TokenGenerator();
+            tokenDatabase = new TokenDatabase();
+            await tokenDatabase.init();
+            
+            // Initialize neural network
+            neuralModel = await createNeuralNetwork();
+            
+            // Initialize 3D scene
+            init3D();
+            
+            // Initialize voice recognition
+            initVoiceRecognition();
+            
+            // Setup UI
+            setupUI();
+            
+            // Start animation
+            animate();
+            
+            console.log('✅ System initialized and ready');
+        }
+        
+        // Wait for page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+            composer.setSize(width, height);
+            
+            if (backgroundMaterial) {
+                backgroundMaterial.uniforms.resolution.value.set(width, height);
+            }
+        });
+    </script>
+</body>
+</html>
