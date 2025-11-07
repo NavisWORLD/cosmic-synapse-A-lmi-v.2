@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12D Cosmic Synapse - Audio-Driven Engine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #2a1a4a 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #00d4ff, #7b2ff7, #f06eaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: #a0a0ff;
+            margin-bottom: 15px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(123, 47, 247, 0.3);
+        }
+
+        .card h2 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .equation {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            margin: 10px 0;
+            border-left: 3px solid #00d4ff;
+            overflow-x: auto;
+        }
+
+        .value-display {
+            background: rgba(123, 47, 247, 0.2);
+            padding: 8px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-size: 0.95em;
+            border-left: 3px solid #7b2ff7;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 500px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .control-group {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group label {
+            display: block;
+            color: #00d4ff;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(45deg, #00d4ff, #7b2ff7);
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(123, 47, 247, 0.5);
+        }
+
+        button {
+            background: linear-gradient(45deg, #00d4ff, #7b2ff7);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 5px;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(123, 47, 247, 0.5);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .audio-controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        #micButton {
+            background: linear-gradient(45deg, #ff0080, #ff8c00);
+            font-size: 1.1em;
+            padding: 15px 40px;
+        }
+
+        #micButton.active {
+            background: linear-gradient(45deg, #00ff00, #00cc00);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(0, 255, 0, 0.8); }
+        }
+
+        .frequency-viz {
+            width: 100%;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        #frequencyCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .stat-box {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #a0a0ff;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .token-display {
+            background: rgba(240, 110, 170, 0.1);
+            border: 1px solid rgba(240, 110, 170, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75em;
+        }
+
+        .token-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            border-left: 3px solid #f06eaa;
+            line-height: 1.5;
+        }
+
+        .token-item strong {
+            color: #00d4ff;
+        }
+
+        .info-text {
+            color: #b0b0ff;
+            line-height: 1.5;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .alert-box {
+            background: rgba(123, 47, 247, 0.2);
+            border-left: 4px solid #7b2ff7;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 0.95em;
+        }
+
+        #fps-counter {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            border-radius: 5px;
+            font-family: monospace;
+            z-index: 10;
+            font-size: 0.9em;
+        }
+
+        .audio-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 0, 128, 0.7);
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 10;
+            display: none;
+        }
+
+        .audio-indicator.active {
+            display: block;
+            animation: blink 1s infinite;
+        }
+
+        .token-indicator {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            background: rgba(0, 212, 255, 0.7);
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 10;
+            display: none;
+            font-size: 0.9em;
+        }
+
+        .token-indicator.active {
+            display: block;
+            animation: pulse-blue 0.5s infinite;
+        }
+
+        @keyframes pulse-blue {
+            0%, 100% { 
+                background: rgba(0, 212, 255, 0.7);
+                box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            }
+            50% { 
+                background: rgba(0, 255, 255, 0.9);
+                box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎤 12D Cosmic Synapse Theory</h1>
+            <p class="subtitle">Audio-Driven Deterministic Cosmological Simulation Engine</p>
+            <p class="info-text"><strong>CONTINUOUS TOKEN GENERATION:</strong> Audio → FFT → φ-Harmonics → Sound-Color Mapping → Seed Generation → Token Stream</p>
+            <p class="info-text" style="font-size: 0.85em; color: #7b2ff7;">Every audio frame generates multiple tokens through the 12D formula (ψ = φE/c² + λ + ∫v·dt + ΩE + U₁₁D)</p>
+        </header>
+
+        <div class="audio-controls">
+            <button id="micButton" onclick="toggleMicrophone()">🎤 START MICROPHONE ENGINE</button>
+            <p class="info-text" style="margin-top: 10px;">
+                <strong>Activate continuous token generation:</strong> Every 100ms, audio is analyzed and converted into:<br>
+                • Audio Frame Tokens (complete spectrum snapshot)<br>
+                • φ-Harmonic Tokens (golden ratio frequency series)<br>
+                • Particle Creation/Update Tokens (visual entities)<br>
+                • Sound→Color→Seed→Token pipeline running in real-time
+            </p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>🎵 Audio Input Analysis</h2>
+                <div class="frequency-viz">
+                    <canvas id="frequencyCanvas"></canvas>
+                </div>
+                <div class="value-display">
+                    RMS Energy: <span id="rms-energy">0.00</span>
+                </div>
+                <div class="value-display">
+                    Dominant Freq: <span id="dominant-freq">0.0</span> Hz
+                </div>
+                <div class="value-display">
+                    Spectral Centroid: <span id="spectral-centroid">0.0</span> Hz
+                </div>
+                <p class="info-text">Live FFT analysis of environmental sound</p>
+            </div>
+
+            <div class="card">
+                <h2>⚡ Mass-Energy (Audio-Modulated)</h2>
+                <div class="equation">E = mc² (modulated by RMS)</div>
+                <div class="value-display">
+                    Base Energy: <span id="energy-value">8.99e16</span> J
+                </div>
+                <div class="value-display">
+                    Audio Gain: <span id="audio-gain">1.00</span>x
+                </div>
+                <p class="info-text">Energy scaled by audio amplitude</p>
+            </div>
+
+            <div class="card">
+                <h2>🌀 φ-Harmonic Series</h2>
+                <div class="equation">f_n = f₀ · φ^(n/2)</div>
+                <div class="value-display">
+                    φ = <span id="phi-value">1.618033988749895</span>
+                </div>
+                <div class="value-display">
+                    Harmonics: <span id="harmonics-count">0</span> generated
+                </div>
+                <p class="info-text">Golden ratio frequency spacing</p>
+            </div>
+
+            <div class="card">
+                <h2>🦋 Chaos & Butterfly Effect</h2>
+                <div class="equation">λ = lim (1/t) ln|dX(t)/dX(0)|</div>
+                <div class="value-display">
+                    Lyapunov: <span id="lyapunov-value">0.905</span>
+                </div>
+                <div class="value-display">
+                    Audio Chaos: <span id="audio-chaos">0.00</span>
+                </div>
+                <p class="info-text">Chaos driven by frequency variance</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🌊 Lorenz Attractor - Audio-Reactive Visualization</h2>
+            <div id="canvas-container">
+                <div id="fps-counter">FPS: <span id="fps">60</span></div>
+                <div class="audio-indicator" id="audioIndicator">🎤 LISTENING</div>
+                <div class="token-indicator" id="tokenIndicator">🎫 GENERATING TOKENS</div>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label>σ (Sigma): <span id="sigma-display">10</span></label>
+                    <input type="range" id="sigma" min="1" max="20" value="10" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>ρ (Rho): <span id="rho-display">28</span></label>
+                    <input type="range" id="rho" min="10" max="40" value="28" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>β (Beta): <span id="beta-display">2.667</span></label>
+                    <input type="range" id="beta" min="1" max="5" value="2.667" step="0.01">
+                </div>
+                <div class="control-group">
+                    <label>Audio Sensitivity: <span id="sensitivity-display">1.0</span></label>
+                    <input type="range" id="sensitivity" min="0.1" max="5" value="1.0" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>Replication Threshold: <span id="replication-display">50</span></label>
+                    <input type="range" id="replication" min="10" max="200" value="50" step="10">
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <button onclick="resetSystem()">🔄 Reset</button>
+                <button onclick="togglePause()">⏯️ Pause/Play</button>
+                <button onclick="changeColor()">🎨 Color</button>
+                <button onclick="addParticle()">➕ Add Particle</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>🎯 12D State Function (ψ)</h2>
+                <div class="equation">
+                    ψ = φE/c² + λ + ∫v·dt + ∫Δx₁₂·dt + ΩE + U₁₁D
+                </div>
+                <div class="stats">
+                    <div class="stat-box">
+                        <div class="stat-label">E/c²</div>
+                        <div class="stat-value" id="psi-energy">1.00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">φ</div>
+                        <div class="stat-value" id="psi-phi">1.618</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">λ</div>
+                        <div class="stat-value" id="psi-lambda">0.905</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Ω</div>
+                        <div class="stat-value" id="psi-omega">12.45</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Total ψ</div>
+                        <div class="stat-value" id="psi-total">15.97</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎫 Continuous Token Stream</h2>
+                <p class="info-text">
+                    <strong>LIVE GENERATION:</strong> Audio Frame Tokens • φ-Harmonic Tokens • Particle Tokens • Frequency Update Tokens<br>
+                    <em>Each audio snapshot creates deterministic, blockchain-ready tokens</em>
+                </p>
+                <div class="token-display" id="tokenDisplay">
+                    <div class="token-item">Waiting for audio input...</div>
+                </div>
+                <div class="value-display">
+                    Total Tokens: <span id="token-count">0</span>
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                    <button onclick="exportTokens()">💾 Export Tokens (JSON)</button>
+                    <button onclick="clearTokens()">🗑️ Clear Tokens</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert-box">
+            <strong>🔬 System Status:</strong> <span id="system-status">Audio engine offline - Click START MICROPHONE to begin</span><br>
+            <strong>📊 Particles:</strong> <span id="particle-count">0</span> active | 
+            <strong>🎫 Tokens:</strong> <span id="token-count-status">0</span> generated |
+            <strong>🔄 Replications:</strong> <span id="replication-count">0</span> |
+            <strong>⚡ Token Rate:</strong> <span id="token-rate">0.0</span> tokens/sec
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        /*
+         * 12D COSMIC SYNAPSE THEORY - CONTINUOUS TOKEN GENERATION ENGINE
+         * 
+         * PIPELINE FLOW:
+         * 1. AUDIO INPUT: Microphone captures live environmental sound (44.1kHz)
+         * 2. FFT ANALYSIS: Fast Fourier Transform extracts frequency spectrum
+         * 3. FREQUENCY EXTRACTION: Top 10 frequencies identified with magnitudes
+         * 4. φ-HARMONIC GENERATION: Golden ratio (1.618...) creates harmonic series
+         * 5. SOUND→COLOR MAPPING: Frequency (0-20kHz) mapped to Hue (0-360°)
+         * 6. SEED GENERATION: Deterministic seeds from frequency×magnitude combinations
+         * 7. TOKEN CREATION: Every 100ms generates:
+         *    - Audio Frame Tokens (complete spectrum snapshot)
+         *    - φ-Harmonic Tokens (each harmonic in the series)
+         *    - Particle Creation Tokens (new visual entities)
+         *    - Frequency Update Tokens (existing particle updates)
+         * 8. ψ CALCULATION: 12D state function from audio: ψ = φE/c² + λ + ∫v·dt + ΩE + U₁₁D
+         * 9. VISUAL RENDERING: Particles rendered in 3D with Lorenz dynamics
+         * 10. BLOCKCHAIN EXPORT: All tokens exportable as JSON for permanent record
+         * 
+         * CONTINUOUS: Token generation runs constantly while audio is active
+         * DETERMINISTIC: Same audio input always produces identical tokens
+         */
+        
+        // Constants
+        const c = 299792458; // Speed of light
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const h = 6.62607015e-34; // Planck's constant
+        
+        // Audio variables
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let dataArray = null;
+        let bufferLength = 0;
+        let isAudioActive = false;
+        let frequencyData = [];
+        let audioEnergy = 0;
+        let tokenCount = 0;
+        let tokens = [];
+        let replicationThreshold = 50; // Energy threshold for particle replication
+        let replicationCount = 0;
+        let tokenGenerationRate = 0;
+        let lastTokenCount = 0;
+        let lastTokenTime = Date.now();
+
+        // UUID generator
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Three.js setup
+        let scene, camera, renderer;
+        let particles = [];
+        let isPaused = false;
+        let colorHue = 180;
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        // Lorenz parameters
+        let sigma = 10;
+        let rho = 28;
+        let beta = 2.667;
+        let dt = 0.005;
+        let audioSensitivity = 1.0;
+
+        // Frequency canvas
+        let freqCanvas, freqCtx;
+
+        class LorenzParticle {
+            constructor(x, y, z, color, frequency = 0, parent = null) {
+                this.id = generateUUID();
+                this.x = x || 0.1;
+                this.y = y || 0;
+                this.z = z || 0;
+                this.color = color || 0x00d4ff;
+                this.frequency = frequency;
+                this.energy = 0; // Cosmic energy Ec
+                this.mass = 1;
+                this.velocity = { x: 0, y: 0, z: 0 };
+                this.entropy = 0;
+                this.memory = new Array(10).fill(0);
+                this.tokens = []; // Token list per particle
+                this.parent = parent; // Track parent for replication
+                this.points = [];
+                this.maxPoints = 2000;
+                this.createdAt = Date.now();
+                
+                // Create line geometry
+                const geometry = new THREE.BufferGeometry();
+                const material = new THREE.LineBasicMaterial({ 
+                    color: this.color,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                this.line = new THREE.Line(geometry, material);
+                scene.add(this.line);
+                
+                // Add starting glow sphere
+                const sphereGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                const sphereMaterial = new THREE.MeshBasicMaterial({ 
+                    color: this.color,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                this.sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+                scene.add(this.sphere);
+            }
+
+            update(audioModulation = 1.0) {
+                // Audio-modulated Lorenz equations
+                const effectiveSigma = sigma * (1 + audioModulation * 0.5);
+                const effectiveRho = rho * (1 + audioModulation * 0.3);
+                
+                const dx = effectiveSigma * (this.y - this.x) * dt;
+                const dy = (this.x * (effectiveRho - this.z) - this.y) * dt;
+                const dz = (this.x * this.y - beta * this.z) * dt;
+
+                this.x += dx;
+                this.y += dy;
+                this.z += dz;
+
+                // Update velocity
+                this.velocity = { x: dx / dt, y: dy / dt, z: dz / dt };
+
+                // Store point
+                this.points.push(new THREE.Vector3(this.x, this.y, this.z));
+                
+                if (this.points.length > this.maxPoints) {
+                    this.points.shift();
+                }
+
+                // Update geometry
+                const positions = new Float32Array(this.points.length * 3);
+                for (let i = 0; i < this.points.length; i++) {
+                    positions[i * 3] = this.points[i].x;
+                    positions[i * 3 + 1] = this.points[i].y;
+                    positions[i * 3 + 2] = this.points[i].z;
+                }
+                
+                this.line.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                this.line.geometry.attributes.position.needsUpdate = true;
+
+                // Update sphere position
+                this.sphere.position.set(this.x, this.y, this.z);
+
+                // Calculate cosmic energy: Ec = 0.5 * m * v^2 * c^2 (relativistic-inspired)
+                const velocityMagnitude = Math.sqrt(dx*dx + dy*dy + dz*dz) / dt;
+                this.energy = 0.5 * this.mass * velocityMagnitude * velocityMagnitude;
+                
+                // Update entropy based on trajectory complexity
+                this.entropy = Math.log(this.points.length + 1) * this.energy;
+
+                // Check for replication
+                this.checkReplication();
+
+                return { dx, dy, dz };
+            }
+
+            checkReplication() {
+                // Replication when energy exceeds threshold
+                if (this.energy > replicationThreshold && particles.length < 30) {
+                    // Create offspring particle
+                    const offset = Math.random() * 2 - 1;
+                    const color = new THREE.Color(this.color);
+                    color.offsetHSL(0.1, 0, 0); // Slight color variation
+                    
+                    const offspring = new LorenzParticle(
+                        this.x + offset,
+                        this.y + offset,
+                        this.z + offset,
+                        color.getHex(),
+                        this.frequency * (1 + (Math.random() * 0.1 - 0.05)), // Slight frequency mutation
+                        this.id // Set parent
+                    );
+                    
+                    offspring.mass = this.mass * (0.95 + Math.random() * 0.1);
+                    
+                    // Split energy
+                    this.energy *= 0.5;
+                    offspring.energy = this.energy;
+                    
+                    particles.push(offspring);
+                    replicationCount++;
+                    
+                    // Generate replication token for offspring
+                    generateParticleToken(offspring, 'replication');
+                    
+                    updateStatus(`Particle ${this.id.substr(0, 8)} replicated → ${offspring.id.substr(0, 8)}`);
+                }
+            }
+
+            assignFrequency(freq, magnitude) {
+                this.frequency = freq;
+                // Generate simple token format for frequency assignment
+                const simpleToken = `Freq_${freq.toFixed(2)}_Particle_${this.id.substr(0, 8)}`;
+                this.tokens.push(simpleToken);
+            }
+
+            destroy() {
+                scene.remove(this.line);
+                scene.remove(this.sphere);
+                this.line.geometry.dispose();
+                this.line.material.dispose();
+                this.sphere.geometry.dispose();
+                this.sphere.material.dispose();
+            }
+        }
+
+        function initThree() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0a0a1a, 0.002);
+            
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(50, 30, 50);
+            camera.lookAt(0, 0, 0);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setClearColor(0x0a0a1a, 0.5);
+            container.appendChild(renderer.domElement);
+
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0x00d4ff, 1, 100);
+            pointLight.position.set(0, 0, 0);
+            scene.add(pointLight);
+
+            // Add initial particle
+            addParticle();
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+
+            animate();
+        }
+
+        function initFrequencyCanvas() {
+            freqCanvas = document.getElementById('frequencyCanvas');
+            freqCtx = freqCanvas.getContext('2d');
+            freqCanvas.width = freqCanvas.offsetWidth;
+            freqCanvas.height = freqCanvas.offsetHeight;
+        }
+
+        function drawFrequencySpectrum() {
+            if (!analyser || !freqCtx) return;
+
+            analyser.getByteFrequencyData(dataArray);
+            
+            freqCtx.fillStyle = 'rgba(10, 10, 26, 0.2)';
+            freqCtx.fillRect(0, 0, freqCanvas.width, freqCanvas.height);
+
+            const barWidth = (freqCanvas.width / bufferLength) * 2.5;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = (dataArray[i] / 255) * freqCanvas.height;
+                
+                const hue = (i / bufferLength) * 360;
+                freqCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                freqCtx.fillRect(x, freqCanvas.height - barHeight, barWidth, barHeight);
+                
+                x += barWidth + 1;
+            }
+        }
+
+        async function toggleMicrophone() {
+            const button = document.getElementById('micButton');
+            const indicator = document.getElementById('audioIndicator');
+            
+            if (!isAudioActive) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 2048;
+                    bufferLength = analyser.frequencyBinCount;
+                    dataArray = new Uint8Array(bufferLength);
+
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    microphone = audioContext.createMediaStreamSource(stream);
+                    microphone.connect(analyser);
+
+                    isAudioActive = true;
+                    button.textContent = '🎤 STOP MICROPHONE';
+                    button.classList.add('active');
+                    indicator.classList.add('active');
+                    updateStatus('🎵 Audio engine active - CONTINUOUSLY generating tokens from audio stream');
+                    
+                    processAudio();
+                } catch (err) {
+                    console.error('Microphone access error:', err);
+                    alert('Could not access microphone. Please grant permission.');
+                }
+            } else {
+                if (microphone) {
+                    microphone.disconnect();
+                    microphone = null;
+                }
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+                isAudioActive = false;
+                button.textContent = '🎤 START MICROPHONE ENGINE';
+                button.classList.remove('active');
+                indicator.classList.remove('active');
+                document.getElementById('tokenIndicator').classList.remove('active');
+                updateStatus('Audio engine stopped');
+            }
+        }
+
+        function processAudio() {
+            if (!isAudioActive || !analyser) return;
+
+            // Show token generation indicator
+            document.getElementById('tokenIndicator').classList.add('active');
+
+            analyser.getByteFrequencyData(dataArray);
+            analyser.getByteTimeDomainData(dataArray);
+
+            // Calculate RMS energy
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const normalized = (dataArray[i] - 128) / 128;
+                sum += normalized * normalized;
+            }
+            audioEnergy = Math.sqrt(sum / dataArray.length);
+
+            // Get frequency data
+            analyser.getByteFrequencyData(dataArray);
+            
+            // CONSTANT TOKEN GENERATION: Extract ALL significant frequencies
+            frequencyData = [];
+            const tempData = Array.from(dataArray);
+            
+            // Get top 10 frequencies for token generation
+            const indices = tempData.map((val, idx) => ({ val, idx }))
+                .sort((a, b) => b.val - a.val)
+                .slice(0, 10);
+            
+            indices.forEach(item => {
+                const freq = (item.idx * audioContext.sampleRate) / (2 * bufferLength);
+                const magnitude = item.val / 255;
+                if (magnitude > 0.05) { // Lower threshold for constant generation
+                    frequencyData.push({ frequency: freq, magnitude });
+                }
+            });
+
+            // Calculate spectral centroid
+            let weightedSum = 0;
+            let magnitudeSum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const freq = (i * audioContext.sampleRate) / (2 * bufferLength);
+                weightedSum += freq * dataArray[i];
+                magnitudeSum += dataArray[i];
+            }
+            const spectralCentroid = magnitudeSum > 0 ? weightedSum / magnitudeSum : 0;
+
+            // Update displays
+            document.getElementById('rms-energy').textContent = audioEnergy.toFixed(3);
+            document.getElementById('audio-gain').textContent = (1 + audioEnergy * audioSensitivity).toFixed(2);
+            
+            if (frequencyData.length > 0) {
+                document.getElementById('dominant-freq').textContent = frequencyData[0].frequency.toFixed(1);
+            }
+            document.getElementById('spectral-centroid').textContent = spectralCentroid.toFixed(1);
+
+            // CONSTANT TOKEN GENERATION from audio stream
+            if (frequencyData.length > 0) {
+                const fundamental = frequencyData[0].frequency;
+                const harmonics = generatePhiHarmonics(fundamental, 8);
+                document.getElementById('harmonics-count').textContent = harmonics.length;
+
+                // Generate CONTINUOUS audio frame tokens (seed-based)
+                const audioFrameToken = generateAudioFrameToken(
+                    frequencyData,
+                    audioEnergy,
+                    spectralCentroid,
+                    harmonics
+                );
+
+                // Map each frequency to visual particles continuously
+                frequencyData.forEach((freqData, idx) => {
+                    // Sound-to-color mapping
+                    const colorHue = (freqData.frequency / 20000) * 360;
+                    const color = new THREE.Color(`hsl(${colorHue}, ${freqData.magnitude * 100}%, 50%)`);
+                    
+                    // Create or update particle for this frequency
+                    if (particles.length < 20) {
+                        createParticleFromFrequency(freqData.frequency, freqData.magnitude, color.getHex());
+                    } else {
+                        // Update existing particles with frequency assignment
+                        const targetParticle = particles[idx % particles.length];
+                        if (targetParticle) {
+                            updateParticleFromAudio(targetParticle, freqData.frequency, freqData.magnitude, color.getHex());
+                        }
+                    }
+                });
+
+                // Generate phi-harmonic tokens for each harmonic
+                harmonics.forEach((harmonic, idx) => {
+                    if (idx < frequencyData.length) {
+                        generateHarmonicToken(harmonic, frequencyData[idx].magnitude, idx);
+                    }
+                });
+            }
+
+            // Update chaos measure
+            const chaos = calculateAudioChaos();
+            document.getElementById('audio-chaos').textContent = chaos.toFixed(3);
+
+            drawFrequencySpectrum();
+
+            if (isAudioActive) {
+                setTimeout(processAudio, 100); // Process every 100ms for constant token generation
+            }
+        }
+
+        function generatePhiHarmonics(fundamental, count) {
+            const harmonics = [];
+            for (let i = 0; i < count; i++) {
+                let freq = fundamental * Math.pow(phi, i / 2);
+                
+                // Octave folding
+                while (freq > fundamental * 4) {
+                    freq /= 2;
+                }
+                while (freq < fundamental / 2) {
+                    freq *= 2;
+                }
+                
+                harmonics.push(freq);
+            }
+            return harmonics.sort((a, b) => a - b);
+        }
+
+        function generateParticleToken(particle, eventType = 'creation') {
+            // Token structure from 12D CST specification
+            const token = {
+                id: generateUUID(),
+                particleId: particle.id,
+                frequency: parseFloat(particle.frequency.toFixed(2)),
+                energy: parseFloat(particle.energy.toFixed(6)),
+                position: [
+                    parseFloat(particle.x.toFixed(4)),
+                    parseFloat(particle.y.toFixed(4)),
+                    parseFloat(particle.z.toFixed(4))
+                ],
+                velocity: [
+                    parseFloat(particle.velocity.x.toFixed(4)),
+                    parseFloat(particle.velocity.y.toFixed(4)),
+                    parseFloat(particle.velocity.z.toFixed(4))
+                ],
+                mass: parseFloat(particle.mass.toFixed(3)),
+                entropy: parseFloat(particle.entropy.toFixed(3)),
+                timestamp: Date.now() / 1000, // Unix timestamp
+                parent: particle.parent || null,
+                eventType: eventType, // 'creation', 'replication', 'frequency_assignment'
+                color: '#' + particle.color.toString(16).padStart(6, '0')
+            };
+            
+            // Add to global tokens array
+            tokens.push(token);
+            tokenCount++;
+            
+            // Add to particle's token list
+            particle.tokens.push(token);
+            
+            updateTokenDisplay();
+            
+            return token;
+        }
+
+        function generateAudioFrameToken(frequencyData, rmsEnergy, spectralCentroid, harmonics) {
+            // CONTINUOUS audio frame token - captures entire audio state
+            const token = {
+                id: generateUUID(),
+                type: 'audio_frame',
+                timestamp: Date.now() / 1000,
+                rmsEnergy: parseFloat(rmsEnergy.toFixed(4)),
+                spectralCentroid: parseFloat(spectralCentroid.toFixed(2)),
+                frequencyCount: frequencyData.length,
+                topFrequencies: frequencyData.slice(0, 5).map(f => ({
+                    freq: parseFloat(f.frequency.toFixed(2)),
+                    magnitude: parseFloat(f.magnitude.toFixed(3))
+                })),
+                phiHarmonics: harmonics.slice(0, 5).map(h => parseFloat(h.toFixed(2))),
+                seed: generateAudioSeed(frequencyData, rmsEnergy), // Deterministic seed
+                psi: calculatePsiFromAudio(frequencyData, rmsEnergy, spectralCentroid)
+            };
+            
+            tokens.push(token);
+            tokenCount++;
+            flashTokenIndicator();
+            updateTokenDisplay();
+            
+            return token;
+        }
+
+        function flashTokenIndicator() {
+            const indicator = document.getElementById('tokenIndicator');
+            indicator.classList.add('active');
+            setTimeout(() => {
+                // Keep it active while audio is processing
+                if (!isAudioActive) {
+                    indicator.classList.remove('active');
+                }
+            }, 100);
+        }
+
+        function generateHarmonicToken(harmonic, magnitude, index) {
+            // Token for each phi-harmonic generated
+            const token = {
+                id: generateUUID(),
+                type: 'phi_harmonic',
+                timestamp: Date.now() / 1000,
+                harmonic: parseFloat(harmonic.toFixed(2)),
+                magnitude: parseFloat(magnitude.toFixed(3)),
+                harmonicIndex: index,
+                phiRatio: Math.pow(phi, index / 2),
+                colorMapping: frequencyToColor(harmonic),
+                seed: hashFrequency(harmonic)
+            };
+            
+            tokens.push(token);
+            tokenCount++;
+            
+            return token;
+        }
+
+        function generateAudioSeed(frequencyData, rmsEnergy) {
+            // Generate deterministic seed from audio data
+            let seedValue = 0;
+            frequencyData.forEach((f, i) => {
+                seedValue += f.frequency * f.magnitude * (i + 1);
+            });
+            seedValue += rmsEnergy * 10000;
+            return Math.floor(seedValue) % 1000000;
+        }
+
+        function hashFrequency(frequency) {
+            // Simple hash for frequency-based seed
+            return Math.floor((frequency * phi) % 100000);
+        }
+
+        function frequencyToColor(frequency) {
+            // Sound-to-color mapping
+            const hue = (frequency / 20000) * 360;
+            const saturation = 100;
+            const lightness = 50;
+            return `hsl(${hue.toFixed(0)}, ${saturation}%, ${lightness}%)`;
+        }
+
+        function calculatePsiFromAudio(frequencyData, rmsEnergy, spectralCentroid) {
+            // Calculate ψ directly from audio using the 12D formula
+            const mass = 1;
+            const energyComponent = (phi * mass * c * c * rmsEnergy) / (c * c);
+            const lambdaComponent = Math.log(spectralCentroid + 1) / 100;
+            const frequencyIntegral = frequencyData.reduce((sum, f) => sum + f.frequency * f.magnitude, 0) / 1000;
+            const omegaComponent = frequencyData.length * rmsEnergy * phi;
+            
+            return energyComponent + phi + lambdaComponent + frequencyIntegral + omegaComponent;
+        }
+
+        function createParticleFromFrequency(frequency, magnitude, color) {
+            // Create new particle from frequency data
+            const offset = particles.length * 0.1;
+            const particle = new LorenzParticle(
+                Math.random() * 10 - 5,
+                Math.random() * 10 - 5,
+                Math.random() * 10 - 5,
+                color,
+                frequency,
+                null
+            );
+            
+            particle.mass = 1 + magnitude * 5;
+            particle.energy = magnitude * 50;
+            particles.push(particle);
+
+            // Generate creation token
+            generateParticleToken(particle, 'audio_creation');
+        }
+
+        function updateParticleFromAudio(particle, frequency, magnitude, color) {
+            // Update existing particle with new audio data
+            particle.frequency = frequency;
+            particle.color = color;
+            particle.line.material.color.setHex(color);
+            particle.sphere.material.color.setHex(color);
+            particle.mass = Math.max(1, particle.mass * (0.95 + magnitude * 0.1));
+            
+            // Generate frequency update token
+            const token = {
+                id: generateUUID(),
+                type: 'frequency_update',
+                particleId: particle.id,
+                frequency: parseFloat(frequency.toFixed(2)),
+                magnitude: parseFloat(magnitude.toFixed(3)),
+                color: '#' + color.toString(16).padStart(6, '0'),
+                timestamp: Date.now() / 1000
+            };
+            
+            tokens.push(token);
+            tokenCount++;
+            particle.tokens.push(token);
+        }
+
+        function calculateAudioChaos() {
+            if (frequencyData.length < 2) return 0;
+            
+            let variance = 0;
+            const mean = frequencyData.reduce((sum, d) => sum + d.magnitude, 0) / frequencyData.length;
+            frequencyData.forEach(d => {
+                variance += Math.pow(d.magnitude - mean, 2);
+            });
+            return Math.sqrt(variance / frequencyData.length);
+        }
+
+        function addParticleFromAudio(frequency, energy) {
+            const offset = particles.length * 0.1;
+            const hue = (frequency / 20000) * 360;
+            const color = new THREE.Color(`hsl(${hue}, 100%, 50%)`);
+            
+            const particle = new LorenzParticle(
+                0.1 + offset + energy * 5,
+                offset,
+                offset,
+                color.getHex(),
+                frequency,
+                null // No parent for audio-generated particles
+            );
+            
+            particle.mass = 1 + energy * 10;
+            particles.push(particle);
+
+            // Generate creation token
+            generateParticleToken(particle, 'creation');
+            
+            updateStatus(`Audio particle created: ${frequency.toFixed(1)}Hz, E=${energy.toFixed(3)}`);
+        }
+
+        function updateTokenDisplay() {
+            const display = document.getElementById('tokenDisplay');
+            if (tokens.length === 0) {
+                display.innerHTML = '<div class="token-item">Waiting for audio input...</div>';
+                document.getElementById('token-count').textContent = '0';
+                return;
+            }
+            
+            // Show last 8 tokens in reverse chronological order
+            const recentTokens = tokens.slice(-8).reverse();
+            display.innerHTML = recentTokens.map(t => {
+                // Different display formats based on token type
+                if (t.type === 'audio_frame') {
+                    return `<div class="token-item">
+                        <strong>🎵 AUDIO FRAME</strong> ${t.id.substr(0, 13)}...<br>
+                        <strong>RMS:</strong> ${t.rmsEnergy} | <strong>Centroid:</strong> ${t.spectralCentroid}Hz<br>
+                        <strong>Top Freq:</strong> ${t.topFrequencies[0]?.freq || 0}Hz<br>
+                        <strong>Seed:</strong> ${t.seed} | <strong>ψ:</strong> ${t.psi?.toFixed(2)}
+                    </div>`;
+                } else if (t.type === 'phi_harmonic') {
+                    return `<div class="token-item">
+                        <strong>🌀 φ-HARMONIC #${t.harmonicIndex}</strong><br>
+                        <strong>Freq:</strong> ${t.harmonic}Hz | <strong>Mag:</strong> ${t.magnitude}<br>
+                        <strong>φ^${(t.harmonicIndex / 2).toFixed(1)}:</strong> ${t.phiRatio?.toFixed(3)}<br>
+                        <strong>Color:</strong> <span style="color: ${t.colorMapping}">${t.colorMapping}</span> | <strong>Seed:</strong> ${t.seed}
+                    </div>`;
+                } else if (t.type === 'frequency_update') {
+                    return `<div class="token-item">
+                        <strong>🔄 FREQ UPDATE</strong> Particle: ${t.particleId.substr(0, 8)}...<br>
+                        <strong>Freq:</strong> ${t.frequency}Hz | <strong>Mag:</strong> ${t.magnitude}<br>
+                        <strong>Color:</strong> <span style="color: ${t.color}">${t.color}</span>
+                    </div>`;
+                } else {
+                    // Standard particle token
+                    const parentInfo = t.parent ? `Parent: ${t.parent.substr(0, 8)}...` : 'No parent';
+                    const posStr = `[${t.position[0].toFixed(1)}, ${t.position[1].toFixed(1)}, ${t.position[2].toFixed(1)}]`;
+                    return `<div class="token-item">
+                        <strong>⚛️ ${t.eventType?.toUpperCase()}</strong> ${t.id.substr(0, 13)}...<br>
+                        <strong>Freq:</strong> ${t.frequency}Hz | <strong>E:</strong> ${t.energy?.toFixed(3)}<br>
+                        <strong>Pos:</strong> ${posStr}<br>
+                        <strong>${parentInfo}</strong>
+                    </div>`;
+                }
+            }).join('');
+            
+            document.getElementById('token-count').textContent = tokens.length;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isPaused) {
+                // Update camera rotation
+                const time = Date.now() * 0.0001;
+                camera.position.x = Math.cos(time) * 60;
+                camera.position.z = Math.sin(time) * 60;
+                camera.lookAt(0, 20, 0);
+
+                // Calculate audio modulation
+                const audioMod = isAudioActive ? audioEnergy * audioSensitivity : 0;
+
+                // Update particles
+                let chaosSum = 0;
+                particles.forEach(particle => {
+                    const derivatives = particle.update(audioMod);
+                    chaosSum += Math.abs(derivatives.dx) + Math.abs(derivatives.dy) + Math.abs(derivatives.dz);
+                });
+
+                // Update ψ calculations
+                updatePsi(chaosSum);
+            }
+
+            renderer.render(scene, camera);
+
+            // Update FPS and statistics
+            frameCount++;
+            const currentTime = performance.now();
+            if (currentTime >= lastTime + 1000) {
+                // Calculate token generation rate (tokens per second)
+                const timeDiff = (Date.now() - lastTokenTime) / 1000;
+                if (timeDiff > 0) {
+                    tokenGenerationRate = (tokens.length - lastTokenCount) / timeDiff;
+                    lastTokenCount = tokens.length;
+                    lastTokenTime = Date.now();
+                }
+                
+                document.getElementById('fps').textContent = frameCount;
+                document.getElementById('particle-count').textContent = particles.length;
+                document.getElementById('token-count-status').textContent = tokens.length;
+                document.getElementById('replication-count').textContent = replicationCount;
+                document.getElementById('token-rate').textContent = tokenGenerationRate.toFixed(1);
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+        }
+
+        function addParticle() {
+            const offset = particles.length * 0.1;
+            const color = new THREE.Color(`hsl(${colorHue + offset * 30}, 100%, 50%)`);
+            const particle = new LorenzParticle(0.1 + offset, offset, offset, color.getHex(), 440 + offset * 100);
+            particles.push(particle);
+            
+            // Generate creation token
+            generateParticleToken(particle, 'creation');
+            
+            updateStatus(`Added trajectory ${particles.length}`);
+        }
+
+        function resetSystem() {
+            particles.forEach(p => p.destroy());
+            particles = [];
+            tokens = [];
+            tokenCount = 0;
+            replicationCount = 0;
+            updateTokenDisplay();
+            addParticle();
+            updateStatus('System reset - New trajectory initialized');
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            updateStatus(isPaused ? 'Simulation paused' : 'Simulation running');
+        }
+
+        function changeColor() {
+            colorHue = (colorHue + 60) % 360;
+            particles.forEach((p, i) => {
+                const color = new THREE.Color(`hsl(${colorHue + i * 30}, 100%, 50%)`);
+                p.line.material.color.setHex(color.getHex());
+                p.sphere.material.color.setHex(color.getHex());
+            });
+            updateStatus('Color scheme updated');
+        }
+
+        function updatePsi(chaosSum) {
+            const mass = 1;
+            const energy = mass * c * c;
+            const audioGain = 1 + (isAudioActive ? audioEnergy * audioSensitivity : 0);
+            const energyComponent = mass * audioGain;
+            
+            // Calculate Lyapunov approximation
+            const audioChaos = isAudioActive ? calculateAudioChaos() : 0;
+            const lyapunov = Math.abs(Math.log(Math.abs(chaosSum) + 1) / 10) + audioChaos;
+            
+            document.getElementById('energy-value').textContent = (energy * audioGain).toExponential(2);
+            document.getElementById('lyapunov-value').textContent = lyapunov.toFixed(3);
+            
+            // Calculate ψ components
+            const psiEnergy = energyComponent;
+            const psiPhi = phi;
+            const psiLambda = lyapunov;
+            const psiOmega = chaosSum;
+            const psiTotal = psiEnergy + psiPhi + psiLambda + psiOmega;
+            
+            document.getElementById('psi-energy').textContent = psiEnergy.toFixed(3);
+            document.getElementById('psi-phi').textContent = psiPhi.toFixed(3);
+            document.getElementById('psi-lambda').textContent = psiLambda.toFixed(3);
+            document.getElementById('psi-omega').textContent = psiOmega.toFixed(2);
+            document.getElementById('psi-total').textContent = psiTotal.toFixed(3);
+        }
+
+        function updateStatus(message) {
+            document.getElementById('system-status').textContent = message;
+        }
+
+        function exportTokens() {
+            if (tokens.length === 0) {
+                alert('No tokens to export yet! Start the microphone or add particles.');
+                return;
+            }
+            
+            // Calculate token type statistics
+            const tokenTypes = {
+                audio_frame: tokens.filter(t => t.type === 'audio_frame').length,
+                phi_harmonic: tokens.filter(t => t.type === 'phi_harmonic').length,
+                frequency_update: tokens.filter(t => t.type === 'frequency_update').length,
+                particle_creation: tokens.filter(t => t.eventType === 'creation' || t.eventType === 'audio_creation').length,
+                particle_replication: tokens.filter(t => t.eventType === 'replication').length
+            };
+            
+            const exportData = {
+                metadata: {
+                    exportDate: new Date().toISOString(),
+                    totalTokens: tokens.length,
+                    tokenGenerationRate: tokenGenerationRate.toFixed(2) + ' tokens/sec',
+                    engine: '12D Cosmic Synapse Theory',
+                    version: '2.0',
+                    mode: 'Continuous Audio-Driven Token Generation',
+                    formula: 'ψ = φE/c² + λ + ∫v·dt + ∫Δx₁₂·dt + ΩE + U₁₁D',
+                    particleCount: particles.length,
+                    replicationCount: replicationCount,
+                    tokenTypes: tokenTypes
+                },
+                tokens: tokens
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `cosmic_tokens_continuous_${Date.now()}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+            updateStatus(`📦 Exported ${tokens.length} tokens (${tokenGenerationRate.toFixed(1)} tokens/sec) to JSON file`);
+        }
+
+        function clearTokens() {
+            if (confirm('Clear all tokens? This cannot be undone.')) {
+                tokens = [];
+                tokenCount = 0;
+                replicationCount = 0;
+                particles.forEach(p => p.tokens = []);
+                updateTokenDisplay();
+                updateStatus('All tokens cleared');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('sigma').addEventListener('input', (e) => {
+            sigma = parseFloat(e.target.value);
+            document.getElementById('sigma-display').textContent = sigma.toFixed(1);
+        });
+
+        document.getElementById('rho').addEventListener('input', (e) => {
+            rho = parseFloat(e.target.value);
+            document.getElementById('rho-display').textContent = rho.toFixed(1);
+        });
+
+        document.getElementById('beta').addEventListener('input', (e) => {
+            beta = parseFloat(e.target.value);
+            document.getElementById('beta-display').textContent = beta.toFixed(3);
+        });
+
+        document.getElementById('sensitivity').addEventListener('input', (e) => {
+            audioSensitivity = parseFloat(e.target.value);
+            document.getElementById('sensitivity-display').textContent = audioSensitivity.toFixed(1);
+        });
+
+        document.getElementById('replication').addEventListener('input', (e) => {
+            replicationThreshold = parseFloat(e.target.value);
+            document.getElementById('replication-display').textContent = replicationThreshold.toFixed(0);
+        });
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            initThree();
+            initFrequencyCanvas();
+            updatePsi(0);
+            updateStatus('🎤 System ready - Click START MICROPHONE for continuous audio→token generation pipeline');
+        });
+    </script>
+</body>
+</html>
