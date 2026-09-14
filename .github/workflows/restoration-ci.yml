@@ -46,6 +46,7 @@ jobs:
           tests/test_cst_replay.py
           tests/test_hypothesis_provenance.py
           tests/test_federated_claims.py
+          tests/test_packaging_contract.py
           coms/hrcs/tests/test_packet_protocol_v2.py
           coms/hrcs/tests/test_acoustic_roundtrip.py
           coms/hrcs/tests/test_mesh_replay.py
