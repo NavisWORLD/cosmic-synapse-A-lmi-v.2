@@ -37,8 +37,8 @@ services:
     volumes:
       - minio_data:/data
     environment:
-      MINIO_ROOT_USER: "${A_LMI_MINIO_ACCESS_KEY:-a_lmi_local}"
-      MINIO_ROOT_PASSWORD: "${A_LMI_MINIO_SECRET_KEY:-change-me-local-only}"
+      MINIO_ROOT_USER: "${A_LMI_MINIO_ACCESS_KEY:?set A_LMI_MINIO_ACCESS_KEY}"
+      MINIO_ROOT_PASSWORD: "${A_LMI_MINIO_SECRET_KEY:?set A_LMI_MINIO_SECRET_KEY}"
     command: server /data --console-address ":9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
@@ -66,8 +66,8 @@ services:
     image: minio/minio:latest
     container_name: cosmic-milvus-minio
     environment:
-      MINIO_ROOT_USER: "${MILVUS_MINIO_ACCESS_KEY:-milvus_local}"
-      MINIO_ROOT_PASSWORD: "${MILVUS_MINIO_SECRET_KEY:-change-me-milvus-local-only}"
+      MINIO_ROOT_USER: "${MILVUS_MINIO_ACCESS_KEY:?set MILVUS_MINIO_ACCESS_KEY}"
+      MINIO_ROOT_PASSWORD: "${MILVUS_MINIO_SECRET_KEY:?set MILVUS_MINIO_SECRET_KEY}"
     ports:
       - "127.0.0.1:9002:9000"
       - "127.0.0.1:9003:9001"
@@ -89,8 +89,8 @@ services:
     environment:
       ETCD_ENDPOINTS: "etcd:2379"
       MINIO_ADDRESS: "minio-storage:9000"
-      MINIO_ACCESS_KEY_ID: "${MILVUS_MINIO_ACCESS_KEY:-milvus_local}"
-      MINIO_SECRET_ACCESS_KEY: "${MILVUS_MINIO_SECRET_KEY:-change-me-milvus-local-only}"
+      MINIO_ACCESS_KEY_ID: "${MILVUS_MINIO_ACCESS_KEY:?set MILVUS_MINIO_ACCESS_KEY}"
+      MINIO_SECRET_ACCESS_KEY: "${MILVUS_MINIO_SECRET_KEY:?set MILVUS_MINIO_SECRET_KEY}"
     volumes:
       - milvus_data:/var/lib/milvus
     healthcheck:
@@ -110,7 +110,7 @@ services:
       - "127.0.0.1:7474:7474"
       - "127.0.0.1:7687:7687"
     environment:
-      NEO4J_AUTH: "${A_LMI_NEO4J_USERNAME:-neo4j}/${A_LMI_NEO4J_PASSWORD:-change-me-local-only}"
+      NEO4J_AUTH: "${A_LMI_NEO4J_USERNAME:-neo4j}/${A_LMI_NEO4J_PASSWORD:?set A_LMI_NEO4J_PASSWORD}"
       NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
       NEO4J_dbms_memory_heap_max__size: 2G
       NEO4J_dbms_memory_pagecache_size: 1G
