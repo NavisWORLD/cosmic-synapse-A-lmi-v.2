@@ -52,7 +52,11 @@ class HRCSNode:
         self.messaging = Messaging(node_id, self.mesh)
         self.tx_thread: Optional[threading.Thread] = None
         self.rx_thread: Optional[threading.Thread] = None
-        self.lock = threading.Lock()
+        # TX and RX are independent operations for the modem abstraction. A
+        # single shared lock caused a waiting receive to starve queued sends in
+        # deterministic transports.
+        self.tx_lock = threading.Lock()
+        self.rx_lock = threading.Lock()
 
     def start(self) -> None:
         if self.running:
@@ -85,7 +89,7 @@ class HRCSNode:
                 if packet is None:
                     continue
                 encrypted = self.security.encrypt_packet(packet.serialize())
-                with self.lock:
+                with self.tx_lock:
                     success = self.active_modem.transmit(encrypted)
                 if success:
                     logging.debug("HRCS TX %s bytes to %016X", len(encrypted), packet.dest)
@@ -95,7 +99,7 @@ class HRCSNode:
     def _rx_worker(self) -> None:
         while self.running:
             try:
-                with self.lock:
+                with self.rx_lock:
                     data = self.active_modem.receive(timeout=0.05)
                 if data is None:
                     if self.discovery.should_send_hello():
@@ -109,12 +113,14 @@ class HRCSNode:
                     continue
 
                 if packet.type == "HELLO":
-                    # Hardware-derived RSSI/SNR are not available through the
-                    # generic modem contract. Keep these neutral placeholders
-                    # out of scientific claims; routing may replace them when a
-                    # real modem exposes measured link metrics.
+                    # Discovery is control-plane traffic, not an application
+                    # message. HELLO is one-hop broadcast in the active node
+                    # implementation and therefore does not enter MeshNetwork's
+                    # application delivery queue.
                     self.discovery.update_neighbor(packet.source, -50, 30)
                     self.router.update_neighbor(packet.source, -50, 30)
+                    continue
+
                 self.mesh.process_received_packet(packet)
             except Exception as exc:
                 logging.error("HRCS RX error: %s", exc)
