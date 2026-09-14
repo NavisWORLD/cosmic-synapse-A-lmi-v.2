@@ -1,64 +1,62 @@
-# God Music - Professional AI Music Conductor
+# God Music
 
-The world's first AI band system with true predictive intelligence. Built on the Unified Theory of Vibrational Information Architecture.
+God Music is a browser-based, algorithmic reactive and predictive music-conductor experiment from the COSMIC SYNAPSE research lineage.
 
-## Features
+It analyzes microphone input with Web Audio APIs and uses deterministic signal-analysis, timing, harmonic, and rule-based prediction code to drive synthesized accompaniment. The current implementation is not presented as a trained machine-learning model, biological signal reader, or proof of any special physical effect.
 
-- **Predictive Intelligence** - Anticipates your next musical moves
-- **Bio-Frequency Matching** - Generates harmonics based on your voice signature
-- **φ-Harmonic Generation** - Uses golden ratio for natural harmonic relationships
-- **Microphone Isolation** - Microphone is NEVER output to speakers (analysis only)
-- **Professional Instruments** - Full drum kit, bass, guitar, piano, strings, pads
-- **Groove Lock** - Locks tempo after establishing your rhythm
-- **Real-Time Visualization** - Spectrum and waveform displays
+## What is implemented
+
+- Pitch, tempo, and spectral analysis helpers
+- Phrase tracking and groove locking
+- Deterministic next-chord generation from the current harmonic rules
+- Synthesized drums, bass, guitar, piano, strings, and pads
+- Spectrum and waveform visualization
+- Browser microphone analysis path that is kept separate from the synthesized output path
+
+The active deterministic JavaScript tests cover core analysis/prediction behavior, and CI also performs a Vite production build.
 
 ## Architecture
 
-The system is fully modular:
+- **Core:** `AudioEngine`, `BioSignature`, `PhiHarmonics`, `PsiCalculator`
+- **Analysis:** `PitchDetector`, `SpectralAnalyzer`, `TempoDetector`
+- **Prediction:** `PredictiveEngine`, `PhraseTracker`, `GrooveLock`, `ChordPredictor`
+- **Instruments:** drums, bass, guitar, piano, strings, pads
+- **Audio:** mixer and synthesis utilities
+- **UI:** logger and visualizer
 
-- **Core**: AudioEngine, BioSignature, PhiHarmonics, PsiCalculator
-- **Analysis**: PitchDetector, SpectralAnalyzer, TempoDetector
-- **Prediction**: PredictiveEngine, PhraseTracker, GrooveLock, ChordPredictor
-- **Instruments**: Drums, Bass, Guitar, Piano, Strings, Pads
-- **Audio**: Mixer, Synthesis utilities
-- **UI**: Logger, Visualizer
+Names such as `BioSignature`, `PhiHarmonics`, and `PsiCalculator` are preserved historical/project terminology. They describe software mechanisms in this repository; they should not be read as validated biomedical or new-physics claims.
 
-## Critical: Microphone Routing
+## Microphone routing
 
-The microphone **NEVER** connects to the output. The audio routing is:
+The intended routing is:
 
-- **Analysis Path**: Microphone → Analyzer (read-only)
-- **Output Path**: Instruments → Compressor → Master → Speakers
+- **Analysis path:** microphone → analyzer
+- **Output path:** synthesized instruments → compressor/master → speakers
 
-This is enforced in `AudioEngine.js` and validated at runtime.
+The microphone signal is used for analysis and is not intentionally connected to the output graph.
 
 ## Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Run development server
+npm test
 npm run dev
-
-# Build for production
 npm run build
-
-# Preview production build
 npm run preview
 ```
 
-## Browser Requirements
+A modern browser with Web Audio API support is required for the live application. Microphone permission is required only for live microphone analysis.
 
-- Modern browser with Web Audio API support
-- Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-- Microphone access required
+## Scope and evidence
+
+The repository currently verifies software behavior and buildability. It does **not** claim that the harmonic rules outperform conventional music systems, that golden-ratio choices have a demonstrated advantage, or that the application infers biological state.
+
+See the root `docs/CLAIMS_AND_LIMITATIONS.md` and `docs/REPRODUCIBILITY.md` for the evidence boundary used by the restoration branch.
 
 ## License
 
-Public GNU 3.0
+GPL-3.0-only. See the repository root `LICENSE`.
 
 ## Author
 
-Cory Shane Davis - Based on Unified Theory of Vibrational Information Architecture
-
+Cory Shane Davis
