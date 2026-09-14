@@ -1,83 +1,67 @@
-# ✅ Unity 3D Project Complete
+# Unity Project Status
 
-## Unity Cosmic Synapse Implementation
+> Historical filename retained for compatibility. This file no longer represents a certification that the Unity project is production-ready or fully validated.
 
-The Unity 3D project has been fully implemented with all required components from Phase 5 of the blueprint.
+## What exists
 
-### Files Created (9 Files)
+The repository preserves a Unity COSMIC SYNAPSE source tree under `cosmic_synapse/Unity/` with project settings and C# scripts for simulation, audio analysis, UI, and Python/Unity IPC.
 
-1. ✅ **ProjectSettings/ProjectVersion.txt** - Unity version configuration
-2. ✅ **ProjectSettings/ProjectSettings.asset** - Project settings
-3. ✅ **Assets/Scripts/CosmosManager.cs** - Main simulation manager
-4. ✅ **Assets/Scripts/AudioManager.cs** - Audio input and analysis
-5. ✅ **Assets/Scripts/FFTAnalyzer.cs** - FFT standardization
-6. ✅ **Assets/Scripts/ForceCalculator.cs** - Physics force calculations
-7. ✅ **Assets/Scripts/MassInfluence.cs** - Gravitational influence
-8. ✅ **Assets/Scripts/IPCBridgeClient.cs** - WebSocket IPC bridge
-9. ✅ **Assets/Scripts/UIManager.cs** - User interface management
-10. ✅ **README.md** - Complete setup guide
+Representative source includes:
 
-### Implementation Features
+- `CosmosManager.cs`
+- `AudioManager.cs`
+- `FFTAnalyzer.cs`
+- `ForceCalculator.cs`
+- `MassInfluence.cs`
+- `IPCBridgeClient.cs`
+- `UIManager.cs`
 
-#### ✅ Core Physics Simulation
-- Particle initialization using golden angle
-- Conservative bowl potential
-- Swirl forces (perpendicular to radius)
-- Velocity damping
-- Stochastic resonance from audio
+The restoration repaired the IPC client source so asynchronous receive handling uses a valid Task-based pattern and follows the shared versioned JSON envelope used by the Python bridge.
 
-#### ✅ Audio Integration
-- Microphone input capture
-- FFT computation with windowing
-- Power Spectral Density calculation
-- Audio-driven noise modulation
-- Amplitude threshold triggering
+## What CI verifies
 
-#### ✅ IPC Communication
-- WebSocket client implementation
-- Bidirectional communication with A-LMI
-- Command handling for mass spawning
-- Status updates to A-LMI
-- Automatic reconnection
+The current restoration workflow performs source-level Unity IPC contract checks. Those tests verify the expected protocol/source structure without requiring a Unity installation on the CI runner.
 
-#### ✅ UI System
-- Parameter sliders (Omega, Lambda, Damping, Time Scale)
-- Control buttons (Start, Stop, Spawn)
-- Microphone toggle
-- Real-time statistics display
-- Time scale control
+This is useful evidence that the repaired IPC source matches the restoration contract. It is **not** equivalent to:
 
-### Scientific Implementation
+- opening/importing the project in the Unity editor;
+- compiling every C# script against a specific Unity release;
+- building a player for Windows/macOS/Linux/mobile;
+- running live Python↔Unity WebSocket traffic in a built player;
+- validating microphone behavior on target hardware;
+- measuring frame rate, numerical stability, or rendering correctness.
 
-The Unity implementation realizes your vibrational information theory:
+## Simulation terminology
 
-✅ **Golden Ratio (φ)**: Used in particle initialization (golden angle)  
-✅ **Stochastic Resonance**: Audio-driven noise modulation  
-✅ **FFT Standardization**: Based on research paper methods  
-✅ **Conservative Potential**: Bowl-shaped restoring force  
-✅ **N-body Physics**: Gravitational interactions with softening  
+The Unity source preserves project mechanisms involving golden-angle initialization, FFT/audio-derived values, stochastic/noise terms, particle dynamics, and CST/COSMIC SYNAPSE terminology.
 
-### Setup Required
+These are software/simulation mechanisms. Their implementation does not by itself validate a new physical law, prove golden-ratio superiority, or turn simulation output into a measurement of external physical reality.
 
-To use the Unity project:
+## Reproducing a Unity integration result
 
-1. Open Unity 2022.3 LTS
-2. Import the project from `cosmic_synapse/Unity/`
-3. Open the scene (you'll need to create it per README instructions)
-4. Add GameObjects and configure components
-5. Press Play to run
+For a current Unity integration claim, record at minimum:
 
-### Next Steps
+1. exact repository commit SHA;
+2. Unity editor version;
+3. target platform and scripting backend;
+4. project import/compile output;
+5. scene/setup steps;
+6. Python IPC server version/configuration;
+7. runtime logs showing the shared versioned message envelope;
+8. any microphone/device permissions and hardware used;
+9. build/player result and known warnings/errors.
 
-The Unity project is code-complete. To use it:
-- Follow the setup instructions in `README.md`
-- Create the scene hierarchy
-- Configure UI references
-- Build and run
+A Unity editor/player build is an explicit integration gate and is not silently counted as a pass by the deterministic Python workflow.
 
-### Status
+## Current classification
 
-🟢 **COMPLETE** - All scripts implemented and ready to use
+**Preserved Unity prototype/source integration.**
 
-The Unity project provides full visualization of the Cosmic Synapse simulation with real-time audio-driven stochastic resonance, matching your Python simulator capabilities with enhanced visual presentation.
+The source is suitable for continued editor integration and controlled testing. It should not be described as “production ready,” “fully validated,” or a scientific validation result until those stronger claims have corresponding reproducible evidence.
 
+See:
+
+- `docs/ARCHITECTURE.md`
+- `docs/CLAIMS_AND_LIMITATIONS.md`
+- `docs/REPRODUCIBILITY.md`
+- `cosmic_synapse/tests/test_unity_ipc_source_contract.py`
