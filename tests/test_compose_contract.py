@@ -15,9 +15,10 @@ def test_active_compose_uses_environment_credentials_not_committed_passwords():
     text = COMPOSE.read_text(encoding="utf-8")
     assert "admin123456" not in text
     assert "vibrational123" not in text
-    assert "${MINIO_ROOT_USER" in text
-    assert "${MINIO_ROOT_PASSWORD" in text
-    assert "${NEO4J_AUTH" in text
+    assert "${A_LMI_MINIO_ACCESS_KEY" in text
+    assert "${A_LMI_MINIO_SECRET_KEY" in text
+    assert "${A_LMI_NEO4J_USERNAME" in text
+    assert "${A_LMI_NEO4J_PASSWORD" in text
 
 
 def test_active_compose_host_ports_bind_loopback_only():
