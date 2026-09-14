@@ -1,245 +1,232 @@
-"""
-Temporal Knowledge Graph Client for Neo4j
+"""Temporal knowledge-graph integration with safe dynamic identifiers.
 
-Stores entities and relationships with temporal information for time-aware reasoning.
+Neo4j is optional at import time and the driver can be injected for deterministic
+tests. Dynamic labels/relationship types are validated before interpolation.
 """
 
-from neo4j import GraphDatabase
+from __future__ import annotations
+
 import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+import re
+from typing import Any, Dict, List, Optional
 
 from ..core.light_token import LightToken
 
+_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def validate_cypher_identifier(value: str) -> str:
+    if not isinstance(value, str) or not _IDENTIFIER.fullmatch(value):
+        raise ValueError(f"Unsafe Cypher identifier: {value!r}")
+    return value
+
+
+# Compatibility alias used by newer visualization tests/docs.
+validate_label = validate_cypher_identifier
+
 
 class TKGClient:
-    """
-    Client for Neo4j temporal knowledge graph operations.
-    
-    Extracts entities and relationships from Light Tokens and stores them
-    with temporal annotations for time-aware reasoning.
-    """
-    
-    def __init__(self, config: Dict[str, Any]):
-        """
-        Initialize Neo4j driver.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config['infrastructure']['neo4j']
+    """Neo4j temporal graph client with injectable driver."""
+
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        *,
+        driver: Any = None,
+        verify_connection: bool = True,
+    ):
+        self.config = config["infrastructure"]["neo4j"]
         self.logger = logging.getLogger(__name__)
-        
-        # Connect to Neo4j
-        self.driver = GraphDatabase.driver(
-            self.uri,
-            auth=(self.config['username'], self.config['password'])
-        )
-        
-        # Verify connection
-        with self.driver.session() as session:
-            session.run("RETURN 1")
-        
-        self.logger.info(f"Connected to Neo4j at {self.uri}")
-    
+        if driver is None:
+            try:
+                from neo4j import GraphDatabase
+            except ImportError as exc:
+                raise RuntimeError(
+                    "Neo4j support is optional; install the graph extra or inject a driver"
+                ) from exc
+            driver = GraphDatabase.driver(
+                self.uri,
+                auth=(self.config["username"], self.config["password"]),
+            )
+        self.driver = driver
+        if verify_connection:
+            with self._session() as session:
+                session.run("RETURN 1").consume()
+        self.logger.info("Neo4j client ready for %s", self.uri)
+
     @property
     def uri(self) -> str:
-        """Get Neo4j URI."""
-        return self.config['uri']
-    
-    def store_entities_from_token(self, token: LightToken):
-        """
-        Extract and store entities from a Light Token.
-        
-        In production, this would use NER (Named Entity Recognition) to
-        extract entities. For now, we create a simple relationship to the token.
-        
-        Args:
-            token: Light Token containing entities
-        """
+        return self.config["uri"]
+
+    def _session(self):
+        database = self.config.get("database")
+        return self.driver.session(database=database) if database else self.driver.session()
+
+    def store_entities_from_token(self, token: LightToken) -> int:
         if not token.content_text:
-            self.logger.debug(f"Token {token.token_id} has no content_text")
-            return
-        
-        timestamp = token.timestamp
-        
-        # Create a node for this Light Token
-        query = """
-        MERGE (t:LightToken {token_id: $token_id})
-        SET t.modality = $modality,
-            t.timestamp = $timestamp,
-            t.content_text = $content_text,
-            t.source_uri = $source_uri
-        RETURN t
-        """
-        
-        with self.driver.session() as session:
+            return 0
+
+        from ..services.ner_service import NERService
+
+        entities = NERService().extract_entities(token.content_text)
+        with self._session() as session:
             session.run(
-                query,
+                """
+                MERGE (t:LightToken {token_id: $token_id})
+                SET t.modality = $modality,
+                    t.timestamp = $timestamp,
+                    t.content_text = $content_text,
+                    t.source_uri = $source_uri
+                RETURN t
+                """,
                 token_id=token.token_id,
                 modality=token.modality,
-                timestamp=timestamp,
-                content_text=token.content_text[:1000],  # Limit size
-                source_uri=token.source_uri
-            )
-        
-        # Extract entities using NER service
-        from ..services.ner_service import NERService
-        ner = NERService()
-        entities = ner.extract_entities(token.content_text)
-        
-        # Store entities and relationships
-        for entity in entities:
-            # Create entity node
-            entity_query = f"""
-            MERGE (e:{entity['label']} {{name: $name}})
-            SET e.description = $description
-            RETURN e
-            """
-            
-            session.run(
-                entity_query,
-                name=entity['text'],
-                description=entity.get('description', entity['label'])
-            )
-            
-            # Create relationship from token to entity
-            rel_query = f"""
-            MATCH (t:LightToken {{token_id: $token_id}})
-            MATCH (e:{entity['label']} {{name: $entity_name}})
-            MERGE (t)-[r:CONTAINS_ENTITY]->(e)
-            SET r.timestamp = $timestamp
-            RETURN r
-            """
-            
-            session.run(
-                rel_query,
-                token_id=token.token_id,
-                entity_name=entity['text'],
-                timestamp=timestamp
-            )
-        
-        self.logger.info(f"Stored {len(entities)} entities from token {token.token_id[:8]} in TKG")
-    
+                timestamp=token.timestamp,
+                content_text=token.content_text[:1000],
+                source_uri=token.source_uri,
+            ).consume()
+
+            for entity in entities:
+                label = validate_cypher_identifier(str(entity["label"]))
+                session.run(
+                    f"""
+                    MERGE (e:{label} {{name: $name}})
+                    SET e.description = $description
+                    RETURN e
+                    """,
+                    name=entity["text"],
+                    description=entity.get("description", label),
+                ).consume()
+                session.run(
+                    f"""
+                    MATCH (t:LightToken {{token_id: $token_id}})
+                    MATCH (e:{label} {{name: $entity_name}})
+                    MERGE (t)-[r:CONTAINS_ENTITY]->(e)
+                    SET r.timestamp = $timestamp
+                    RETURN r
+                    """,
+                    token_id=token.token_id,
+                    entity_name=entity["text"],
+                    timestamp=token.timestamp,
+                ).consume()
+        return len(entities)
+
     def create_entity(
         self,
         entity_type: str,
         entity_name: str,
-        properties: Optional[Dict[str, Any]] = None
+        properties: Optional[Dict[str, Any]] = None,
     ):
-        """
-        Create an entity node in the knowledge graph.
-        
-        Args:
-            entity_type: Type of entity (Person, Organization, Concept, etc.)
-            entity_name: Name of the entity
-            properties: Additional properties
-        """
-        query = f"""
-        MERGE (e:{entity_type} {{name: $name}})
-        SET e += $properties
-        RETURN e
-        """
-        
-        with self.driver.session() as session:
+        label = validate_cypher_identifier(entity_type)
+        with self._session() as session:
             result = session.run(
-                query,
+                f"MERGE (e:{label} {{name: $name}}) SET e += $properties RETURN e",
                 name=entity_name,
-                properties=properties or {}
+                properties=properties or {},
             )
             return result.single()
-    
+
     def create_relationship(
         self,
         from_entity: str,
         to_entity: str,
         relationship_type: str,
-        properties: Optional[Dict[str, Any]] = None
+        properties: Optional[Dict[str, Any]] = None,
     ):
-        """
-        Create a relationship between two entities.
-        
-        Args:
-            from_entity: Name of source entity
-            to_entity: Name of target entity
-            relationship_type: Type of relationship
-            properties: Additional properties (including timestamp)
-        """
-        query = f"""
-        MATCH (a {{name: $from_name}}), (b {{name: $to_name}})
-        MERGE (a)-[r:{relationship_type}]->(b)
-        SET r += $properties
-        RETURN r
-        """
-        
-        with self.driver.session() as session:
+        rel_type = validate_cypher_identifier(relationship_type)
+        with self._session() as session:
             result = session.run(
-                query,
+                f"""
+                MATCH (a {{name: $from_name}}), (b {{name: $to_name}})
+                MERGE (a)-[r:{rel_type}]->(b)
+                SET r += $properties
+                RETURN r
+                """,
                 from_name=from_entity,
                 to_name=to_entity,
-                properties=properties or {}
+                properties=properties or {},
             )
             return result.single()
-    
+
     def query_entities(self, entity_type: str, limit: int = 100) -> List[Dict[str, Any]]:
-        """
-        Query entities by type.
-        
-        Args:
-            entity_type: Type of entity to query
-            limit: Maximum number of results
-            
-        Returns:
-            List of entity dictionaries
-        """
-        query = f"MATCH (e:{entity_type}) RETURN e LIMIT $limit"
-        
-        with self.driver.session() as session:
-            result = session.run(query, limit=limit)
-            return [dict(record['e']) for record in result]
-    
+        label = validate_cypher_identifier(entity_type)
+        with self._session() as session:
+            result = session.run(f"MATCH (e:{label}) RETURN e LIMIT $limit", limit=limit)
+            return [dict(record["e"]) for record in result]
+
     def temporal_query(
         self,
         entity_name: str,
         relationship_type: str,
         start_time: Optional[str] = None,
-        end_time: Optional[str] = None
+        end_time: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """
-        Query relationships with temporal constraints.
-        
-        Args:
-            entity_name: Name of entity
-            relationship_type: Type of relationship
-            start_time: Start timestamp (ISO format)
-            end_time: End timestamp (ISO format)
-            
-        Returns:
-            List of relationships matching temporal criteria
-        """
-        query = f"""
-        MATCH (a {{name: $entity_name}})-[r:{relationship_type}]->(b)
-        WHERE ($start_time IS NULL OR r.timestamp >= $start_time)
-          AND ($end_time IS NULL OR r.timestamp <= $end_time)
-        RETURN r, b
-        ORDER BY r.timestamp DESC
-        """
-        
-        with self.driver.session() as session:
+        rel_type = validate_cypher_identifier(relationship_type)
+        with self._session() as session:
             result = session.run(
-                query,
+                f"""
+                MATCH (a {{name: $entity_name}})-[r:{rel_type}]->(b)
+                WHERE ($start_time IS NULL OR r.timestamp >= $start_time)
+                  AND ($end_time IS NULL OR r.timestamp <= $end_time)
+                RETURN r, b
+                ORDER BY r.timestamp DESC
+                """,
                 entity_name=entity_name,
-                relationship_type=relationship_type,
                 start_time=start_time,
-                end_time=end_time
+                end_time=end_time,
             )
-            return [{
-                'relationship': dict(record['r']),
-                'target': dict(record['b'])
-            } for record in result]
-    
-    def close(self):
-        """Close the Neo4j connection."""
-        self.driver.close()
-        self.logger.info("Closed Neo4j connection")
+            return [
+                {"relationship": dict(record["r"]), "target": dict(record["b"])}
+                for record in result
+            ]
 
+    def fetch_graph(self, limit: int = 1000) -> Dict[str, List[Dict[str, Any]]]:
+        """Return a renderer-neutral graph snapshot using stable Neo4j element IDs."""
+
+        if limit <= 0:
+            raise ValueError("limit must be positive")
+        edge_limit = max(limit, min(limit * 5, 5000))
+        with self._session() as session:
+            node_rows = session.run(
+                """
+                MATCH (n)
+                RETURN elementId(n) AS id, labels(n) AS labels, properties(n) AS properties
+                LIMIT $limit
+                """,
+                limit=limit,
+            )
+            nodes = []
+            for row in node_rows:
+                labels = list(row.get("labels") or [])
+                properties = dict(row.get("properties") or {})
+                nodes.append(
+                    {
+                        "id": row["id"],
+                        "type": labels[0] if labels else "Unknown",
+                        "labels": labels,
+                        **properties,
+                    }
+                )
+
+            edge_rows = session.run(
+                """
+                MATCH (a)-[r]->(b)
+                RETURN elementId(a) AS source, elementId(b) AS target,
+                       type(r) AS type, properties(r) AS properties
+                LIMIT $limit
+                """,
+                limit=edge_limit,
+            )
+            edges = [
+                {
+                    "source": row["source"],
+                    "target": row["target"],
+                    "type": row["type"],
+                    "properties": dict(row.get("properties") or {}),
+                }
+                for row in edge_rows
+            ]
+        return {"nodes": nodes, "edges": edges}
+
+    def close(self) -> None:
+        self.driver.close()
