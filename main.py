@@ -1,308 +1,222 @@
 #!/usr/bin/env python3
-"""
-Main Orchestration Script for A-LMI System
+"""Canonical orchestration entry point for the active A-LMI runtime.
 
-Initializes all services, performs health checks, and coordinates
-the autonomous agent loop with graceful shutdown handling.
+Heavy/optional services are imported lazily so configuration inspection does
+not require every ML, audio, database, or hardware dependency.
 """
 
-import sys
-import time
-import signal
+from __future__ import annotations
+
 import logging
-import yaml
-from pathlib import Path
-from typing import Dict, Any
+import signal
+import sys
 import threading
+import time
+from pathlib import Path
+from typing import Any, Mapping
 
-# Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from a_lmi.core.agent import ALMIAgent
-from a_lmi.services.processing_core import ProcessingCore
-from a_lmi.services.audio_processor import AudioProcessor
-# Config loaded in ALMIOrchestrator
+from a_lmi.config import ConfigSource, load_config
 
 
 class ALMIOrchestrator:
-    """
-    Main orchestrator for the A-LMI system.
-    
-    Responsibilities:
-    - Initialize all services
-    - Health checks
-    - Service coordination
-    - Graceful shutdown
-    - Error handling and recovery
-    """
-    
-    def __init__(self, config_path: str = "infrastructure/config.yaml"):
-        """
-        Initialize orchestrator.
-        
-        Args:
-            config_path: Path to configuration file
-        """
-        # Setup logging
+    """Coordinate infrastructure-backed A-LMI services and graceful shutdown."""
+
+    def __init__(self, config_source: ConfigSource = "infrastructure/config.yaml"):
+        self.config: Mapping[str, Any] = load_config(config_source)
+
+        log_file = Path(self.config.get("logging", {}).get("file", "logs/a_lmi.log"))
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        log_level = getattr(
+            logging, str(self.config.get("logging", {}).get("level", "INFO")).upper(), logging.INFO
+        )
+        log_format = self.config.get("logging", {}).get(
+            "format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler(sys.stdout),
-                logging.FileHandler('logs/a_lmi.log')
-            ]
+            level=log_level,
+            format=log_format,
+            handlers=[logging.StreamHandler(sys.stdout), logging.FileHandler(log_file)],
         )
         self.logger = logging.getLogger(__name__)
-        
-        # Load configuration
-        with open(config_path, 'r') as f:
-            self.config = yaml.safe_load(f)
-        
-        self.logger.info("="*70)
-        self.logger.info("A-LMI System - Unified Vibrational Intelligence")
-        self.logger.info("="*70)
-        
-        # Service instances
+
         self.agent = None
         self.processing_core = None
         self.audio_processor = None
-        
-        # Threads
-        self.service_threads = []
+        self.service_threads: list[threading.Thread] = []
         self.running = False
-        
-        # Setup signal handlers for graceful shutdown
+
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
-        
-        self.logger.info("Orchestrator initialized")
-    
+        self.logger.info("A-LMI orchestrator initialized")
+
     def _signal_handler(self, signum, frame):
-        """Handle shutdown signals."""
-        self.logger.info(f"Received signal {signum}, initiating graceful shutdown...")
+        self.logger.info("Received signal %s; shutting down", signum)
         self.stop()
-        sys.exit(0)
-    
+        raise SystemExit(0)
+
     def check_infrastructure(self) -> bool:
-        """
-        Check infrastructure services are running.
-        
-        Returns:
-            True if all services are up
-        """
-        self.logger.info("Checking infrastructure services...")
-        
         checks = {
-            'Kafka': self._check_kafka(),
-            'MinIO': self._check_minio(),
-            'Milvus': self._check_milvus(),
-            'Neo4j': self._check_neo4j()
+            "Kafka": self._check_kafka(),
+            "MinIO": self._check_minio(),
+            "Milvus": self._check_milvus(),
+            "Neo4j": self._check_neo4j(),
         }
-        
-        all_up = all(checks.values())
-        
         for service, status in checks.items():
-            status_str = "✓ UP" if status else "✗ DOWN"
-            self.logger.info(f"  {service}: {status_str}")
-        
-        if not all_up:
-            self.logger.error("Infrastructure services not ready. Please start with: docker-compose up -d")
+            self.logger.info("  %s: %s", service, "UP" if status else "DOWN")
+        if not all(checks.values()):
+            self.logger.error(
+                "Full-stack infrastructure is not ready. Start the documented local stack "
+                "or use deterministic/unit modes that do not require external services."
+            )
             return False
-        
-        self.logger.info("All infrastructure services ready!")
         return True
-    
+
     def _check_kafka(self) -> bool:
-        """Check Kafka is running."""
         try:
             from kafka import KafkaProducer
+
             producer = KafkaProducer(
-                bootstrap_servers=self.config['infrastructure']['kafka']['bootstrap_servers'],
-                request_timeout_ms=5000
+                bootstrap_servers=self.config["infrastructure"]["kafka"]["bootstrap_servers"],
+                request_timeout_ms=5000,
             )
             producer.close()
             return True
-        except:
+        except Exception as exc:
+            self.logger.debug("Kafka health check failed: %s", exc)
             return False
-    
+
     def _check_minio(self) -> bool:
-        """Check MinIO is running."""
         try:
             from minio import Minio
+
+            cfg = self.config["infrastructure"]["minio"]
+            if not cfg.get("access_key") or not cfg.get("secret_key"):
+                return False
             client = Minio(
-                self.config['infrastructure']['minio']['endpoint'],
-                access_key=self.config['infrastructure']['minio']['access_key'],
-                secret_key=self.config['infrastructure']['minio']['secret_key'],
-                secure=False
+                cfg["endpoint"],
+                access_key=cfg["access_key"],
+                secret_key=cfg["secret_key"],
+                secure=bool(cfg.get("secure", False)),
             )
             client.list_buckets()
             return True
-        except:
+        except Exception as exc:
+            self.logger.debug("MinIO health check failed: %s", exc)
             return False
-    
+
     def _check_milvus(self) -> bool:
-        """Check Milvus is running."""
         try:
             from pymilvus import connections
-            connections.connect(
-                host=self.config['infrastructure']['milvus']['host'],
-                port=self.config['infrastructure']['milvus']['port']
-            )
+
+            cfg = self.config["infrastructure"]["milvus"]
+            connections.connect(host=cfg["host"], port=cfg["port"])
             return True
-        except:
+        except Exception as exc:
+            self.logger.debug("Milvus health check failed: %s", exc)
             return False
-    
+
     def _check_neo4j(self) -> bool:
-        """Check Neo4j is running."""
         try:
             from neo4j import GraphDatabase
+
+            cfg = self.config["infrastructure"]["neo4j"]
+            if not cfg.get("password"):
+                return False
             driver = GraphDatabase.driver(
-                self.config['infrastructure']['neo4j']['uri'],
-                auth=(
-                    self.config['infrastructure']['neo4j']['username'],
-                    self.config['infrastructure']['neo4j']['password']
-                )
+                cfg["uri"], auth=(cfg["username"], cfg["password"])
             )
-            with driver.session() as session:
-                session.run("RETURN 1")
+            with driver.session(database=cfg.get("database")) as session:
+                session.run("RETURN 1").consume()
             driver.close()
             return True
-        except:
+        except Exception as exc:
+            self.logger.debug("Neo4j health check failed: %s", exc)
             return False
-    
-    def initialize_services(self):
-        """Initialize all A-LMI services."""
-        self.logger.info("Initializing A-LMI services...")
-        
+
+    def initialize_services(self) -> None:
+        # Imports live here intentionally: minimal/config-only use does not need
+        # Kafka, PyTorch/Transformers, PyAudio, Milvus, or Neo4j installed.
+        from a_lmi.core.agent import ALMIAgent
+        from a_lmi.services.processing_core import ProcessingCore
+
+        self.agent = ALMIAgent(self.config)
+        self.processing_core = ProcessingCore(self.config)
+
         try:
-            # Initialize agent
-            self.logger.info("Initializing autonomous agent...")
-            self.agent = ALMIAgent(self.config)
-            
-            # Initialize processing core
-            self.logger.info("Initializing processing core...")
-            self.processing_core = ProcessingCore()
-            
-            # Initialize audio processor (optional)
-            try:
-                self.logger.info("Initializing audio processor...")
-                self.audio_processor = AudioProcessor(self.config)
-            except Exception as e:
-                self.logger.warning(f"Audio processor initialization failed: {e}")
-                self.audio_processor = None
-            
-            self.logger.info("All services initialized successfully!")
-            
-        except Exception as e:
-            self.logger.error(f"Error initializing services: {e}", exc_info=True)
-            raise
-    
-    def start(self):
-        """Start all services."""
+            from a_lmi.services.audio_processor import AudioProcessor
+
+            self.audio_processor = AudioProcessor(self.config)
+        except (ImportError, RuntimeError, OSError) as exc:
+            self.logger.warning("Optional audio path unavailable: %s", exc)
+            self.audio_processor = None
+
+    def start(self) -> None:
         if self.running:
             self.logger.warning("Services already running")
             return
-        
-        self.logger.info("Starting A-LMI system...")
-        
-        # Check infrastructure first
         if not self.check_infrastructure():
-            self.logger.error("Cannot start: infrastructure not ready")
             return
-        
-        # Initialize services
         try:
             self.initialize_services()
-        except Exception as e:
-            self.logger.error(f"Failed to initialize services: {e}")
+        except Exception as exc:
+            self.logger.error("Failed to initialize full-stack services: %s", exc, exc_info=True)
             return
-        
-        # Start service threads
+
         self.running = True
-        
-        # Start agent (runs its own loops internally)
         if self.agent:
-            agent_thread = threading.Thread(target=self.agent.run, daemon=True)
-            agent_thread.start()
-            self.service_threads.append(agent_thread)
-        
-        # Start processing core
+            thread = threading.Thread(target=self.agent.run, daemon=True)
+            thread.start()
+            self.service_threads.append(thread)
         if self.processing_core:
-            proc_thread = threading.Thread(target=self.processing_core.run, daemon=True)
-            proc_thread.start()
-            self.service_threads.append(proc_thread)
-        
-        # Start audio processor
+            thread = threading.Thread(target=self.processing_core.run, daemon=True)
+            thread.start()
+            self.service_threads.append(thread)
         if self.audio_processor:
-            audio_thread = threading.Thread(target=self._run_audio, daemon=True)
-            audio_thread.start()
-            self.service_threads.append(audio_thread)
-        
-        self.logger.info("="*70)
-        self.logger.info("A-LMI System is RUNNING")
-        self.logger.info("Press Ctrl+C to stop")
-        self.logger.info("="*70)
-        
-        # Keep main thread alive
+            thread = threading.Thread(target=self._run_audio, daemon=True)
+            thread.start()
+            self.service_threads.append(thread)
+
+        self.logger.info("A-LMI full-stack runtime is running")
         try:
             while self.running:
                 time.sleep(1)
         except KeyboardInterrupt:
             self.stop()
-    
-    def _run_audio(self):
-        """Run audio processor."""
-        if self.audio_processor:
-            self.audio_processor.start_recording()
-            try:
-                while self.running:
-                    time.sleep(1)
-            finally:
-                self.audio_processor.stop_recording()
-    
-    def stop(self):
-        """Stop all services gracefully."""
+
+    def _run_audio(self) -> None:
+        assert self.audio_processor is not None
+        self.audio_processor.start_recording()
+        try:
+            while self.running:
+                time.sleep(1)
+        finally:
+            self.audio_processor.stop_recording()
+
+    def stop(self) -> None:
         if not self.running:
             return
-        
-        self.logger.info("Stopping A-LMI system...")
         self.running = False
-        
-        # Stop services
         if self.audio_processor:
             self.audio_processor.stop_recording()
-        
-        # Give threads time to finish
         for thread in self.service_threads:
             thread.join(timeout=5.0)
-        
-        self.logger.info("A-LMI system stopped")
-    
-    def status(self):
-        """Print system status."""
-        self.logger.info("="*70)
-        self.logger.info("A-LMI System Status")
-        self.logger.info("="*70)
-        self.logger.info(f"Running: {self.running}")
-        self.logger.info(f"Active threads: {len(self.service_threads)}")
-        self.logger.info(f"Agent: {'✓' if self.agent else '✗'}")
-        self.logger.info(f"Processing Core: {'✓' if self.processing_core else '✗'}")
-        self.logger.info(f"Audio Processor: {'✓' if self.audio_processor else '✗'}")
-        self.logger.info("="*70)
+        self.logger.info("A-LMI runtime stopped")
+
+    def status(self) -> dict[str, Any]:
+        return {
+            "running": self.running,
+            "active_threads": len(self.service_threads),
+            "agent": self.agent is not None,
+            "processing_core": self.processing_core is not None,
+            "audio_processor": self.audio_processor is not None,
+        }
 
 
-def main():
-    """Main entry point."""
-    # Create logs directory
-    Path('logs').mkdir(exist_ok=True)
-    
-    # Create orchestrator
-    orchestrator = ALMIOrchestrator()
-    
-    # Start system
-    orchestrator.start()
+def main() -> None:
+    ALMIOrchestrator().start()
 
 
 if __name__ == "__main__":
     main()
-

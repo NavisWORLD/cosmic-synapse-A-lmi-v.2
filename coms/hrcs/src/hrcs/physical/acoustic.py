@@ -1,204 +1,147 @@
-"""
-Acoustic Modem Implementation
-Golden ratio OFDM-based acoustic communication (20Hz-20kHz)
+"""Experimental phi-spaced multicarrier acoustic modem.
+
+The carriers are not assumed to be orthogonal, so the active implementation
+uses a least-squares/matched basis decoder rather than labeling the scheme
+OFDM. BPSK phase/sign is preserved during demodulation. A length prefix makes
+synthetic round trips byte-exact even when the final carrier group is padded.
+
+Optional historical stochastic-noise processing is disabled by default and is
+not represented as a validated communications advantage.
 """
 
-import numpy as np
+from __future__ import annotations
+
+import math
+import struct
 from typing import Optional
+
+import numpy as np
 
 try:
     import sounddevice as sd
+
     SOUNDDEVICE_AVAILABLE = True
 except ImportError:
+    sd = None
     SOUNDDEVICE_AVAILABLE = False
 
 from ..core.math import UnifiedMath
 from .base import BaseModem
 
-
-# Default parameters
-SAMPLE_RATE = 48000      # Audio sample rate (Hz)
-BASE_FREQ = 432         # Base frequency (Hz)
-CHANNELS = 32           # Number of OFDM subcarriers
-SYMBOL_DURATION = 0.02  # Symbol duration (seconds)
+SAMPLE_RATE = 48000
+BASE_FREQ = 432
+CHANNELS = 32
+SYMBOL_DURATION = 0.02
+FRAME_LENGTH_BYTES = 4
 
 
 class AcousticModem(BaseModem):
-    """
-    Acoustic communication using golden ratio OFDM
-    
-    Uses orthogonal frequency division multiplexing (OFDM) with golden ratio
-    subcarrier spacing for robust acoustic communication in the 20Hz-20kHz range.
-    """
-    
-    def __init__(self, sample_rate=SAMPLE_RATE, base_freq=BASE_FREQ, channels=CHANNELS):
+    """Phi-spaced multicarrier BPSK modem with optional physical audio I/O."""
+
+    def __init__(
+        self,
+        sample_rate=SAMPLE_RATE,
+        base_freq=BASE_FREQ,
+        channels=CHANNELS,
+        stochastic_noise_level: float = 0.0,
+        stochastic_seed: int | None = None,
+    ):
         super().__init__()
-        self.sample_rate = sample_rate
-        self.base_freq = base_freq
+        self.sample_rate = int(sample_rate)
+        self.base_freq = float(base_freq)
         self.band_name = "acoustic"
-        
-        # Generate golden ratio frequency channels
         self.channels = UnifiedMath.golden_ratio_frequencies(base_freq, channels)
-        
-        # Keep channels within audible range
-        self.channels = np.array([f for f in self.channels if f < 18000])
+        self.channels = np.asarray([f for f in self.channels if f < 18000], dtype=float)
         self.num_channels = len(self.channels)
-        
+        if self.num_channels == 0:
+            raise ValueError("Acoustic modem requires at least one carrier")
         self.symbol_duration = SYMBOL_DURATION
         self.samples_per_symbol = int(self.sample_rate * self.symbol_duration)
-    
+        if self.samples_per_symbol <= self.num_channels:
+            raise ValueError("Not enough samples per symbol for configured carrier basis")
+        self.stochastic_noise_level = float(stochastic_noise_level)
+        self._rng = np.random.default_rng(stochastic_seed)
+
+        t = np.arange(self.samples_per_symbol, dtype=np.float64) / self.sample_rate
+        self._carrier_basis = np.sin(2 * np.pi * self.channels[:, None] * t[None, :])
+        # A is samples x carriers. pinv(A) maps a received symbol back to
+        # signed carrier coefficients even though the carriers are non-orthogonal.
+        self._decoder = np.linalg.pinv(self._carrier_basis.T, rcond=1e-10)
+
     def is_available(self) -> bool:
-        """Check if audio hardware is available"""
         return SOUNDDEVICE_AVAILABLE
-    
+
     def modulate(self, data_bytes: bytes) -> np.ndarray:
-        """
-        Modulate data onto acoustic carriers using BPSK OFDM
-        
-        Args:
-            data_bytes: Data to modulate
-            
-        Returns:
-            Array of audio samples
-        """
-        # Convert bytes to bits
-        bits = np.unpackbits(np.frombuffer(data_bytes, dtype=np.uint8))
-        
-        # Calculate symbols needed
-        bits_per_symbol = self.num_channels
-        num_symbols = int(np.ceil(len(bits) / bits_per_symbol))
-        
-        # Pad bits to multiple of bits_per_symbol
-        total_bits = num_symbols * bits_per_symbol
-        bits = np.pad(bits, (0, total_bits - len(bits)))
-        
-        # Generate signal
-        signal = []
-        
-        for sym_idx in range(num_symbols):
-            # Get bits for this symbol
-            start = sym_idx * bits_per_symbol
-            end = start + bits_per_symbol
-            symbol_bits = bits[start:end]
-            
-            # Generate OFDM symbol
-            t = np.linspace(0, self.symbol_duration, self.samples_per_symbol)
-            symbol_signal = np.zeros(self.samples_per_symbol)
-            
-            for i, freq in enumerate(self.channels):
-                if i < len(symbol_bits):
-                    # BPSK modulation: bit 0 = phase 0, bit 1 = phase π
-                    phase = np.pi if symbol_bits[i] else 0
-                    carrier = np.sin(2 * np.pi * freq * t + phase)
-                    symbol_signal += carrier
-            
-            # Normalize to prevent clipping
-            max_val = np.max(np.abs(symbol_signal))
-            if max_val > 0:
-                symbol_signal = symbol_signal / max_val
-            
-            # Apply stochastic resonance enhancement
-            symbol_signal = UnifiedMath.stochastic_enhance(symbol_signal, 0.05)
-            
-            signal.extend(symbol_signal)
-        
-        return np.array(signal)
-    
+        if not isinstance(data_bytes, bytes):
+            raise TypeError("Acoustic modem payload must be bytes")
+        framed = struct.pack("!I", len(data_bytes)) + data_bytes
+        bits = np.unpackbits(np.frombuffer(framed, dtype=np.uint8))
+        num_symbols = int(math.ceil(len(bits) / self.num_channels))
+        bits = np.pad(bits, (0, num_symbols * self.num_channels - len(bits)))
+
+        symbols = []
+        for symbol_index in range(num_symbols):
+            start = symbol_index * self.num_channels
+            symbol_bits = bits[start : start + self.num_channels]
+            coefficients = np.where(symbol_bits == 0, 1.0, -1.0)
+            symbol = coefficients @ self._carrier_basis
+            peak = float(np.max(np.abs(symbol)))
+            if peak > 0:
+                symbol = symbol / peak
+            if self.stochastic_noise_level > 0:
+                symbol = UnifiedMath.stochastic_enhance(
+                    symbol,
+                    self.stochastic_noise_level,
+                    rng=self._rng,
+                )
+            symbols.append(symbol.astype(np.float64, copy=False))
+        return np.concatenate(symbols) if symbols else np.asarray([], dtype=float)
+
     def demodulate(self, received_signal: np.ndarray) -> bytes:
-        """
-        Demodulate acoustic signal
-        
-        Args:
-            received_signal: Array of received audio samples
-            
-        Returns:
-            Demodulated data bytes
-        """
-        bits = []
-        num_symbols = len(received_signal) // self.samples_per_symbol
-        
-        for sym_idx in range(num_symbols):
-            # Extract symbol
-            start = sym_idx * self.samples_per_symbol
-            end = start + self.samples_per_symbol
-            
-            if end > len(received_signal):
-                break
-                
-            symbol = received_signal[start:end]
-            
-            # Correlate with each carrier
-            t = np.linspace(0, self.symbol_duration, self.samples_per_symbol)
-            
-            for freq in self.channels:
-                ref_0 = np.sin(2 * np.pi * freq * t)
-                ref_1 = np.sin(2 * np.pi * freq * t + np.pi)
-                
-                corr_0 = np.abs(np.sum(symbol * ref_0))
-                corr_1 = np.abs(np.sum(symbol * ref_1))
-                
-                # Decision: choose bit based on stronger correlation
-                bit = 1 if corr_1 > corr_0 else 0
-                bits.append(bit)
-        
-        # Convert bits to bytes
-        bit_array = np.array(bits)
-        # Pad to multiple of 8
-        remainder = len(bit_array) % 8
-        if remainder > 0:
-            bit_array = np.pad(bit_array, (0, 8 - remainder))
-        
-        return np.packbits(bit_array).tobytes()
-    
+        signal = np.asarray(received_signal, dtype=float).reshape(-1)
+        num_symbols = len(signal) // self.samples_per_symbol
+        if num_symbols == 0:
+            raise ValueError("Acoustic signal does not contain a complete symbol")
+
+        bits: list[int] = []
+        for symbol_index in range(num_symbols):
+            start = symbol_index * self.samples_per_symbol
+            symbol = signal[start : start + self.samples_per_symbol]
+            coefficients = self._decoder @ symbol
+            bits.extend((coefficients < 0).astype(np.uint8).tolist())
+
+        raw = np.packbits(np.asarray(bits, dtype=np.uint8)).tobytes()
+        if len(raw) < FRAME_LENGTH_BYTES:
+            raise ValueError("Acoustic frame is missing its length prefix")
+        payload_length = struct.unpack("!I", raw[:FRAME_LENGTH_BYTES])[0]
+        available = len(raw) - FRAME_LENGTH_BYTES
+        if payload_length > available:
+            raise ValueError(
+                f"Acoustic frame declares {payload_length} bytes but only {available} are available"
+            )
+        return raw[FRAME_LENGTH_BYTES : FRAME_LENGTH_BYTES + payload_length]
+
     def transmit(self, data: bytes) -> bool:
-        """
-        Transmit data acoustically
-        
-        Args:
-            data: Data to transmit
-            
-        Returns:
-            True if successful
-        """
         if not self.is_available():
             return False
-        
         try:
             signal = self.modulate(data)
             sd.play(signal, self.sample_rate)
             sd.wait()
             return True
-        except Exception as e:
-            print(f"Acoustic transmit error: {e}")
+        except Exception:
             return False
-    
+
     def receive(self, timeout: float = 1.0) -> Optional[bytes]:
-        """
-        Record and demodulate acoustic signal
-        
-        Args:
-            timeout: Recording duration in seconds
-            
-        Returns:
-            Demodulated data bytes, or None on error
-        """
         if not self.is_available():
             return None
-        
         try:
-            recording = sd.rec(int(timeout * self.sample_rate),
-                              samplerate=self.sample_rate,
-                              channels=1)
+            recording = sd.rec(
+                int(timeout * self.sample_rate),
+                samplerate=self.sample_rate,
+                channels=1,
+            )
             sd.wait()
-            
-            # Extract mono channel
-            if len(recording.shape) > 1:
-                recording = recording[:, 0]
-            else:
-                recording = recording.flatten()
-            
-            return self.demodulate(recording)
-        except Exception as e:
-            print(f"Acoustic receive error: {e}")
+            return self.demodulate(np.asarray(recording).reshape(-1))
+        except Exception:
             return None
-
