@@ -1,117 +1,112 @@
-# Architecture Documentation
+# God Music Architecture
 
-## System Overview
+God Music is a modular ES6/Web Audio application. The active restoration describes it as an algorithmic reactive/predictive browser music prototype.
 
-God Music is a modular ES6+ application built with a clear separation of concerns.
+Historical class names such as `BioSignature`, `PhiHarmonics`, and `PsiCalculator` are retained for compatibility and project lineage. They should be read as software abstractions, not validated biomedical measurements or new-physics constructs.
 
-## Module Structure
+## Module structure
 
-### Core Modules (`src/core/`)
-- **AudioEngine.js** - Web Audio API initialization and microphone routing
-- **BioSignature.js** - Real-time bio-frequency extraction and tracking
-- **PhiHarmonics.js** - Golden ratio harmonic series generation
-- **PsiCalculator.js** - Musical information density calculation
+### Core (`src/core/`)
 
-### Analysis Modules (`src/analysis/`)
-- **PitchDetector.js** - YIN algorithm for fundamental frequency detection
-- **SpectralAnalyzer.js** - FFT-based spectral analysis
-- **TempoDetector.js** - Beat and tempo detection
+- `AudioEngine.js` — Web Audio context, analyzer, synthesis-output routing
+- `BioSignature.js` — historical class name for tracked audio-derived features
+- `PhiHarmonics.js` — deterministic harmonic-rule generation using the project phi parameter
+- `PsiCalculator.js` — project-specific musical information calculation
 
-### Prediction Modules (`src/prediction/`)
-- **PredictiveEngine.js** - Main prediction orchestrator
-- **PhraseTracker.js** - Musical phrase position tracking
-- **GrooveLock.js** - Tempo locking mechanism
-- **ChordPredictor.js** - φ-harmonic chord prediction
+### Analysis (`src/analysis/`)
 
-### Instrument Modules (`src/instruments/`)
-- **InstrumentBase.js** - Base class for all instruments
-- **Drums.js** - Drum kit synthesis
-- **Bass.js** - Bass guitar synthesis
-- **Guitar.js** - Guitar synthesis (Karplus-Strong)
-- **Piano.js** - Piano synthesis (FM)
-- **Strings.js** - String pad synthesis
-- **Pads.js** - Ambient pad synthesis
+- `PitchDetector.js` — pitch/fundamental-frequency estimation
+- `SpectralAnalyzer.js` — FFT/spectral helpers
+- `TempoDetector.js` — beat/tempo estimation
 
-### Audio Modules (`src/audio/`)
-- **Mixer.js** - Master mixer and instrument buses
-- **Synthesis.js** - Shared synthesis utilities
+### Prediction (`src/prediction/`)
 
-### UI Modules (`src/ui/`)
-- **Logger.js** - Activity log system
-- **Visualizer.js** - Spectrum and waveform displays
-- **InstrumentControls.js** - Instrument volume and mute controls
+- `PredictiveEngine.js` — deterministic orchestration
+- `PhraseTracker.js` — phrase/bar/beat position tracking
+- `GrooveLock.js` — tempo-lock rule state
+- `ChordPredictor.js` — rule-based next-chord helper using the configured harmonic sequence
 
-## Audio Routing
+The current prediction layer is deterministic/rule-based, not a trained machine-learning model.
 
-### Critical: Microphone Isolation
+### Instruments (`src/instruments/`)
 
-```
-Microphone Input:
-  └─> createMediaStreamSource
-      └─> Analyzer (read-only, NO connection to output)
+Synthesized drums, bass, guitar, piano, strings, pads, and the shared instrument base.
 
-Instrument Synthesis:
-  └─> Individual Instrument Buses
-      └─> Compressor
-          └─> Master Gain
-              └─> Audio Destination (Speakers)
+### Audio (`src/audio/`)
+
+Mixer and synthesis utilities.
+
+### UI (`src/ui/`)
+
+Logger, visualizer, and instrument controls.
+
+## Intended audio routing
+
+```text
+microphone/media stream
+  └─ analyzer path
+
+synthesized instruments
+  └─ instrument buses
+      └─ compressor/master
+          └─ audio destination
 ```
 
-**The microphone NEVER connects to the output chain.** This is enforced by:
-1. Structural code separation (mic → analyzer only)
-2. Runtime validation in `AudioEngine.validateRouting()`
-3. Visual indicator in UI
+The source is intentionally structured so the microphone analysis source is not connected to the synthesized output chain. Runtime/source checks are useful, but target-browser/device verification is still required before making an absolute live-audio routing claim.
 
-## Data Flow
+## Data flow
 
-1. **User Input** → Microphone → Analyzer
-2. **Analysis** → BioSignature extraction
-3. **Harmonic Generation** → PhiHarmonics from bio-signature
-4. **Prediction** → PredictiveEngine analyzes patterns
-5. **Music Generation** → Instruments receive commands
-6. **Output** → Mixer → Compressor → Speakers
+```text
+microphone sample
+   ↓
+audio analysis (pitch / spectrum / tempo-related features)
+   ↓
+historical BioSignature feature object
+   ↓
+deterministic harmonic/timing rules
+   ↓
+phrase / groove / chord prediction helpers
+   ↓
+synthesized instruments
+   ↓
+mixer / output
+```
 
-## Prediction System
+No step in that flow establishes biological-state inference.
 
-The prediction system operates on multiple levels:
+## Prediction behavior
 
-1. **Phrase Level**: Tracks position within 4-bar phrases
-2. **Beat Level**: Knows current beat position
-3. **Harmonic Level**: Predicts next chord using φ-harmonics
-4. **Rhythmic Level**: Locks tempo after 4 bars
+The prediction subsystem tracks phrase/beat state, tempo history, and deterministic chord/harmonic rules. “Prediction” means forward rule logic based on current state; it does not imply learned intelligence.
 
-## Extension Points
+## Extension points
 
-### Adding a New Instrument
+### Add an instrument
 
-1. Create class extending `InstrumentBase`
-2. Implement synthesis methods
-3. Add to `instruments` object in `main.js`
-4. Create bus in mixer
-5. Add UI controls
+1. Extend `InstrumentBase`.
+2. Implement the synthesis/play methods.
+3. Register the instrument in the application entry point.
+4. Add/connect its mixer bus.
+5. Add UI controls and deterministic tests where practical.
 
-### Adding UI Components
+### Add analysis/prediction behavior
 
-1. Create class in `src/ui/`
-2. Initialize in `main.js`
-3. Add HTML elements if needed
-4. Style in CSS files
+Keep raw audio-analysis features separate from semantic/biological claims. For a learned model, record the model/revision, training/evaluation assumptions, input/output contract, and evidence separately.
 
 ## Dependencies
 
-- **Web Audio API** - Core audio processing
-- **No external libraries** - Pure ES6 modules
-- **Vite** (optional) - Development/build tool
+Runtime behavior primarily uses browser Web Audio/ES modules. Vite is the supported development/build path and is what CI verifies.
 
-## Build Modes
+```bash
+npm install
+npm test
+npm run dev
+npm run build
+```
 
-### Standalone
-- Open `index.html` directly
-- Modules load via ES6 imports
-- No build step required
+A direct `file://` open is not treated as equivalent to the tested Vite/localhost workflow because ES-module and microphone security behavior can differ across browsers.
 
-### Vite Development
-- `npm run dev` - Development server with HMR
-- `npm run build` - Production build
-- `npm run preview` - Preview production build
+## Evidence boundary
 
+CI currently verifies deterministic Node utilities and a Vite production build. It does not certify browser microphone routing, latency, mobile compatibility, audio quality, biometric inference, trained AI, or performance advantages from phi/golden-ratio rules.
+
+See the repository root `docs/CLAIMS_AND_LIMITATIONS.md` and `docs/REPRODUCIBILITY.md`.
