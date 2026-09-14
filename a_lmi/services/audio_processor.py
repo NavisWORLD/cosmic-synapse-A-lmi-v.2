@@ -1,286 +1,240 @@
+"""Optional real-time audio capture and provider-based audio analysis.
+
+PyAudio, Vosk, and learned environmental classifiers are optional. Importing or
+constructing the service does not open hardware. Missing providers are reported
+as unavailable rather than replaced with fabricated classifications or text.
 """
-Audio Processing Service
 
-Handles real-time audio input, speech-to-text transcription, and 
-Environmental Sound Classification (ESC) for acoustic context tracking.
-"""
+from __future__ import annotations
 
-import pyaudio
-import wave
-import numpy as np
-import logging
-from typing import Optional, Callable
-import threading
-import queue
-import time
-from datetime import datetime, timezone
-
-# Note: Vosk requires separate installation
-# from vosk import Model, KaldiRecognizer
 import json
+import logging
+import queue
+import threading
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable, Optional
+
+import numpy as np
+
+_AUTO = object()
 
 
 class AudioProcessor:
-    """
-    Real-time audio processor with ESC and speech recognition.
-    
-    Implements:
-    - Continuous microphone streaming
-    - Environmental Sound Classification
-    - Speech-to-text transcription (Vosk)
-    - Acoustic context metadata capture
-    """
-    
-    def __init__(self, config: dict):
-        """
-        Initialize audio processor.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config['a_lmi']['perception']['audio_processor']
+    """Real-time microphone service with explicit optional providers."""
+
+    def __init__(
+        self,
+        config: dict,
+        *,
+        audio_backend: Any = _AUTO,
+        esc_classifier: Any = None,
+        speech_recognizer: Any = None,
+        artifact_store: Any = None,
+    ):
+        self.root_config = config
+        perception = config["a_lmi"]["perception"]
+        self.config = perception["audio_processor"]
+        self.speech_config = perception.get("speech_to_text", {})
         self.logger = logging.getLogger(__name__)
-        
-        # Audio parameters
-        self.sample_rate = self.config['sample_rate']
-        self.chunk_size = self.config['chunk_size']
-        self.format = self._parse_format(self.config['format'])
-        self.channels = self.config['channels']
-        
-        # Audio streaming
+
+        if audio_backend is _AUTO:
+            try:
+                import pyaudio as imported_backend
+            except ImportError:
+                imported_backend = None
+            audio_backend = imported_backend
+        self.audio_backend = audio_backend
+        self.audio_available = audio_backend is not None
+
+        self.sample_rate = int(self.config["sample_rate"])
+        self.chunk_size = int(self.config["chunk_size"])
+        self.channels = int(self.config["channels"])
+        self.format_name = str(self.config.get("format", "paInt16"))
+        self.format = self._parse_format(self.format_name)
+
         self.audio = None
         self.stream = None
         self.is_recording = False
-        self.audio_queue = queue.Queue()
-        
-        # ESC model (would be loaded from trained PyTorch model)
-        self.esc_model = None
-        self.esc_labels = [
-            'silence', 'indoor', 'outdoor', 'transport', 'nature',
-            'office', 'cafe', 'library', 'street', 'park',
-            'residential', 'commercial', 'industrial'
-        ]
-        
-        # Speech recognition (Vosk)
-        # self.vosk_model = None
-        # self.recognizer = None
-        
-        # Callback for processed audio data
-        self.on_audio_processed: Optional[Callable] = None
-    
-    def _parse_format(self, format_str: str) -> int:
-        """Parse format string to pyaudio format constant."""
+        self.audio_queue: queue.Queue[bytes] = queue.Queue()
+        self.processing_thread: Optional[threading.Thread] = None
+
+        self.esc_classifier = esc_classifier
+        self.speech_recognizer = speech_recognizer
+        self.artifact_store = artifact_store
+        self._vosk_load_attempted = speech_recognizer is not None
+        self.on_audio_processed: Optional[Callable[[dict], None]] = None
+
+    def is_available(self) -> bool:
+        return bool(self.audio_available)
+
+    def _parse_format(self, format_str: str):
+        if self.audio_backend is None:
+            return None
         format_map = {
-            'paInt16': pyaudio.paInt16,
-            'paInt32': pyaudio.paInt32,
-            'paFloat32': pyaudio.paFloat32
+            "paInt16": getattr(self.audio_backend, "paInt16", None),
+            "paInt32": getattr(self.audio_backend, "paInt32", None),
+            "paFloat32": getattr(self.audio_backend, "paFloat32", None),
         }
-        return format_map.get(format_str, pyaudio.paInt16)
-    
-    def start_recording(self):
-        """Start continuous audio recording."""
+        value = format_map.get(format_str)
+        if value is None:
+            raise ValueError(f"Unsupported audio format: {format_str}")
+        return value
+
+    def start_recording(self) -> None:
+        if not self.audio_available:
+            raise RuntimeError(
+                "audio backend is unavailable; install the audio extra and configure microphone access"
+            )
         if self.is_recording:
-            self.logger.warning("Already recording")
             return
-        
-        self.audio = pyaudio.PyAudio()
-        
+
+        self.audio = self.audio_backend.PyAudio()
         self.stream = self.audio.open(
             format=self.format,
             channels=self.channels,
             rate=self.sample_rate,
             frames_per_buffer=self.chunk_size,
             input=True,
-            stream_callback=self._audio_callback
+            stream_callback=self._audio_callback,
         )
-        
         self.is_recording = True
         self.stream.start_stream()
-        
-        # Start processing thread
-        self.processing_thread = threading.Thread(target=self._process_audio_loop, daemon=True)
+        self.processing_thread = threading.Thread(
+            target=self._process_audio_loop, daemon=True, name="a-lmi-audio"
+        )
         self.processing_thread.start()
-        
-        self.logger.info("Started audio recording")
-    
-    def stop_recording(self):
-        """Stop audio recording."""
+
+    def stop_recording(self) -> None:
         if not self.is_recording:
             return
-        
         self.is_recording = False
-        
-        if self.stream:
+        if self.stream is not None:
             self.stream.stop_stream()
             self.stream.close()
-        
-        if self.audio:
+            self.stream = None
+        if self.audio is not None:
             self.audio.terminate()
-        
-        self.logger.info("Stopped audio recording")
-    
+            self.audio = None
+        if self.processing_thread is not None:
+            self.processing_thread.join(timeout=2.0)
+            self.processing_thread = None
+
     def _audio_callback(self, in_data, frame_count, time_info, status):
-        """
-        Callback for audio stream data.
-        
-        This is called by pyaudio whenever new audio data is available.
-        """
-        if self.is_recording:
-            self.audio_queue.put(in_data)
-        
-        return (None, pyaudio.paContinue)
-    
-    def _process_audio_loop(self):
-        """
-        Main processing loop (runs in separate thread).
-        
-        Processes audio chunks from queue:
-        1. Classify environmental sound
-        2. Perform speech-to-text
-        3. Emit processed data
-        """
-        buffer = []
-        buffer_duration = 3.0  # seconds of audio to buffer
-        buffer_size = int(self.sample_rate * buffer_duration)
-        
+        if self.is_recording and in_data:
+            self.audio_queue.put(bytes(in_data))
+        pa_continue = (
+            getattr(self.audio_backend, "paContinue", 0)
+            if self.audio_backend is not None
+            else 0
+        )
+        return (None, pa_continue)
+
+    def _process_audio_loop(self) -> None:
+        buffer: list[int] = []
+        buffer_size = int(self.sample_rate * 3.0)
         while self.is_recording:
             try:
-                # Get audio chunk from queue
-                audio_data = self.audio_queue.get(timeout=1.0)
-                
-                # Convert to numpy array
-                audio_array = np.frombuffer(audio_data, dtype=np.int16)
-                buffer.extend(audio_array)
-                
-                # Process when we have enough data
-                if len(buffer) >= buffer_size:
-                    # Prepare audio chunk
-                    audio_chunk = np.array(buffer[:buffer_size], dtype=np.int16)
-                    buffer = buffer[buffer_size:]
-                    
-                    # Classify environment
-                    esc_class = self._classify_environment(audio_chunk)
-                    
-                    # Transcribe speech
-                    transcription = self._transcribe_speech(audio_chunk)
-                    
-                    # Create processed audio event
-                    event = {
-                        'timestamp': datetime.now(timezone.utc).isoformat(),
-                        'type': 'audio',
-                        'sample_rate': self.sample_rate,
-                        'esc_class': esc_class,
-                        'transcription': transcription,
-                        'audio_ref': None,  # Would store in object storage
-                        'stream_id': 'microphone'
-                    }
-                    
-                    # Call callback if set
-                    if self.on_audio_processed:
-                        self.on_audio_processed(event)
-                    
+                audio_data = self.audio_queue.get(timeout=0.5)
             except queue.Empty:
                 continue
-            except Exception as e:
-                self.logger.error(f"Error in audio processing: {e}", exc_info=True)
-    
-    def _classify_environment(self, audio_chunk: np.ndarray) -> str:
-        """
-        Classify environmental sound using ESC model.
-        
-        In production, this would use a trained CNN model.
-        For now, returns a placeholder classification.
-        
-        Args:
-            audio_chunk: Audio signal
-            
-        Returns:
-            ESC class label
-        """
-        # TODO: Implement actual ESC model inference
-        # For now, return placeholder
-        return 'indoor'
-    
+            try:
+                buffer.extend(np.frombuffer(audio_data, dtype=np.int16))
+                while len(buffer) >= buffer_size:
+                    audio_chunk = np.asarray(buffer[:buffer_size], dtype=np.int16)
+                    del buffer[:buffer_size]
+                    timestamp = datetime.now(timezone.utc).isoformat()
+                    audio_ref = None
+                    raw_sha256 = None
+                    if self.artifact_store is not None:
+                        artifact = self.artifact_store.store_bytes(
+                            audio_chunk.tobytes(),
+                            f"audio/{timestamp.replace(':', '-')}.pcm",
+                            "audio/L16",
+                        )
+                        audio_ref = artifact.uri
+                        raw_sha256 = artifact.sha256
+                    event = {
+                        "timestamp": timestamp,
+                        "type": "audio",
+                        "sample_rate": self.sample_rate,
+                        "esc_class": self._classify_environment(audio_chunk),
+                        "transcription": self._transcribe_speech(audio_chunk),
+                        "audio_ref": audio_ref,
+                        "raw_sha256": raw_sha256,
+                        "stream_id": "microphone",
+                    }
+                    if self.on_audio_processed:
+                        self.on_audio_processed(event)
+            except Exception as exc:
+                self.logger.error("Audio processing error: %s", exc, exc_info=True)
+
+    def _classify_environment(self, audio_chunk: np.ndarray) -> Optional[str]:
+        """Return a provider result or None; never invent a placeholder class."""
+
+        if self.esc_classifier is None:
+            return None
+        result = (
+            self.esc_classifier.classify(audio_chunk)
+            if hasattr(self.esc_classifier, "classify")
+            else self.esc_classifier(audio_chunk)
+        )
+        if isinstance(result, tuple):
+            return str(result[0])
+        return None if result is None else str(result)
+
+    def _ensure_vosk_recognizer(self) -> None:
+        if self.speech_recognizer is not None or self._vosk_load_attempted:
+            return
+        self._vosk_load_attempted = True
+        model_path = self.speech_config.get("model_path")
+        if not model_path or not Path(model_path).is_dir():
+            return
+        try:
+            from vosk import KaldiRecognizer, Model
+        except ImportError:
+            self.logger.info("Vosk not installed; speech transcription disabled")
+            return
+        expected_rate = int(self.speech_config.get("sample_rate", self.sample_rate))
+        if expected_rate != self.sample_rate:
+            self.logger.warning(
+                "Vosk model sample rate %s does not match capture rate %s; transcription disabled",
+                expected_rate,
+                self.sample_rate,
+            )
+            return
+        self.speech_recognizer = KaldiRecognizer(Model(model_path), self.sample_rate)
+
     def _transcribe_speech(self, audio_chunk: np.ndarray) -> Optional[str]:
-        """
-        Transcribe speech using Vosk.
-        
-        Args:
-            audio_chunk: Audio signal
-            
-        Returns:
-            Transcription text or None
-        """
-        # TODO: Implement Vosk transcription
-        # For now, return None
-        return None
+        """Transcribe with an injected/Vosk recognizer when available."""
+
+        self._ensure_vosk_recognizer()
+        recognizer = self.speech_recognizer
+        if recognizer is None:
+            return None
+        payload = np.asarray(audio_chunk, dtype=np.int16).tobytes()
+        if hasattr(recognizer, "AcceptWaveform"):
+            if not recognizer.AcceptWaveform(payload):
+                return None
+            result = json.loads(recognizer.Result())
+            text = str(result.get("text", "")).strip()
+            return text or None
+        if callable(recognizer):
+            result = recognizer(audio_chunk, self.sample_rate)
+            return None if result is None else str(result)
+        raise TypeError("Unsupported speech recognizer interface")
 
 
 class EnvironmentalSoundClassifier:
-    """
-    Environmental Sound Classification using deep learning.
-    
-    This classifies ambient acoustic conditions for the vibrational
-    information theory - tracking how environmental frequencies affect processing.
-    """
-    
-    def __init__(self, model_path: str):
-        """
-        Initialize ESC classifier.
-        
-        Args:
-            model_path: Path to trained PyTorch model
-        """
-        self.model_path = model_path
-        self.model = None
-        self.logger = logging.getLogger(__name__)
-        
-        # Load model (would use torch.load in production)
-        # self.model = torch.load(model_path)
-    
+    """Adapter for a real environmental classifier supplied by a deployment."""
+
+    def __init__(self, model: Any = None):
+        self.model = model
+
     def classify(self, audio_chunk: np.ndarray) -> tuple[str, float]:
-        """
-        Classify environmental sound.
-        
-        Args:
-            audio_chunk: Audio signal
-            
-        Returns:
-            (class_label, confidence) tuple
-        """
-        # TODO: Implement actual classification
-        return ('indoor', 0.5)
-
-
-def main():
-    """Test audio processor."""
-    import yaml
-    
-    # Load config
-    with open('infrastructure/config.yaml', 'r') as f:
-        config = yaml.safe_load(f)
-    
-    # Create processor
-    processor = AudioProcessor(config)
-    
-    # Define callback
-    def on_audio(audio_data):
-        print(f"Audio event: {audio_data['esc_class']} - {audio_data.get('transcription')}")
-    
-    processor.on_audio_processed = on_audio
-    
-    # Start recording
-    try:
-        processor.start_recording()
-        print("Recording... Press Ctrl+C to stop")
-        
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Stopping...")
-        processor.stop_recording()
-
-
-if __name__ == "__main__":
-    main()
-
+        if self.model is None:
+            raise RuntimeError("No environmental sound model is configured")
+        result = self.model(audio_chunk)
+        if not isinstance(result, tuple) or len(result) != 2:
+            raise ValueError("Environmental classifier must return (label, confidence)")
+        return str(result[0]), float(result[1])
