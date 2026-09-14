@@ -2,11 +2,12 @@
   "name": "god-music",
   "version": "1.0.0",
   "type": "module",
-  "description": "Professional AI Music Conductor with Predictive Intelligence",
+  "description": "Algorithmic reactive and predictive music conductor from the COSMIC SYNAPSE research lineage",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test test/*.test.js"
   },
   "devDependencies": {
     "vite": "^5.0.0"
@@ -14,4 +15,3 @@
   "author": "Cory Shane Davis",
   "license": "MIT"
 }
-
