@@ -1,168 +1,171 @@
-"""
-3D Knowledge Graph Visualization
+"""Renderer-neutral Neo4j graph loading with optional Plotly visualization."""
 
-Interactive 3D visualization of the temporal knowledge graph using Plotly.
-"""
+from __future__ import annotations
 
-import plotly.graph_objects as go
-import plotly.express as px
-import numpy as np
-from typing import List, Dict, Any
 import logging
+from typing import Any, Dict, List
+
+import numpy as np
 
 
 class KnowledgeGraph3D:
-    """
-    Interactive 3D visualization of knowledge graph.
-    
-    Features:
-    - Force-directed layout
-    - Real-time updates
-    - Entity relationships
-    - Color coding by type
-    - Temporal playback
-    """
-    
+    """Load a real knowledge-graph snapshot and optionally render it in 3D."""
+
     def __init__(self):
-        """Initialize 3D visualization."""
         self.logger = logging.getLogger(__name__)
         self.fig = None
-        self.nodes = []
-        self.edges = []
+        self.nodes: List[Dict[str, Any]] = []
+        self.edges: List[Dict[str, Any]] = []
         self.colors = {}
-        self.logger.info("3D Knowledge Graph visualization initialized")
-    
-    def load_from_neo4j(self, neo4j_client):
-        """
-        Load graph data from Neo4j.
-        
-        Args:
-            neo4j_client: Neo4j client instance
-        """
+
+    def load_from_neo4j(self, neo4j_client) -> None:
+        """Execute graph queries and normalize IDs to renderer indices."""
+
+        if hasattr(neo4j_client, "fetch_graph"):
+            snapshot = neo4j_client.fetch_graph(limit=1000)
+        else:
+            with neo4j_client.driver.session() as session:
+                node_rows = session.run(
+                    """
+                    MATCH (n)
+                    RETURN elementId(n) AS id, labels(n) AS labels, properties(n) AS properties
+                    LIMIT 1000
+                    """
+                )
+                edge_rows = session.run(
+                    """
+                    MATCH (a)-[r]->(b)
+                    RETURN elementId(a) AS source, elementId(b) AS target,
+                           type(r) AS type, properties(r) AS properties
+                    LIMIT 5000
+                    """
+                )
+                snapshot = {
+                    "nodes": [
+                        {
+                            "id": row["id"],
+                            "type": (list(row.get("labels") or []) or ["Unknown"])[0],
+                            "labels": list(row.get("labels") or []),
+                            **dict(row.get("properties") or {}),
+                        }
+                        for row in node_rows
+                    ],
+                    "edges": [
+                        {
+                            "source": row["source"],
+                            "target": row["target"],
+                            "type": row["type"],
+                            "properties": dict(row.get("properties") or {}),
+                        }
+                        for row in edge_rows
+                    ],
+                }
+
+        self.nodes = list(snapshot.get("nodes") or [])
+        index_by_id = {node["id"]: index for index, node in enumerate(self.nodes)}
+        normalized_edges = []
+        for edge in snapshot.get("edges") or []:
+            source_id = edge["source"]
+            target_id = edge["target"]
+            if source_id not in index_by_id or target_id not in index_by_id:
+                self.logger.warning(
+                    "Skipping edge with unloaded endpoint: %s -> %s", source_id, target_id
+                )
+                continue
+            normalized_edges.append(
+                {
+                    **edge,
+                    "source": index_by_id[source_id],
+                    "target": index_by_id[target_id],
+                }
+            )
+        self.edges = normalized_edges
+        self.logger.info("Loaded %d nodes and %d edges", len(self.nodes), len(self.edges))
+
+    def create_3d_graph(self):
         try:
-            # Query all nodes
-            nodes_query = "MATCH (n) RETURN n LIMIT 1000"
-            
-            # Query all relationships
-            edges_query = "MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 5000"
-            
-            # Process nodes and edges
-            # (Implementation would query Neo4j and parse results)
-            
-            self.logger.info(f"Loaded {len(self.nodes)} nodes and {len(self.edges)} edges")
-            
-        except Exception as e:
-            self.logger.error(f"Error loading graph: {e}")
-    
-    def create_3d_graph(self) -> go.Figure:
-        """
-        Create 3D interactive graph visualization.
-        
-        Returns:
-            Plotly figure
-        """
-        # Get node positions (would use force-directed layout algorithm)
+            import plotly.graph_objects as go
+        except ImportError as exc:
+            raise RuntimeError(
+                "3D graph rendering requires the optional visualization dependencies"
+            ) from exc
+
         positions = self._compute_layout()
-        
-        # Create scatter plot for nodes
         node_trace = go.Scatter3d(
             x=[pos[0] for pos in positions],
             y=[pos[1] for pos in positions],
             z=[pos[2] for pos in positions],
-            mode='markers+text',
+            mode="markers+text",
             marker=dict(
                 size=10,
                 color=[self._get_node_color(node) for node in self.nodes],
-                colorscale='Viridis',
-                showscale=True
+                showscale=False,
             ),
             text=[self._get_node_label(node) for node in self.nodes],
             textposition="middle center",
-            name='Entities'
+            name="Entities",
         )
-        
-        # Create edges
+
         edge_traces = []
         for edge in self.edges:
-            x_edges = [positions[edge['source']][0], positions[edge['target']][0], None]
-            y_edges = [positions[edge['source']][1], positions[edge['target']][1], None]
-            z_edges = [positions[edge['source']][2], positions[edge['target']][2], None]
-            
-            edge_trace = go.Scatter3d(
-                x=x_edges,
-                y=y_edges,
-                z=z_edges,
-                mode='lines',
-                line=dict(width=2, color='gray'),
-                hoverinfo='none',
-                showlegend=False
-            )
-            edge_traces.append(edge_trace)
-        
-        # Create figure
-        fig = go.Figure(data=[node_trace] + edge_traces)
-        
-        # Update layout
-        fig.update_layout(
-            title='A-LMI Knowledge Graph - 3D View',
-            scene=dict(
-                xaxis_title='X',
-                yaxis_title='Y',
-                zaxis_title='Z',
-                aspectmode='cube',
-                camera=dict(
-                    eye=dict(x=1.5, y=1.5, z=1.5)
+            source = positions[edge["source"]]
+            target = positions[edge["target"]]
+            edge_traces.append(
+                go.Scatter3d(
+                    x=[source[0], target[0], None],
+                    y=[source[1], target[1], None],
+                    z=[source[2], target[2], None],
+                    mode="lines",
+                    hovertext=edge.get("type", "relationship"),
+                    hoverinfo="text",
+                    showlegend=False,
                 )
+            )
+
+        self.fig = go.Figure(data=[node_trace] + edge_traces)
+        self.fig.update_layout(
+            title="A-LMI Knowledge Graph - 3D View",
+            scene=dict(
+                xaxis_title="X",
+                yaxis_title="Y",
+                zaxis_title="Z",
+                aspectmode="cube",
+                camera=dict(eye=dict(x=1.5, y=1.5, z=1.5)),
             ),
-            height=800
+            height=800,
         )
-        
-        return fig
-    
+        return self.fig
+
     def _compute_layout(self) -> List[List[float]]:
-        """
-        Compute 3D positions using force-directed layout.
-        
-        Returns:
-            List of 3D positions
-        """
-        # Simplified layout algorithm
-        # In production, would use more sophisticated algorithm
         num_nodes = len(self.nodes)
         if num_nodes == 0:
             return []
-        
-        # Simple spherical layout for now
         positions = []
-        for i in range(num_nodes):
-            angle1 = 2 * np.pi * i / num_nodes
-            angle2 = np.pi * (i % 10) / 10
-            x = np.cos(angle1) * np.sin(angle2)
-            y = np.sin(angle1) * np.sin(angle2)
-            z = np.cos(angle2)
-            positions.append([x, y, z])
-        
+        for index in range(num_nodes):
+            angle1 = 2 * np.pi * index / num_nodes
+            angle2 = np.pi * (index % 10) / 10
+            positions.append(
+                [
+                    float(np.cos(angle1) * np.sin(angle2)),
+                    float(np.sin(angle1) * np.sin(angle2)),
+                    float(np.cos(angle2)),
+                ]
+            )
         return positions
-    
-    def _get_node_color(self, node: Dict[str, Any]) -> str:
-        """Get color for node based on type."""
-        node_type = node.get('type', 'Unknown')
-        color_map = {
-            'PERSON': '#FF6B6B',
-            'ORG': '#4ECDC4',
-            'GPE': '#FFE66D',
-            'LightToken': '#A8E6CF',
-            'Unknown': '#CCCCCC'
-        }
-        return color_map.get(node_type, color_map['Unknown'])
-    
-    def _get_node_label(self, node: Dict[str, Any]) -> str:
-        """Get label for node."""
-        return node.get('name', node.get('id', 'Unknown')[:10])
-    
-    def save_html(self, filepath: str):
-        """Save visualization as HTML."""
-        fig = self.create_3d_graph()
-        fig.write_html(filepath)
-        self.logger.info(f"Saved visualization to {filepath}")
 
+    def _get_node_color(self, node: Dict[str, Any]) -> str:
+        color_map = {
+            "PERSON": "#FF6B6B",
+            "Person": "#FF6B6B",
+            "ORG": "#4ECDC4",
+            "GPE": "#FFE66D",
+            "LightToken": "#A8E6CF",
+            "Unknown": "#CCCCCC",
+        }
+        return color_map.get(node.get("type", "Unknown"), color_map["Unknown"])
+
+    def _get_node_label(self, node: Dict[str, Any]) -> str:
+        return str(node.get("name", node.get("id", "Unknown")))[:40]
+
+    def save_html(self, filepath: str) -> None:
+        self.create_3d_graph().write_html(filepath)
