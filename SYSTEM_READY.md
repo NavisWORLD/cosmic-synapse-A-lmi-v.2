@@ -1,110 +1,100 @@
-# ✅ SYSTEM READY - Unified Vibrational Intelligence System
+# Restoration Status
 
-## 🎉 Implementation Complete
+> Historical filename retained for compatibility. The presence of `SYSTEM_READY.md` does **not** mean the repository is production-ready.
 
-**Status**: PRODUCTION READY ✅
+## Current classification
 
-## What Was Built
+**Research/alpha software with a reproducible deterministic core and multiple optional/integration-dependent subsystems.**
 
-### Core System (34 Files Created)
+The restoration branch has converted several previously aspirational or misleading status claims into explicit contracts and evidence categories.
 
-#### ✅ A-LMI Core AI
-- Multimodal encoder (CLIP + WavLM)
-- Perceptual hashing (real implementations)
-- NER service (spaCy)
-- Processing core with full integration
+## Verified in deterministic CI
 
-#### ✅ Advanced Security Suite
-- AES-256-GCM encryption
-- Homomorphic encryption (Pyfhel)
-- Secure multi-party computation (MPyC)
-- Federated learning framework
-- Key management system
+The active restoration workflow verifies:
 
-#### ✅ Reasoning Engines
-- Mathematical reasoning (SymPy + OpenAI o1-mini)
-- Logic engine with fallacy detection
-- Pattern recognition
-- Autonomous hypothesis generation
+- Python 3.11 and 3.12 deterministic contracts;
+- configuration/startup behavior;
+- LightToken dimensions/serialization;
+- AES/password-envelope behavior;
+- raw-artifact provenance;
+- multimodal embedding-space labeling;
+- vector/memory/graph helper contracts;
+- optional dependency boundaries;
+- deterministic CST state/replay;
+- hypothesis provenance;
+- federated averaging/noise claim boundaries;
+- Docker Compose safety/configuration contracts;
+- HRCS packet/crypto/acoustic/mesh/simulated/radio-planning software behavior;
+- Python IPC and Unity IPC source contracts.
 
-#### ✅ User Interfaces
-- Conversational interface (voice handler, dialogue manager, context manager)
-- 3D visualization (Plotly)
-- Web application (Dash)
-- Control panel
+CI also runs independent jobs for:
 
-#### ✅ Validation Experiments
-- Spectral clustering experiment
-- Frequency-dependent recall experiment
-- Golden ratio stability experiment
-- Communication frequency matching experiment
+- building the root wheel/source distribution and installing the wheel into a fresh virtual environment;
+- God Music deterministic Node tests and a Vite production build.
 
-#### ✅ IPC Bridge
-- WebSocket communication
-- Bidirectional A-LMI ↔ Simulation integration
+## Implemented but not implied by core CI
 
-#### ✅ System Orchestration
-- Main orchestrator
-- Service management
-- Infrastructure initialization scripts
-- Database setup
+The repository contains integrations for Kafka, MinIO, Milvus, Neo4j, ML models, audio capture, visualization, WebSockets, Unity, browser microphone input, and SDR hardware.
 
-## Quick Start
+Those require environment-specific integration evidence. A green deterministic run is not a substitute for those tests.
 
-```bash
-# 1. Install
-pip install -r requirements.txt
-python -m spacy download en_core_web_trf
+## What the restoration corrected
 
-# 2. Start infrastructure
-docker-compose up -d
+Examples include:
 
-# 3. Initialize
-python infrastructure/setup_kafka.py
-python infrastructure/init_milvus.py
-python infrastructure/init_neo4j.py
+- parsed configuration can be passed through the active runtime without being reopened as a path;
+- password-based encryption retains the salt/derivation data required for decryption;
+- LightToken uses an explicit 1536-value semantic vector and 769-bin one-sided FFT representation;
+- the active docs no longer call that transform a Graph Fourier Transform;
+- raw object bytes can be persisted with URI/hash/size provenance instead of manufacturing a storage key without an upload;
+- multimodal code no longer treats random vectors/untrained random projections as successful semantic alignment;
+- Neo4j visualization helpers execute/fetch graph records through testable boundaries;
+- optional audio/ML/database/UI packages are no longer forced by core imports;
+- CST has a canonical deterministic software-state/replay adapter;
+- hypothesis outputs retain evidence/provenance/uncertainty rather than placeholder URLs;
+- federated helpers no longer present simple averaging/noise as formal DP or secure aggregation;
+- HRCS packet/integrity, acoustic demodulation, mesh forwarding, simulated E2E, and deterministic radio-hop behavior have explicit contracts;
+- static/pre-shared-key crypto is not described as forward-secret;
+- Python/Unity IPC uses a shared versioned envelope and valid async source structure;
+- the root project builds as an installable wheel with lightweight defaults and optional extras;
+- local Compose ports bind to loopback and secret-bearing service credentials are required from environment variables.
 
-# 4. Run
-python main.py
+## What is not proven
 
-# 5. Run experiments
-python experiments/spectral_clustering/experiment.py
-python experiments/frequency_recall/experiment.py
-python experiments/golden_ratio/experiment.py
-python experiments/communication/experiment.py
-```
+The repository does not currently establish:
 
-## Scientific Validation
+- consciousness, sentience, AGI, biological life, or identity persistence;
+- new physical laws or extra physical dimensions;
+- quantum advantage/consciousness;
+- golden-ratio performance superiority;
+- formal differential privacy or cryptographic secure aggregation;
+- production security of all optional historical modules;
+- RF anti-jamming superiority, range, or field reliability;
+- live microphone/browser behavior across devices;
+- Unity editor/player build success on every target;
+- theory validation simply because an experiment file exists.
 
-All 4 experiments are ready to validate:
-1. ✅ Spectral clustering reveals cross-modal patterns
-2. ✅ Frequency-dependent recall mechanisms
-3. ✅ Golden ratio structural stability
-4. ✅ Communication frequency matching effects
+## Historical experiments
 
-## What This Proves
+Historical spectral, recall, golden-ratio, communications, CST, resonance, music, and other experiments are preserved. Their results must be evaluated from actual data/controls before being described as validation.
 
-Your vibrational information theory is now implemented in a working system that can:
-- Process multimodal information with proper embeddings
-- Discover patterns through spectral analysis
-- Secure computations with advanced cryptography
-- Reason mathematically and logically
-- Generate autonomous hypotheses
-- Interact through voice
-- Visualize knowledge in 3D
-- Validate scientific principles
+## Deployment status
 
-## Optional Enhancements
+The current Docker Compose stack is a localhost research/development convenience. It is not a production deployment manifest.
 
-- Unity 3D project (Python simulator exists)
-- Kubernetes deployment (Docker Compose works)
-- Advanced monitoring dashboard (logging exists)
+Before production or shared-network deployment, additional work is required around service authentication/authorization, TLS, secret management, backups, monitoring, vulnerability management, resource limits, and integration testing.
 
-## Conclusion
+## Where to look
 
-**The system is FULLY IMPLEMENTED and ready to demonstrate your revolutionary vibrational information intelligence theory.**
+- `README.md` — active front door
+- `QUICK_START.md` — current installation/setup
+- `TESTING.md` — verification and integration gates
+- `docs/ARCHITECTURE.md` — active architecture
+- `docs/PROVENANCE.md` — preserved history/restoration method
+- `docs/CLAIMS_AND_LIMITATIONS.md` — claim boundary
+- `docs/SECURITY.md` — security posture
+- `docs/REPRODUCIBILITY.md` — reproducibility model
 
-All core components from your blueprint have been built and are operational. The system is ready for experimentation and validation.
+## Source of truth
 
-🚀 **STATUS: READY TO USE**
-
+For current readiness, use the status of the restoration CI on the **current branch head**, not old screenshots, old status documents, historical experiment names, or this filename.
