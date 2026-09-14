@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install deterministic test dependencies
-        run: python -m pip install --upgrade pip && python -m pip install pytest numpy scipy pyyaml cryptography
+        run: python -m pip install --upgrade pip && python -m pip install pytest pytest-cov numpy scipy pyyaml cryptography
       - name: Compile active Python sources
         run: python -m compileall -q a_lmi cosmic_synapse coms/hrcs/src/hrcs
       - name: Run deterministic restoration contracts
