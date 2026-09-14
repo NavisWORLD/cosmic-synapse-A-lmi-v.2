@@ -50,6 +50,7 @@ jobs:
           coms/hrcs/tests/test_acoustic_roundtrip.py
           coms/hrcs/tests/test_mesh_replay.py
           coms/hrcs/tests/test_simulated_e2e.py
+          coms/hrcs/tests/test_radio_contract.py
           cosmic_synapse/tests/test_ipc_schema.py
           cosmic_synapse/tests/test_ipc_bridge_contract.py
           cosmic_synapse/tests/test_unity_ipc_source_contract.py
