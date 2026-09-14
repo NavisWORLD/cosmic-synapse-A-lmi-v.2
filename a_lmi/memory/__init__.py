@@ -1,15 +1,29 @@
-"""
-Memory Layer Module
+"""Memory-layer integrations.
 
-Implements the multi-layered memory architecture:
-- Object Storage (MinIO): Raw data archival
-- Vector Database (Milvus): Similarity search on embeddings
-- Temporal Knowledge Graph (Neo4j): Structured reasoning
+The active package keeps infrastructure clients optional. Importing
+``a_lmi.memory`` must not require Milvus, MinIO, or Neo4j; those SDKs are
+loaded only when their concrete client is requested/constructed.
 """
 
-from .vector_db_client import VectorDBClient
-from .object_storage_client import ObjectStorageClient
-from .tkg_client import TKGClient
+from __future__ import annotations
 
-__all__ = ['VectorDBClient', 'ObjectStorageClient', 'TKGClient']
+from importlib import import_module
+from typing import Any
 
+__all__ = ["VectorDBClient", "ObjectStorageClient", "TKGClient"]
+
+_LAZY_IMPORTS = {
+    "VectorDBClient": ("a_lmi.memory.vector_db_client", "VectorDBClient"),
+    "ObjectStorageClient": ("a_lmi.memory.object_storage_client", "ObjectStorageClient"),
+    "TKGClient": ("a_lmi.memory.tkg_client", "TKGClient"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    try:
+        module_name, attribute = _LAZY_IMPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(name) from exc
+    value = getattr(import_module(module_name), attribute)
+    globals()[name] = value
+    return value
