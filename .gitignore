@@ -1,0 +1,38 @@
+# Local secrets / environment
+.env
+.env.*
+!.env.example
+keys/
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Node / Vite
+node_modules/
+**/node_modules/
+**/dist/
+
+# Runtime output
+logs/
+*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
