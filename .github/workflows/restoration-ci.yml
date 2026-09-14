@@ -13,6 +13,7 @@ jobs:
   deterministic-core:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ['3.11', '3.12']
     steps:
@@ -55,3 +56,40 @@ jobs:
           cosmic_synapse/tests/test_ipc_schema.py
           cosmic_synapse/tests/test_ipc_bridge_contract.py
           cosmic_synapse/tests/test_unity_ipc_source_contract.py
+
+  package-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build wheel and source distribution
+        run: python -m pip install --upgrade pip build && python -m build
+      - name: Install built wheel into a clean environment
+        run: |
+          python -m venv .clean-venv
+          . .clean-venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.whl
+          cosmic-synapse doctor --json > /tmp/cosmic-doctor.json
+          cat /tmp/cosmic-doctor.json
+          grep -q '"core_imports": "ok"' /tmp/cosmic-doctor.json
+          python -c "from a_lmi.core.light_token import LightToken; from cosmic_synapse.cst_state import CSTEngine; print(CSTEngine(seed=1).state.snapshot())"
+
+  god-music:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: god music
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install God Music dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run God Music deterministic tests
+        run: npm test
+      - name: Build God Music web application
+        run: npm run build
