@@ -44,6 +44,8 @@ jobs:
           tests/test_optional_audio.py
           tests/test_cst_state.py
           tests/test_cst_replay.py
+          tests/test_hypothesis_provenance.py
+          tests/test_federated_claims.py
           coms/hrcs/tests/test_packet_protocol_v2.py
           coms/hrcs/tests/test_acoustic_roundtrip.py
           coms/hrcs/tests/test_mesh_replay.py
