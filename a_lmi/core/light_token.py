@@ -110,12 +110,16 @@ class LightToken:
             result["joint_embedding"] = self.joint_embedding.tolist()
 
         if self.spectral_signature is not None:
-            result["spectral_signature_magnitude"] = np.abs(
-                self.spectral_signature
-            ).astype(np.float32).tolist()
-            result["spectral_signature_phase"] = np.angle(
-                self.spectral_signature
-            ).astype(np.float32).tolist()
+            # Store complex64 components directly. Magnitude/phase was used by
+            # the historical serializer, but reconstructing a complex number
+            # through atan/exp introduces avoidable numeric drift. Direct real
+            # and imaginary components round-trip the active representation.
+            result["spectral_signature_real"] = self.spectral_signature.real.astype(
+                np.float32
+            ).tolist()
+            result["spectral_signature_imag"] = self.spectral_signature.imag.astype(
+                np.float32
+            ).tolist()
 
         return result
 
@@ -143,7 +147,18 @@ class LightToken:
             token.joint_embedding = vector
             token._embedding_set = True
 
-        if "spectral_signature_magnitude" in data:
+        if "spectral_signature_real" in data or "spectral_signature_imag" in data:
+            if "spectral_signature_real" not in data or "spectral_signature_imag" not in data:
+                raise ValueError("Serialized spectral real/imag components are incomplete")
+            real = np.asarray(data["spectral_signature_real"], dtype=np.float32)
+            imag = np.asarray(data["spectral_signature_imag"], dtype=np.float32)
+            if real.shape != imag.shape:
+                raise ValueError("Serialized spectral real/imag shapes do not match")
+            token.spectral_signature = (real + 1j * imag).astype(np.complex64)
+            token._spectral_computed = True
+            token._label_spectral_shape(real.size)
+        elif "spectral_signature_magnitude" in data:
+            # Backward-compatible reader for historical magnitude/phase JSON.
             magnitude = np.asarray(data["spectral_signature_magnitude"], dtype=np.float32)
             phase = np.asarray(data["spectral_signature_phase"], dtype=np.float32)
             if magnitude.shape != phase.shape:
@@ -152,16 +167,19 @@ class LightToken:
                 magnitude * np.exp(1j * phase)
             ).astype(np.complex64)
             token._spectral_computed = True
-            if magnitude.shape == (SPECTRAL_DIMENSION,):
-                token.metadata.setdefault("spectral_transform", SPECTRAL_TRANSFORM)
-                token.metadata.setdefault("spectral_dimension", SPECTRAL_DIMENSION)
-            else:
-                # Historical full-FFT records remain readable without being
-                # silently relabeled as the modern one-sided transform.
-                token.metadata.setdefault("spectral_transform", "legacy_embedding_fft")
-                token.metadata.setdefault("spectral_dimension", int(magnitude.size))
+            token._label_spectral_shape(magnitude.size)
 
         return token
+
+    def _label_spectral_shape(self, size: int) -> None:
+        """Describe modern vs historical spectral payloads without relabeling history."""
+
+        if size == SPECTRAL_DIMENSION:
+            self.metadata.setdefault("spectral_transform", SPECTRAL_TRANSFORM)
+            self.metadata.setdefault("spectral_dimension", SPECTRAL_DIMENSION)
+        else:
+            self.metadata.setdefault("spectral_transform", "legacy_embedding_fft")
+            self.metadata.setdefault("spectral_dimension", int(size))
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), separators=(",", ":"), sort_keys=True)
