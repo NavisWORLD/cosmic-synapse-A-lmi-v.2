@@ -33,10 +33,17 @@ jobs:
           tests/test_light_token_contract.py
           tests/test_password_encryption.py
           tests/test_object_storage_contract.py
+          tests/test_artifact_persistence.py
           tests/test_multimodal_contract.py
+          tests/test_embedding_spaces.py
           tests/test_vector_schema_contract.py
+          tests/test_memory_schema.py
           tests/test_tkg_contract.py
+          tests/test_tkg_visualization.py
           tests/test_audio_optional_contract.py
+          tests/test_optional_audio.py
+          tests/test_cst_state.py
+          tests/test_cst_replay.py
           coms/hrcs/tests/test_packet_protocol_v2.py
           coms/hrcs/tests/test_acoustic_roundtrip.py
           coms/hrcs/tests/test_mesh_replay.py
