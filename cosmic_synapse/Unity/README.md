@@ -1,208 +1,164 @@
-# Unity 3D Cosmic Synapse Project
+# Unity 3D COSMIC SYNAPSE Prototype
 
-## Overview
+This folder preserves the Unity visualization/simulation client for the COSMIC SYNAPSE research project. It contains source for particle simulation, audio analysis, UI controls, and versioned IPC with the Python bridge.
 
-This Unity project implements the real-time physics simulation for the Cosmic Synapse component of the Unified Vibrational Intelligence System.
+The restoration CI verifies the Unity IPC **source contract**; it does not currently run a Unity editor/player build. Treat the steps below as an integration guide, not a statement that every Unity target has been compiled and validated.
 
-## Features
+## Source surface
 
-- Real-time particle physics simulation
-- Audio-driven stochastic resonance
-- FFT-based spectral analysis
-- IPC communication with A-LMI
-- Interactive 3D visualization
-- WebSocket integration
+- `CosmosManager.cs` — simulation manager
+- `AudioManager.cs` — microphone/audio analysis
+- `FFTAnalyzer.cs` — FFT helpers
+- `ForceCalculator.cs` — simulation force calculations
+- `MassInfluence.cs` — mass/influence component
+- `IPCBridgeClient.cs` — versioned WebSocket IPC client
+- `UIManager.cs` — UI control surface
+
+Project terms involving golden-angle initialization, resonance, CST, or related historical terminology describe simulation/software choices. Their implementation is not proof of a new physical law or performance advantage.
 
 ## Prerequisites
 
-- **Unity 2022.3 LTS** or later
-- Microphone access
-- Windows/Mac/Linux (target platform)
+For a live editor integration you will need:
 
-## Setup Instructions
+- a compatible Unity editor (historical project metadata targets the Unity 2022.3 LTS era);
+- platform microphone permission if testing live audio;
+- Python 3.11+ for the active Python IPC package;
+- the root `ipc` extra for WebSocket transport:
 
-### 1. Open Project in Unity
-
-1. Open Unity Hub
-2. Click "Open" and select the `cosmic_synapse/Unity` folder
-3. Wait for Unity to import the project
-
-### 2. Install Required Packages
-
-Unity will automatically install required packages:
-- TextMeshPro
-- Audio packages (built-in)
-
-### 3. Set Up the Scene
-
-1. Create a new scene: `File > New Scene > Basic`
-2. Save as `Assets/Scenes/Main.unity`
-
-### 4. Add GameObject Hierarchy
-
-Create the following GameObject structure in the scene:
-
+```bash
+python -m pip install '.[ipc]'
 ```
+
+Record the exact Unity version when publishing an integration result rather than assuming every later editor version is compatible.
+
+## Scene setup
+
+The repository preserves scripts/settings, but a usable scene may still require editor wiring. A representative hierarchy is:
+
+```text
 Main Camera
 Directional Light
-Cosmos Manager (Empty GameObject with CosmosManager script)
+Cosmos Manager
   └─ ParticleSystem
-  └─ AudioSource
-  └─ FFTAnalyzer script
-  └─ ForceCalculator script
-  └─ IPCBridgeClient script
-Audio Manager (Empty GameObject with AudioManager script)
-UI Canvas (with UIManager script)
-  └─ Panel
-     └─ Omega Slider
-     └─ Lambda Slider
-     └─ Damping Slider
-     └─ Time Scale Slider
-     └─ Start Button
-     └─ Stop Button
-     └─ Spawn Button
-     └─ Microphone Toggle
-     └─ Statistics Text
+Audio Manager
+UI Canvas
 ```
 
-### 5. Configure Components
+Attach/configure the relevant scripts and UI references in the inspector for the scene you are testing.
 
-#### CosmosManager Component:
-- Particle Count: 1000
-- Omega: 0.5
-- Lambda: 0.1
-- Damping: 0.98
-- Time Scale: 1.0
+Suggested historical parameters can be used as starting points, but they are experiment/configuration values rather than validated universal constants.
 
-#### AudioManager Component:
-- Sample Rate: 44100
-- Buffer Size: 512
-- Trigger Threshold: 0.5
+## Running the Python IPC bridge
 
-#### IPCBridgeClient Component:
-- Server URL: ws://localhost:8765
-- Auto Connect: true
+From the repository root:
 
-#### UIManager Component:
-- Wire up all UI references in the inspector
+```bash
+python -m pip install '.[ipc]'
+python -m cosmic_synapse.ipc.bridge
+```
 
-### 6. Configure Particle System
+The default server address is:
 
-Select the ParticleSystem under Cosmos Manager:
-- Max Particles: 1000
-- Start Lifetime: 10
-- Start Speed: 0
-- Start Size: 0.05
-- Simulation Space: World
-- Emission Rate: 1000 (over time)
+```text
+ws://localhost:8765
+```
 
-### 7. Build Settings
+The Python bridge loads the optional `websockets` package only when the transport is actually run.
 
-1. Go to `File > Build Settings`
-2. Select your target platform
-3. Click "Switch Platform"
-4. Click "Build" to create executable
+## Versioned IPC protocol
 
-## Running the Simulation
+The active protocol envelope is version 1:
 
-### Standalone Mode
-
-1. Press Play in Unity Editor
-2. Or build and run the executable
-3. Toggle microphone on to enable audio-driven resonance
-4. Adjust parameters using UI sliders
-
-### Integrated Mode (with A-LMI)
-
-1. Start A-LMI system first: `python main.py`
-2. Start IPC bridge: `python cosmic_synapse/ipc/bridge.py`
-3. Launch Unity simulation
-4. Unity will connect automatically via WebSocket
-
-## Controls
-
-- **Omega Slider**: Adjust golden ratio frequency (φ parameter)
-- **Lambda Slider**: Adjust Lyapunov exponent for stochastic resonance
-- **Damping Slider**: Adjust velocity damping factor
-- **Time Scale Slider**: Adjust simulation speed
-- **Microphone Toggle**: Enable/disable audio input
-- **Spawn Button**: Manually spawn a mass at center
-
-## IPC Communication
-
-The Unity client communicates with the A-LMI system via WebSocket:
-
-### Commands from A-LMI:
 ```json
 {
+  "version": 1,
   "type": "command",
-  "command": "spawn_mass",
-  "position": [0, 0, 0],
-  "properties": {
-    "mass_type": "star"
+  "payload": {
+    "command": "spawn_mass",
+    "id": "spawn-example",
+    "mass_type": "star",
+    "position": [0.0, 0.0, 0.0],
+    "properties": {}
   }
 }
 ```
 
-### Status to A-LMI:
+A status message uses the same envelope:
+
 ```json
 {
+  "version": 1,
   "type": "status",
-  "simulation_time": 123.45,
-  "particle_count": 1000,
-  "amplitude": 0.7
+  "payload": {
+    "simulation_time": 123.45,
+    "particle_count": 1000,
+    "amplitude": 0.7
+  }
 }
 ```
 
+Supported message types are defined by the Python schema. Do not send the older unversioned top-level command/status shapes from historical docs.
+
+The Python bridge validates the envelope before dispatch and replies to commands with a versioned `command_received` acknowledgement containing the command id.
+
+## Integration workflow
+
+1. Install the root package plus `ipc` extra.
+2. Start `python -m cosmic_synapse.ipc.bridge`.
+3. Open/import the Unity project in the chosen editor version.
+4. Configure the scene and set `IPCBridgeClient` to `ws://localhost:8765`.
+5. Enter Play mode.
+6. Confirm connection/runtime logs.
+7. Send/receive versioned messages and capture both Python and Unity logs.
+8. If needed, build a target player and repeat the IPC check outside the editor.
+
+## Audio integration
+
+Live microphone behavior depends on the OS, Unity audio device selection, permissions, sample rate, and hardware. The current deterministic workflow does not treat unavailable microphone hardware as a passing live-audio test.
+
+When reporting a result, record the device and relevant audio configuration.
+
+## Build status
+
+A full Unity editor/player compile is an explicit integration gate that is **not** part of the current GitHub Actions workflow. Source-level IPC checks passing should not be reported as a successful Unity build.
+
+For a reproducible Unity result, retain:
+
+- exact repository commit SHA;
+- Unity editor version;
+- target platform/backend;
+- import/compile logs;
+- scene/configuration steps;
+- runtime IPC logs;
+- hardware/permission details;
+- build/player result and warnings.
+
 ## Troubleshooting
 
-### No Audio Input
-- Check microphone permissions in OS settings
-- Verify microphone device is selected in AudioManager
-- Test microphone in system settings
+### IPC connection fails
 
-### IPC Connection Failed
-- Ensure A-LMI is running
-- Check WebSocket URL is correct
-- Verify firewall allows localhost connections
+- Confirm the Python bridge is running on `localhost:8765`.
+- Confirm the `ipc` Python extra is installed.
+- Verify the Unity client URL.
+- Inspect both Python and Unity logs.
+- Confirm the messages use the v1 envelope.
 
-### Performance Issues
-- Reduce particle count
-- Lower FFT size
-- Disable audio processing if not needed
+### No microphone input
 
-## Scripts Reference
+- Check OS permissions.
+- Confirm Unity selected a valid microphone device.
+- Test without IPC first to isolate the device path.
 
-### Core Scripts:
-- **CosmosManager.cs**: Main simulation manager
-- **AudioManager.cs**: Microphone input and audio analysis
-- **FFTAnalyzer.cs**: FFT standardization and spectral analysis
-- **ForceCalculator.cs**: Physics force calculations
-- **IPCBridgeClient.cs**: WebSocket communication
-- **UIManager.cs**: User interface management
-- **MassInfluence.cs**: Gravitational influence component
+### Performance problems
 
-### Key Features Implemented:
-- Golden angle particle initialization
-- Conservative bowl potential
-- Swirl forces
-- Stochastic resonance from audio
-- IPC bridge for A-LMI communication
-- Real-time parameter adjustment
+- Reduce particle count/visual workload.
+- Profile in the Unity editor/player rather than inferring performance from source.
 
-## Performance Optimization
+## Evidence boundary
 
-For large particle counts:
-- Use GPU particles (Unity's VFX Graph)
-- Implement spatial partitioning
-- Reduce update frequency for non-critical components
-- Use object pooling for spawned masses
+See the repository root:
 
-## Next Steps
-
-- Implement shader-based particle rendering
-- Add trail rendering for particle paths
-- Create field visualization (heat map)
-- Add camera controls (orbit, zoom, pan)
-- Export simulation data for analysis
-
+- `docs/ARCHITECTURE.md`
+- `docs/CLAIMS_AND_LIMITATIONS.md`
+- `docs/REPRODUCIBILITY.md`
+- `UNITY_PROJECT_COMPLETE.md` (historical filename, current status note)
