@@ -54,6 +54,7 @@ jobs:
           tests/test_provider_runtime.py
           tests/test_cli_product_flow.py
           tests/test_benchmarking.py
+          tests/test_security_active_surface.py
           coms/hrcs/tests/test_packet_protocol_v2.py
           coms/hrcs/tests/test_acoustic_roundtrip.py
           coms/hrcs/tests/test_mesh_replay.py
@@ -62,6 +63,16 @@ jobs:
           cosmic_synapse/tests/test_ipc_schema.py
           cosmic_synapse/tests/test_ipc_bridge_contract.py
           cosmic_synapse/tests/test_unity_ipc_source_contract.py
+
+  security-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run active-surface security regression gate
+        run: python -m pytest -q tests/test_security_active_surface.py
 
   package-build:
     runs-on: ubuntu-latest
