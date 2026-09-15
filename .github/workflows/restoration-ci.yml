@@ -178,7 +178,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install Milvus integration dependencies
-        run: python -m pip install . 'pymilvus>=2.3,<2.4'
+        run: python -m pip install . 'pymilvus>=2.3,<2.4' 'marshmallow>=3,<4'
       - name: Run live Milvus insert-search-restart-search gate
         run: bash integration/vm/run_milvus_gate.sh
 
