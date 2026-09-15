@@ -83,6 +83,7 @@ services:
   milvus:
     image: milvusdb/milvus:v2.3.3
     container_name: cosmic-milvus-standalone
+    command: ["milvus", "run", "standalone"]
     depends_on:
       - etcd
       - minio-storage
