@@ -76,7 +76,7 @@ def test_active_config_does_not_embed_secret_fallbacks():
 def test_compose_published_ports_remain_loopback_bound():
     compose = Path("infrastructure/docker-compose.yml").read_text(encoding="utf-8")
     published = [
-        line.strip()[2:-1]
+        line.strip().removeprefix('- "').removesuffix('"')
         for line in compose.splitlines()
         if line.strip().startswith('- "') and line.strip().endswith('"') and ":" in line
     ]
