@@ -71,6 +71,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install security test dependency
+        run: python -m pip install --upgrade pip pytest
       - name: Run active-surface security regression gate
         run: python -m pytest -q tests/test_security_active_surface.py
 
