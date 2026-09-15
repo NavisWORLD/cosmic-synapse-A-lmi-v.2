@@ -50,6 +50,7 @@ jobs:
           tests/test_federated_claims.py
           tests/test_packaging_contract.py
           tests/test_compose_contract.py
+          tests/test_continuity_bundle.py
           coms/hrcs/tests/test_packet_protocol_v2.py
           coms/hrcs/tests/test_acoustic_roundtrip.py
           coms/hrcs/tests/test_mesh_replay.py
