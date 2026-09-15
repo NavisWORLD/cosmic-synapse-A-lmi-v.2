@@ -149,6 +149,18 @@ class VectorDBClient:
         self.collection.insert(data)
         self.collection.flush()
 
+    def _load_collection_for_search(self) -> None:
+        """Ensure Milvus has the collection loaded before a vector query.
+
+        Collection metadata and rows persist across a Milvus restart, but loaded
+        query state does not. Calling ``load`` at the search boundary makes both
+        newly created and re-opened persistent collections queryable after a
+        reconnect without assuming in-memory server state survived the restart.
+        """
+        if self.collection is None:
+            raise RuntimeError("Milvus collection is not initialized")
+        self.collection.load()
+
     def _format_results(self, results) -> List[Dict[str, Any]]:
         formatted: List[Dict[str, Any]] = []
         for hits in results:
@@ -184,6 +196,7 @@ class VectorDBClient:
             safe = embedding_space.replace("\\", "\\\\").replace('"', '\\"')
             expressions.append(f'embedding_space == "{safe}"')
         expr = " and ".join(expressions) or None
+        self._load_collection_for_search()
         results = self.collection.search(
             data=[vector.tolist()],
             anns_field="joint_embedding",
@@ -210,6 +223,7 @@ class VectorDBClient:
         vector = np.asarray(query_spectral_power, dtype=np.float32)
         if vector.shape != (self.contract["spectral_dimension"],):
             raise ValueError("query_spectral_power has the wrong dimension")
+        self._load_collection_for_search()
         results = self.collection.search(
             data=[vector.tolist()],
             anns_field="spectral_power",
