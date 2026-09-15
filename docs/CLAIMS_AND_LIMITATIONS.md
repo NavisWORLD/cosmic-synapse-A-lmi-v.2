@@ -1,134 +1,126 @@
 # Claims and Limitations
 
-This file is the current claim boundary for the restoration branch. It separates verified software behavior from theory, hypothesis, simulation, integration requirements, and unverified extrapolation.
+This file is the current claim boundary for COSMIC SYNAPSE / A-LMI. It separates verified software behavior from theory, hypothesis, simulation, external integration requirements, hardware results, and unverified extrapolation.
 
 ## Verified software behavior
 
-The restoration CI verifies deterministic software contracts for the following classes of behavior:
+The active CI verifies software contracts for:
 
 - configuration loading and environment expansion;
 - password-encryption round trips using stored derivation metadata;
-- LightToken embedding/spectral serialization contracts;
-- raw-artifact persistence metadata and SHA-256 provenance;
-- explicit multimodal embedding-space labeling;
-- vector schema dimensions and memory metadata;
-- temporal-graph loading and visualization helpers with injected/test backends;
+- LightToken embedding/spectral serialization;
+- raw-artifact SHA-256/URI/size provenance;
+- explicit multimodal embedding-space identity and pinned intended Hub revisions;
+- vector/memory/graph helper contracts;
 - optional audio dependency boundaries;
-- deterministic CST state snapshots and replay;
+- deterministic CST state/replay;
 - hypothesis evidence/provenance fields;
-- weighted federated averaging and reproducible experimental noise;
-- HRCS packet integrity, authenticated encryption, acoustic round trips, replay handling, mesh forwarding, simulated end-to-end communication, and deterministic radio-hop planning;
-- versioned Python IPC envelopes and transport-independent bridge handling;
-- Unity IPC source-level async/schema contracts;
-- dependency-light packaging and CLI diagnostics;
-- local Docker Compose credential/port/hostname contracts;
-- God Music deterministic JavaScript utility tests and Vite production build.
+- weighted federated averaging and reproducible experimental noise with explicit non-DP/non-secure-aggregation labels;
+- portable user-owned continuity workspace creation;
+- deterministic `.cosmos` export/verify/import with integrity and archive-security checks;
+- persistent memory across explicit provider swaps without authority transfer;
+- provider failure/identity fail-closed behavior;
+- end-user CLI product workflow;
+- bounded local benchmark/soak reporting without fake performance thresholds;
+- selected active security regressions;
+- HRCS packet integrity, authenticated encryption, acoustic software round trips, replay handling, mesh forwarding, simulated end-to-end communication, deterministic radio planning/TX software boundaries;
+- versioned Python IPC and Unity source/schema contracts;
+- dependency-light packaging and clean installed-wheel product smoke;
+- localhost Docker Compose credential/port/hostname contracts;
+- God Music deterministic JavaScript tests and Vite build.
 
-The package build job also constructs a wheel/source distribution, installs the built wheel into a fresh virtual environment, and runs the dependency-light doctor command.
+These are software results only where stated.
 
-## Implemented but integration-dependent
+## User-owned persistent substrate claim
 
-The repository contains code paths for capabilities that require external services, downloaded model weights, browsers, operating-system permissions, or hardware. Their presence in the source tree is not equivalent to a CI-verified live deployment.
+The current software supports a portable workspace in which memory, CST computational state, provider provenance, routing, artifact/knowledge surfaces, and policy/authority exist outside model parameters. Deterministic tests demonstrate that replacing a test provider preserves prior memory while leaving authority unchanged. Export/import verifies that this software state can be serialized into an integrity-checked portable bundle and restored.
 
-Examples include:
+This supports an engineering claim about **persistent software continuity across replaceable providers**. It does not establish consciousness, personal identity, biological continuity, or equivalence between different models.
 
-- Kafka message infrastructure;
-- MinIO object storage;
-- Milvus vector storage;
-- Neo4j graph storage;
-- CLIP/Transformer model loading;
-- WavLM/audio model loading;
-- Vosk speech recognition;
-- live microphone capture;
-- Dash/Plotly interactive applications;
-- WebSocket networking;
-- Unity editor/player execution;
-- SDR transmission/reception hardware.
+## Model provider claims
 
-These require separate integration tests in the target environment.
+The provider contract makes model identity/revision/capabilities explicit and prevents provider selection from implicitly granting tool authority. The Ollama client contract is tested, including endpoint credential rejection, timeout/retry/error behavior, and provenance structure.
 
-## Theory and hypothesis
-
-Historical terminology such as CST, `12D`, vibrational information, phi/golden-ratio harmonics, resonance, and related names is preserved because it is part of the project lineage.
-
-In the active engineering layer:
-
-- `12D` refers to a twelve-channel computational state representation unless a historical document explicitly uses it in another theoretical sense.
-- spectral signatures are numerical transforms of software vectors/signals.
-- the current LightToken spectral representation is a one-dimensional real FFT of a semantic embedding, not a Graph Fourier Transform.
-- golden-ratio constants are software parameters/rules; their use does not demonstrate physical or performance superiority.
-- simulation dynamics are simulation results, not measurements of external physical reality.
-- a generated hypothesis is an object to test, not a discovery by itself.
-
-## Security claims
-
-### Supported
-
-- AES-GCM authenticated encryption helpers are implemented.
-- Password-based encryption stores the salt/derivation information needed to decrypt the resulting envelope.
-- HRCS uses authenticated symmetric encryption in the restored active path.
-
-### Not established by the current code/tests
-
-- cryptographic forward secrecy from static or pre-shared keys;
-- audited production key management;
-- formal differential privacy guarantees;
-- cryptographic secure aggregation for federated learning;
-- production-grade SMPC/HE deployment security;
-- resistance to sophisticated traffic analysis, RF interception, or active adversaries;
-- a complete security audit of every preserved historical artifact.
-
-Compatibility methods may preserve historical API names, but active documentation describes their actual mechanism rather than the stronger historical label.
+A real Ollama inference was not established by the dependency-light closure environment unless separately recorded as an integration result. A software client passing tests is not proof that a particular model is installed, reachable, correct, or performant.
 
 ## Multimodal claims
 
-The code can represent/process multiple modalities, but embedding spaces are not assumed to be universally interchangeable.
+The active adapter pins the intended external snapshots:
 
-- Text and image vectors produced by the same CLIP family may occupy the model's shared space.
-- WavLM-style audio vectors are a distinct space unless an explicit trained alignment maps them into another space.
-- Random vectors and untrained random projections are not accepted as successful semantic inference/alignment in the restored production path.
+- CLIP: `openai/clip-vit-large-patch14@32bd64288804d66eefd0ccbe215aa642df71cc41`
+- WavLM: `microsoft/wavlm-base-plus@4c66d4806a428f2e922ccfa1a962776e232d487b`
 
-No current CI result demonstrates human-level multimodal understanding, AGI, or autonomous scientific competence.
+Text and image vectors from the same CLIP family may share that pretrained model space. WavLM audio is a separate space unless a real trained alignment maps it elsewhere. Random vectors/untrained random projections are not accepted as successful semantic alignment.
+
+Revision pinning specifies intended provenance; it is not evidence that weights were downloaded or inference was executed in CI.
+
+## Implemented but integration-dependent
+
+The repository contains code/configuration for Kafka, MinIO, Milvus, Neo4j, CLIP, WavLM, Vosk, microphone/audio capture, browsers, Dash/Plotly, WebSockets, Unity, GPU execution, and SDR hardware. Presence in source is not equivalent to a verified live deployment.
+
+These require target-environment evidence.
+
+## Theory and hypothesis
+
+Historical CST, `12D`, vibrational-information, resonance, phi/golden-ratio, bio/psi and related terminology remains part of project lineage.
+
+In the active engineering layer:
+
+- CST/`12D` is treated as computational software state unless a historical artifact is explicitly discussing theory;
+- LightToken spectral data is a one-dimensional rFFT of software embeddings, not a Graph Fourier Transform or physical-frequency discovery;
+- golden-ratio constants/rules are parameters, not proof of physical or performance superiority;
+- simulations are simulations, not measurements of external reality;
+- generated hypotheses are candidates for testing, not discoveries by themselves.
+
+## Security claims
+
+Supported engineering properties include AES-GCM helpers, password envelopes with stored derivation metadata, portable-bundle integrity/security checks, loopback Compose bindings, env-driven active secrets, zero default workspace authority, and credential-bearing provider endpoint rejection.
+
+The current repository does **not** establish:
+
+- a complete security audit or penetration test;
+- production authentication/authorization;
+- audited key management;
+- cryptographic forward secrecy from static/pre-shared keys;
+- formal differential privacy;
+- cryptographic secure aggregation;
+- production-grade SMPC/HE security;
+- complete dependency/image vulnerability clearance;
+- resistance to sophisticated network/RF adversaries.
+
+The active security-static job is a scoped regression gate, not certification.
 
 ## HRCS claims
 
-The restored deterministic tests demonstrate packet and simulated communications behavior in software.
-
-The SDR path now derives hop plans deterministically and can retune transmit frequency when compatible hardware is available. The current restoration does **not** establish synchronized frequency-hopping reception, anti-jamming superiority, regulatory suitability, range, throughput, or field reliability.
-
-Hardware operation must comply with applicable radio law and device limits.
+Software tests establish packet/simulation behavior within their defined fixtures. They do not establish synchronized frequency-hopping reception, anti-jamming superiority, RF range, throughput, field reliability, regulatory suitability, or emergency readiness.
 
 ## God Music claims
 
-God Music contains working browser audio-analysis, synthesis, timing, and deterministic predictive/rule logic. CI verifies JavaScript utility behavior and a production web build.
-
-The active project does not claim:
-
-- to be the world's first system of its kind;
-- biological-frequency measurement;
-- clinical or biometric inference;
-- learned musical intelligence unless a trained model is actually introduced and evaluated;
-- superiority caused by phi/golden-ratio rules.
+God Music has deterministic/rule-based browser audio-analysis/synthesis utilities and a buildable Vite app. Current evidence does not establish biological-frequency measurement, clinical/biometric inference, trained musical intelligence, world-first status, or superiority caused by phi/golden-ratio rules.
 
 ## Consciousness / identity / life
 
-No repository test establishes consciousness, sentience, self-awareness, biological life, a soul, identity persistence, resurrection, or a new species. Software state persistence and deterministic replay are engineering properties and should be described as such.
+No repository test establishes consciousness, sentience, self-awareness, AGI, biological life, a soul, identity resurrection/persistence, or a new species. Persistent software state and user-owned portable history are engineering properties, not biological/metaphysical evidence.
 
 ## Physics / mathematics
 
-No current repository test establishes a new physical law, breaks quantum mechanics, proves extra physical dimensions, or establishes a millennium-prize-level mathematical result.
+No current repository result establishes a new physical law, breaks quantum mechanics, proves extra physical dimensions, establishes quantum advantage/consciousness, or proves a millennium-prize-level mathematical result.
 
-## How to make stronger claims
+## Performance claims
 
-A stronger claim should be promoted only when the repository contains enough evidence to reproduce it, typically including:
+The benchmark harness records measured timings from the environment in which it runs and intentionally defines no universal threshold. Do not publish CI timing as representative production capacity or hardware superiority without a controlled benchmark report.
+
+## Promoting a stronger claim
+
+A stronger claim should normally include:
 
 1. a precise operational definition;
-2. a predeclared metric or acceptance threshold;
+2. a predeclared metric/threshold where appropriate;
 3. a controlled baseline/control condition;
 4. deterministic or statistically appropriate test code;
-5. raw results/artifacts with provenance;
-6. environment/configuration details;
-7. limitations and negative results;
-8. independent replication when the claim is extraordinary or hardware/real-world dependent.
+5. raw outputs/artifacts with hashes/provenance;
+6. exact commit/environment/model/service/hardware details;
+7. failures and limitations;
+8. independent replication for extraordinary, security-sensitive, or hardware/real-world claims.
 
-Until then, label the item as theory, hypothesis, simulation, prototype, integration target, or unverified experiment as appropriate.
+Until that evidence exists, use theory, hypothesis, simulation, prototype, integration target, blocked result, or unverified experiment as appropriate.
