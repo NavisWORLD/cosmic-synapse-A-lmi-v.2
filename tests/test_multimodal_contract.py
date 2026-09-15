@@ -38,7 +38,8 @@ def test_embedding_space_provenance_pins_exact_hub_revisions():
 
 def test_feature_tensor_accepts_transformers_structured_pooling_output():
     class FakeTensor:
-        pass
+        def detach(self):
+            return self
 
     class StructuredOutput:
         def __init__(self):
