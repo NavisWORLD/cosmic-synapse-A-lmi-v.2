@@ -1,153 +1,127 @@
 # History and Migration Map
 
-The repository intentionally contains multiple generations of ideas, demos, publications, packages, and runtime code. This map helps contributors choose the active path without deleting historical material.
+The repository intentionally preserves multiple generations of ideas, demos, publications, packages, runtime code, and terminology. This map identifies the current canonical engineering path without deleting historical material.
 
 ## Preservation rule
 
-Do not delete or rewrite a historical artifact merely because its terminology, dependency choices, status claims, or implementation differ from the active restoration layer.
+Do not remove or rewrite a historical artifact merely because its terminology, dependencies, status claims, or implementation differ from the current product layer. Preserve lineage, make the active replacement explicit, and avoid routing new users through stale setup/security/status claims.
 
-Instead:
+The pre-restoration state remains preserved at `preservation/pre-restoration-2026-09-14`.
 
-- preserve the artifact;
-- make the active replacement/path explicit;
-- add compatibility only where it is useful and testable;
-- avoid routing new users through stale setup/status documents.
+## Current canonical paths
 
-The pre-restoration state is preserved on `preservation/pre-restoration-2026-09-14`.
-
-## Active paths
-
-| Concern | Active path | Historical / alternate material |
+| Concern | Current path | Historical / alternate material |
 | --- | --- | --- |
-| Root Python packaging | `pyproject.toml` | `requirements.txt` and older setup instructions |
-| Core diagnostics | `a_lmi/cli.py` / `cosmic-synapse doctor` | direct one-off import/start scripts |
-| Configuration | `a_lmi/config.py`, `infrastructure/config.yaml`, `.env.example` | hard-coded/default credentials in older revisions/docs |
+| Root Python packaging | `pyproject.toml` | older requirements/setup assumptions |
+| CLI / product front door | `a_lmi/cli.py` / `cosmic-synapse` | one-off direct scripts |
+| User-owned continuity | `a_lmi/continuity.py` | ad-hoc state/memory files from earlier generations |
+| Provider contract | `a_lmi/providers.py` | model-specific direct calls |
+| Persistent provider runtime | `a_lmi/runtime.py` | tightly coupled model/session flows |
+| Bounded local benchmark | `a_lmi/benchmarking.py` | historical experiments with different goals |
+| Configuration | `a_lmi/config.py`, `infrastructure/config.yaml`, `.env.example` | old hard-coded/default credentials |
 | LightToken | `a_lmi/core/light_token.py` | older full-FFT/terminology variants |
+| Multimodal | `a_lmi/services/multimodal_encoder.py` | random/untrained alignment fallbacks |
 | Raw artifact storage | `a_lmi/memory/object_storage_client.py` | storage-key-only flows without raw upload |
 | Vector memory | `a_lmi/memory/vector_db_client.py` | legacy collection/dimension assumptions |
-| Temporal graph | `a_lmi/memory/tkg_client.py` | older direct Neo4j-only assumptions |
-| CST state/replay | `cosmic_synapse/cst_state.py` | prior CST/12D generations and theory artifacts |
-| Python/Unity IPC schema | `cosmic_synapse/ipc/schema.py` | ad-hoc/unversioned message shapes |
-| IPC bridge | `cosmic_synapse/ipc/bridge.py` | eager WebSocket dependency / legacy send assumptions |
-| Unity IPC client | `cosmic_synapse/Unity/Assets/Scripts/IPCBridgeClient.cs` | prior coroutine/`await` source |
-| HRCS active implementation | `coms/hrcs/src/hrcs/` | theory/docs and earlier assumptions inside nested project history |
-| God Music active web app | `god music/src/` | older standalone HTML/publication generations |
-| Active project documentation | root README + root quick/testing/status files + `docs/` | historical papers, PDFs, ZIPs, demos, old status narratives |
+| Temporal graph | `a_lmi/memory/tkg_client.py` | direct/older Neo4j assumptions |
+| CST state/replay | `cosmic_synapse/cst_state.py` | prior CST/12D engines and theory artifacts |
+| Python/Unity IPC schema | `cosmic_synapse/ipc/schema.py` | ad-hoc/unversioned shapes |
+| IPC bridge | `cosmic_synapse/ipc/bridge.py` | eager transport assumptions |
+| Unity IPC client | `cosmic_synapse/Unity/Assets/Scripts/IPCBridgeClient.cs` | prior coroutine/await source |
+| HRCS active code | `coms/hrcs/src/hrcs/` | earlier project generations and theory docs |
+| God Music web app | `god music/src/` | standalone HTML/publication generations |
+| Active evidence/docs | root product docs + `docs/` | preserved papers/PDFs/ZIPs/demos/status narratives |
+
+## Product-flow migration
+
+The current front door is intentionally simple:
+
+```text
+install
+-> cosmic-synapse init
+-> inspect
+-> run with an explicit provider when available
+-> export .cosmos
+-> verify
+-> import
+-> continue
+```
+
+Memory/state/authority live in the surrounding workspace, not inside a provider. Swapping providers is therefore an explicit runtime operation rather than a migration of the user's system into model parameters.
 
 ## Dependency migration
 
-### Old pattern
-
-```text
-pip install -r requirements.txt
-```
-
-This pulled the project toward an all-at-once dependency model and made optional stacks appear mandatory.
-
-### Active pattern
+The base install is:
 
 ```bash
 python -m pip install .
 ```
 
-Optional groups are explicit:
+Optional groups remain explicit: `audio`, `ml`, `infra`, `viz`, `ipc`, `dev`. This replaces the earlier all-at-once dependency posture for the current package while leaving historical setup material preserved.
 
-```text
-audio
-ml
-infra
-viz
-ipc
-dev
-```
+## Configuration / secret migration
 
-This keeps the core importable/installable without PyAudio, Torch/Transformers, database clients, Dash/Plotly, or WebSockets.
+Active Python configuration flows through `a_lmi.config.load_config`. Local infrastructure uses untracked environment values based on `.env.example`; secret-bearing active values are not intended to have committed fallback passwords.
 
-## Configuration migration
-
-Active Python configuration should flow through `a_lmi.config.load_config`, which accepts either a mapping or a YAML path and expands `${NAME}` / `${NAME:-default}` placeholders.
-
-For local Docker infrastructure:
-
-- use `.env.example` as a variable-name template;
-- create a local untracked `.env`;
-- supply required secret-bearing values explicitly;
-- do not reuse credentials found in Git history.
+Do not reuse credentials found in Git history or preserved artifacts.
 
 ## Spectral terminology migration
 
-### Historical wording
-
-Some earlier documentation described the embedding-domain transform as a Graph Fourier Transform or used stronger frequency/physical interpretations.
-
-### Active wording
-
-The current LightToken spectral vector is `numpy.fft.rfft` over a 1536-value embedding, producing 769 complex-frequency bins before serialization/representation handling.
-
-Call it a one-dimensional FFT/rFFT representation of the software embedding unless a genuine graph Laplacian/eigenbasis transform is introduced and tested.
+The current LightToken spectral vector is `numpy.fft.rfft` over a 1536-value embedding, yielding 769 bins. Call it an embedding rFFT representation unless an actual graph Laplacian/eigenbasis transform is introduced. Historical Graph-Fourier/physical-frequency wording remains context, not current engineering status.
 
 ## Multimodal migration
 
-### Historical behavior
+Current model-space provenance is explicit and pins intended external Hub snapshots:
 
-Some paths could return random vectors or use an untrained random projection while describing the result as aligned/shared semantics.
+- `openai/clip-vit-large-patch14@32bd64288804d66eefd0ccbe215aa642df71cc41`
+- `microsoft/wavlm-base-plus@4c66d4806a428f2e922ccfa1a962776e232d487b`
 
-### Active behavior
-
-- production success paths do not manufacture random embeddings;
-- embedding-space identity is explicit;
-- CLIP text/image and WavLM audio are not assumed to be one universal space;
-- any future cross-space alignment must identify the trained/algebraic mapping and its evidence.
+CLIP text/image and WavLM audio are not treated as one universal embedding space. Production success paths do not manufacture random vectors or call an untrained random projection semantic alignment.
 
 ## CST / 12D migration
 
-Historical CST engines/files remain preserved. The active `cosmic_synapse.cst_state` adapter is the stable engineering interface for deterministic state, snapshots, events, and replay.
+Historical CST engines/files remain preserved. `cosmic_synapse.cst_state` is the current stable deterministic interface for software state, snapshots, events, serialization, and replay. Active `12D` language is computational/project terminology rather than an established physical dimensionality claim.
 
-`12D` in active engineering docs means a twelve-channel computational state representation, not an experimentally established physical dimensionality claim.
+## Provider / authority migration
+
+The canonical provider boundary now records provider/model identity and keeps authority in `policy/authority.json`. Provider replacement does not inherit shell/filesystem/network/cloud/deployment/actuator authority.
+
+Custom Ollama endpoints may not embed credentials. This avoids turning endpoint configuration into persisted secret provenance.
 
 ## Federated/security terminology migration
 
-Compatibility methods may retain names used by earlier code, but active docs distinguish mechanism from guarantee:
+Active docs distinguish mechanism from guarantee:
 
-- weighted averaging is federated aggregation logic;
-- Gaussian-noise injection alone is not a complete formal-DP guarantee;
-- ordinary averaging is not cryptographic secure aggregation;
-- static/pre-shared authenticated encryption is not forward secrecy.
+- weighted averaging is not cryptographic secure aggregation;
+- Gaussian-noise injection alone is not a formal-DP guarantee;
+- static/pre-shared authenticated encryption is not forward secrecy;
+- a scoped static security regression is not a complete security audit.
 
 ## HRCS migration
 
-The active HRCS test surface now centers on packet/integrity behavior, authenticated encryption, acoustic software round trips, mesh forwarding/replay handling, simulated end-to-end delivery, and deterministic radio hop planning/transmit retuning.
-
-Do not migrate historical anti-jamming, zero-infrastructure, optimality, range, or emergency-readiness language into active status unless separately demonstrated.
+The current verified software surface centers on packet/integrity behavior, authenticated encryption, software acoustic round trips, mesh/replay behavior, simulated E2E delivery, deterministic radio planning, and experimental TX retuning. Historical anti-jamming/range/emergency-readiness language is not promoted without hardware evidence.
 
 ## God Music migration
 
-The active Vite app remains under `god music/` and retains historical phi/bio/psi class names where they are part of code lineage.
+The active Vite app retains historical naming where useful for lineage. Describe its present behavior as algorithmic/reactive/predictive rule logic unless a real trained model is introduced and evaluated.
 
-Describe the present engine as algorithmic/reactive/predictive rule logic unless a trained model is actually integrated and evaluated.
+## Status/source migration
 
-## Status-document migration
+For current status, use this priority:
 
-Files with names such as `SYSTEM_READY.md`, old implementation-complete notes, publications, and historical READMEs may contain stronger status language from earlier development phases.
+1. CI on the exact current `main` SHA;
+2. `README.md`, `QUICK_START.md`, `TESTING.md`, `SYSTEM_READY.md`;
+3. `docs/PRODUCT_WORKFLOW.md` and `docs/FINAL_CLOSURE_EVIDENCE.md`;
+4. active architecture/claims/security/reproducibility docs;
+5. historical artifacts for lineage/context.
 
-For current project status, use this priority order:
-
-1. CI result on the current restoration head
-2. root `README.md`
-3. `TESTING.md` / `QUICK_START.md`
-4. `docs/ARCHITECTURE.md`
-5. `docs/CLAIMS_AND_LIMITATIONS.md`
-6. `docs/SECURITY.md` / `docs/REPRODUCIBILITY.md`
-7. preserved historical artifacts for lineage/context
-
-## Adding a new canonical path
-
-When replacing another historical path:
+## Adding or replacing a canonical path
 
 1. identify the exact old behavior;
-2. add a failing contract if behavior is executable/testable;
-3. implement the smallest replacement;
-4. preserve compatibility only where it does not hide errors;
-5. document old → new path here;
-6. run the relevant deterministic/integration gate;
-7. preserve failure evidence and limitations.
+2. preserve historical evidence;
+3. add a failing contract when practical;
+4. implement the smallest coherent replacement;
+5. preserve compatibility only where it does not hide errors;
+6. update this mapping and active docs;
+7. run the relevant deterministic/integration gate on the exact commit;
+8. preserve failures and limitations.

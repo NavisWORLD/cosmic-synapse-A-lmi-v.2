@@ -50,6 +50,11 @@ jobs:
           tests/test_federated_claims.py
           tests/test_packaging_contract.py
           tests/test_compose_contract.py
+          tests/test_continuity_bundle.py
+          tests/test_provider_runtime.py
+          tests/test_cli_product_flow.py
+          tests/test_benchmarking.py
+          tests/test_security_active_surface.py
           coms/hrcs/tests/test_packet_protocol_v2.py
           coms/hrcs/tests/test_acoustic_roundtrip.py
           coms/hrcs/tests/test_mesh_replay.py
@@ -58,6 +63,18 @@ jobs:
           cosmic_synapse/tests/test_ipc_schema.py
           cosmic_synapse/tests/test_ipc_bridge_contract.py
           cosmic_synapse/tests/test_unity_ipc_source_contract.py
+
+  security-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install security test dependency
+        run: python -m pip install --upgrade pip pytest
+      - name: Run active-surface security regression gate
+        run: python -m pytest -q tests/test_security_active_surface.py
 
   package-build:
     runs-on: ubuntu-latest
@@ -78,6 +95,22 @@ jobs:
           cat /tmp/cosmic-doctor.json
           grep -q '"core_imports": "ok"' /tmp/cosmic-doctor.json
           python -c "from a_lmi.core.light_token import LightToken; from cosmic_synapse.cst_state import CSTEngine; print(CSTEngine(seed=1).state.snapshot())"
+      - name: Smoke portable product flow from installed wheel
+        run: |
+          . .clean-venv/bin/activate
+          tmpdir="$(mktemp -d)"
+          cosmic-synapse --help > /tmp/cosmic-help.txt
+          cosmic-synapse init "$tmpdir/source" --name "CI Portable Cosmos" --seed 7 --json > /tmp/cosmic-init.json
+          cosmic-synapse inspect "$tmpdir/source" --json > /tmp/cosmic-inspect-source.json
+          cosmic-synapse export "$tmpdir/source" "$tmpdir/state.cosmos" --json > /tmp/cosmic-export.json
+          cosmic-synapse verify "$tmpdir/state.cosmos" --json > /tmp/cosmic-verify.json
+          cosmic-synapse import "$tmpdir/state.cosmos" "$tmpdir/restored" --json > /tmp/cosmic-import.json
+          cosmic-synapse inspect "$tmpdir/restored" --json > /tmp/cosmic-inspect-restored.json
+          cosmic-synapse providers --json > /tmp/cosmic-providers.json
+          grep -q '"valid": true' /tmp/cosmic-verify.json
+          grep -q '"name": "CI Portable Cosmos"' /tmp/cosmic-inspect-restored.json
+          grep -q '"tool_authority": \[\]' /tmp/cosmic-inspect-restored.json
+          grep -q '"network_checked": false' /tmp/cosmic-providers.json
 
   god-music:
     runs-on: ubuntu-latest

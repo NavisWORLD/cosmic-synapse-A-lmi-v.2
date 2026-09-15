@@ -1,12 +1,20 @@
 import numpy as np
 
-from a_lmi.services.multimodal_encoder import MultimodalEncoder
+from a_lmi.services.multimodal_encoder import (
+    CLIP_MODEL_ID,
+    CLIP_MODEL_REVISION,
+    WAVLM_MODEL_ID,
+    WAVLM_MODEL_REVISION,
+    MultimodalEncoder,
+)
 
 
 def test_encoder_imports_without_loading_optional_ml_models_and_names_spaces():
-    assert MultimodalEncoder.embedding_space_for("text") == "clip:openai/clip-vit-large-patch14"
-    assert MultimodalEncoder.embedding_space_for("image") == "clip:openai/clip-vit-large-patch14"
-    assert MultimodalEncoder.embedding_space_for("audio") == "wavlm:microsoft/wavlm-base-plus"
+    clip_space = f"clip:{CLIP_MODEL_ID}@{CLIP_MODEL_REVISION}"
+    wavlm_space = f"wavlm:{WAVLM_MODEL_ID}@{WAVLM_MODEL_REVISION}"
+    assert MultimodalEncoder.embedding_space_for("text") == clip_space
+    assert MultimodalEncoder.embedding_space_for("image") == clip_space
+    assert MultimodalEncoder.embedding_space_for("audio") == wavlm_space
     assert MultimodalEncoder.embedding_spaces_aligned("text", "image") is True
     assert MultimodalEncoder.embedding_spaces_aligned("text", "audio") is False
 

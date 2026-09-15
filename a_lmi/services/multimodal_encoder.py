@@ -1,12 +1,15 @@
 """Optional multimodal encoders with explicit embedding-space provenance.
 
-Text and images use the same pretrained CLIP space. Audio/speech use WavLM
-and are intentionally labelled as a different space. The active 1536-value
-LightToken carrier is produced by deterministic dimension adaptation (padding
-or truncation + norm preservation), not an untrained random projection.
+Text and images use the same pinned pretrained CLIP space. Audio/speech use a
+pinned WavLM snapshot and are intentionally labelled as a different space. The
+active 1536-value LightToken carrier is produced by deterministic dimension
+adaptation (padding or truncation + norm preservation), not an untrained random
+projection.
 
 Heavy ML dependencies and model weights are loaded only when an encode method
-is actually called.
+is actually called. Pinning a Hub revision makes the intended model snapshot
+reproducible; it does not imply that the weights have been downloaded or run in
+the current environment.
 """
 
 from __future__ import annotations
@@ -18,16 +21,18 @@ from typing import List, Union
 import numpy as np
 
 CLIP_MODEL_ID = "openai/clip-vit-large-patch14"
+CLIP_MODEL_REVISION = "32bd64288804d66eefd0ccbe215aa642df71cc41"
 WAVLM_MODEL_ID = "microsoft/wavlm-base-plus"
+WAVLM_MODEL_REVISION = "4c66d4806a428f2e922ccfa1a962776e232d487b"
 LIGHTTOKEN_DIMENSION = 1536
 
 
 def embedding_space_for(modality: str) -> str:
     normalized = modality.lower()
     if normalized in {"text", "image"}:
-        return f"clip:{CLIP_MODEL_ID}"
+        return f"clip:{CLIP_MODEL_ID}@{CLIP_MODEL_REVISION}"
     if normalized in {"audio", "speech"}:
-        return f"wavlm:{WAVLM_MODEL_ID}"
+        return f"wavlm:{WAVLM_MODEL_ID}@{WAVLM_MODEL_REVISION}"
     raise ValueError(f"Unknown modality: {modality}")
 
 
@@ -130,13 +135,22 @@ class MultimodalEncoder:
             raise RuntimeError(
                 "CLIP encoding requires transformers; install the optional ML extra"
             ) from exc
-        self.clip_model = CLIPModel.from_pretrained(CLIP_MODEL_ID)
-        self.clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_ID)
+        self.clip_model = CLIPModel.from_pretrained(
+            CLIP_MODEL_ID, revision=CLIP_MODEL_REVISION
+        )
+        self.clip_processor = CLIPProcessor.from_pretrained(
+            CLIP_MODEL_ID, revision=CLIP_MODEL_REVISION
+        )
         self.clip_model.to(self.device)
         self.clip_model.eval()
         for parameter in self.clip_model.parameters():
             parameter.requires_grad = False
-        self.logger.info("Loaded CLIP model %s on %s", CLIP_MODEL_ID, self.device)
+        self.logger.info(
+            "Loaded CLIP model %s@%s on %s",
+            CLIP_MODEL_ID,
+            CLIP_MODEL_REVISION,
+            self.device,
+        )
 
     def _ensure_wavlm(self) -> None:
         if self.wavlm_model is not None:
@@ -148,13 +162,22 @@ class MultimodalEncoder:
             raise RuntimeError(
                 "WavLM encoding requires transformers; install the optional ML extra"
             ) from exc
-        self.wavlm_model = WavLMModel.from_pretrained(WAVLM_MODEL_ID)
-        self.wavlm_processor = Wav2Vec2FeatureExtractor.from_pretrained(WAVLM_MODEL_ID)
+        self.wavlm_model = WavLMModel.from_pretrained(
+            WAVLM_MODEL_ID, revision=WAVLM_MODEL_REVISION
+        )
+        self.wavlm_processor = Wav2Vec2FeatureExtractor.from_pretrained(
+            WAVLM_MODEL_ID, revision=WAVLM_MODEL_REVISION
+        )
         self.wavlm_model.to(self.device)
         self.wavlm_model.eval()
         for parameter in self.wavlm_model.parameters():
             parameter.requires_grad = False
-        self.logger.info("Loaded WavLM model %s on %s", WAVLM_MODEL_ID, self.device)
+        self.logger.info(
+            "Loaded WavLM model %s@%s on %s",
+            WAVLM_MODEL_ID,
+            WAVLM_MODEL_REVISION,
+            self.device,
+        )
 
     @staticmethod
     def _normalize_and_pack(features: np.ndarray) -> np.ndarray:

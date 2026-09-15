@@ -1,14 +1,31 @@
 # Testing and Validation Guide
 
-The restoration branch separates deterministic software verification from external-service, browser, model, Unity, audio-device, and SDR integration work.
-
-A passing deterministic CI run means the tested software contracts passed. It does **not** mean every optional service/hardware path was exercised.
+COSMIC SYNAPSE / A-LMI separates deterministic software verification from external-service, browser, model, Unity, audio-device, GPU, and SDR integration work. A green CI run means the listed software contracts passed on that exact commit. It does not imply every optional service or hardware path was executed.
 
 ## Deterministic Python contracts
 
-CI runs the active deterministic suite on Python 3.11 and 3.12.
+CI runs the active deterministic suite on Python 3.11 and 3.12. The workflow is the executable source of truth; the current suite includes:
 
-From the repository root:
+- configuration and environment expansion;
+- LightToken serialization/dimensions;
+- password encryption envelopes;
+- object/artifact SHA-256 provenance;
+- multimodal model-space and exact revision provenance;
+- vector/memory/graph contracts;
+- optional audio boundaries;
+- deterministic CST state/replay;
+- hypothesis provenance;
+- federated claim boundaries;
+- packaging and Compose contracts;
+- portable continuity export/import/integrity/security;
+- provider/runtime swapping and authority separation;
+- end-user CLI product flow;
+- bounded benchmark/soak integrity;
+- active-surface security regressions;
+- HRCS packet/acoustic/mesh/simulated/radio contracts;
+- Python/Unity IPC schema/source contracts.
+
+Local equivalent:
 
 ```bash
 python -m pip install --upgrade pip
@@ -33,6 +50,11 @@ PYTHONPATH=.:coms/hrcs/src python -m pytest -q \
   tests/test_federated_claims.py \
   tests/test_packaging_contract.py \
   tests/test_compose_contract.py \
+  tests/test_continuity_bundle.py \
+  tests/test_provider_runtime.py \
+  tests/test_cli_product_flow.py \
+  tests/test_benchmarking.py \
+  tests/test_security_active_surface.py \
   coms/hrcs/tests/test_packet_protocol_v2.py \
   coms/hrcs/tests/test_acoustic_roundtrip.py \
   coms/hrcs/tests/test_mesh_replay.py \
@@ -43,31 +65,23 @@ PYTHONPATH=.:coms/hrcs/src python -m pytest -q \
   cosmic_synapse/tests/test_unity_ipc_source_contract.py
 ```
 
-## What those tests establish
+## Security-static gate
 
-They verify software contracts including:
+CI also runs `tests/test_security_active_surface.py` as a separate job. It checks selected active product paths for direct dynamic-execution shortcuts, verifies the root `.env` is not tracked, confirms secret-bearing example values remain placeholders, checks active config secret fallbacks, and keeps published Compose ports loopback-bound.
 
-- configuration loading/environment expansion;
-- password encryption/decryption envelopes;
-- LightToken dimensional and serialization behavior;
-- raw-artifact persistence metadata/hashes;
-- explicit multimodal embedding-space labeling;
-- vector/memory schema alignment;
-- temporal graph loading/visualization helpers with test backends;
-- optional audio import boundaries;
-- deterministic CST state snapshots/replay;
-- hypothesis provenance/uncertainty fields;
-- federated averaging/noise terminology and reproducibility;
-- local Compose credential/port/hostname safety rules;
-- HRCS packet/crypto/acoustic/mesh/simulated communication/radio-planning contracts;
-- Python IPC schema/bridge behavior;
-- Unity IPC source-level schema/async contract.
+This is a regression gate, not a complete penetration test, dependency vulnerability scan, or certification of historical artifacts.
 
-## Package-build gate
+## Package-build and installed-product gate
 
-CI separately builds the root Python distribution and installs the resulting wheel into a fresh environment.
+CI separately builds the wheel and source distribution, installs the wheel into a fresh virtual environment, runs `cosmic-synapse doctor --json`, imports representative core classes, and executes the portable product flow through the installed CLI:
 
-Local equivalent:
+```text
+init -> inspect -> export -> verify -> import -> inspect -> providers
+```
+
+The smoke verifies that the restored workspace name and empty tool-authority state survive the round trip.
+
+Local packaging equivalent:
 
 ```bash
 python -m pip install --upgrade pip build
@@ -79,8 +93,6 @@ python -m pip install dist/*.whl
 cosmic-synapse doctor --json
 ```
 
-This catches packaging errors that can be hidden when importing directly from a checkout.
-
 ## God Music gate
 
 From `god music/`:
@@ -91,160 +103,53 @@ npm test
 npm run build
 ```
 
-CI verifies deterministic JavaScript utilities plus the Vite production build.
+This proves deterministic JavaScript behavior and Vite buildability, not live microphone behavior on a device/browser.
+
+## Portable continuity checks
+
+The `.cosmos` tests cover deterministic export, integrity verification, safe import, SHA-256/size corruption detection, path traversal rejection, symlink rejection, undeclared/duplicate-member rejection, secret-file exclusion, version checks, and destination safety.
+
+Provider/runtime tests prove that memory survives a provider swap while the authority file remains unchanged. Provider failures cannot create a fabricated assistant record, and response identity mismatches fail closed.
+
+## Multimodal/model integration
+
+The active code pins intended model revisions:
+
+- CLIP: `openai/clip-vit-large-patch14@32bd64288804d66eefd0ccbe215aa642df71cc41`
+- WavLM: `microsoft/wavlm-base-plus@4c66d4806a428f2e922ccfa1a962776e232d487b`
+
+The deterministic suite verifies the identifiers/revisions and embedding-space boundary without downloading weights. A real integration result must separately record download/cache provenance, runtime/device versions, input fixture, output dimensions, and failures.
 
 ## Local infrastructure integration
 
-Before starting Docker Compose, create local untracked credentials:
+For Kafka/MinIO/Milvus/Neo4j, create local untracked credentials from `.env.example`, start Compose, and record real service evidence:
 
 ```bash
 cp .env.example .env
-```
-
-Replace all placeholders, then:
-
-```bash
 docker compose -f infrastructure/docker-compose.yml up -d
 docker compose -f infrastructure/docker-compose.yml ps
 ```
 
-Optional initialization helpers:
+When applicable, verify live startup, health, writes, reads/searches, event flow, persistence across restart, useful failure behavior, and clean shutdown. Configuration tests alone are not a live-integration pass.
 
-```bash
-python infrastructure/setup_kafka.py
-python infrastructure/init_milvus.py
-python infrastructure/init_neo4j.py
-```
+## Audio, browser, Unity, GPU, and HRCS hardware
 
-These are **integration** tests, not deterministic CI results. Record exact image versions, environment, commands, and outputs when reporting them.
+Keep these evidence classes separate:
 
-## Multimodal/model integration
+- software/simulation result;
+- browser/device result;
+- Unity editor/player result;
+- GPU/CUDA result;
+- SDR/RF hardware result.
 
-Install the relevant extras:
+Static C# tests do not equal a Unity build. Synthetic acoustic tests do not equal speaker/microphone testing. Radio planning/TX code does not establish synchronized RX hopping, range, anti-jamming superiority, or field reliability.
 
-```bash
-python -m pip install '.[ml]'
-```
+## Benchmark discipline
 
-Then separately record:
-
-- model name/revision/checksum;
-- preprocessing configuration;
-- input fixture;
-- output vector dimension/space;
-- device/runtime versions.
-
-Do not replace unavailable model output with random vectors and call the path successful.
-
-## Audio integration
-
-Install:
-
-```bash
-python -m pip install '.[audio]'
-```
-
-Live tests should record microphone/audio-interface model, operating system, sample rate, permissions, and whether a downloaded speech model is present.
-
-The deterministic CI audio contracts only verify dependency boundaries and software behavior that does not require a physical microphone.
-
-## Neo4j / visualization integration
-
-With `infra` and `viz` extras installed and Neo4j running, verify that graph queries actually return records before judging visualization behavior.
-
-The restoration fixed the previous class of bug where visualization code could define a query without executing it; test-backed graph behavior is covered, while a real Neo4j deployment remains an integration gate.
-
-## HRCS testing
-
-Selected HRCS software tests run from the root restoration workflow. A full nested-package run can be performed with:
-
-```bash
-cd coms/hrcs
-python -m pip install -e '.[dev]'
-pytest
-```
-
-Keep these categories separate:
-
-- software-generated acoustic round trip;
-- simulated modem/network result;
-- speaker/microphone hardware result;
-- SDR hardware result;
-- RF field result.
-
-Do not infer RF range, anti-jamming performance, or emergency reliability from the software tests.
-
-## Unity integration
-
-The restoration CI checks the Unity IPC source contract, including use of Task-based async receive code and the shared versioned envelope.
-
-A full Unity editor/player build is not performed by the current workflow. Record Unity version, target platform, build logs, and runtime IPC evidence for any Unity integration claim.
-
-## Validation experiments
-
-Historical experiments under `experiments/` remain useful as hypotheses/prototypes, but their names do not make their conclusions established.
-
-For any experiment promoted as current evidence, document:
-
-1. hypothesis;
-2. control/baseline;
-3. metric and threshold;
-4. seed/environment;
-5. raw inputs/outputs;
-6. statistical method when relevant;
-7. negative/null results;
-8. exact commit SHA.
-
-Examples such as spectral clustering, frequency-dependent recall, golden-ratio stability, or communication matching should be reported as experiment outcomes, not theory validation, unless the evidence actually supports the stronger statement.
-
-## Security testing
-
-Current deterministic tests cover specific crypto/config contracts; they are not a full security audit.
-
-Before external deployment, separately review:
-
-- secret storage/rotation;
-- TLS/network policy;
-- authentication/authorization;
-- dependency/image vulnerabilities;
-- service exposure;
-- key lifecycle;
-- logging and sensitive-data handling;
-- adversarial protocol behavior.
-
-## Troubleshooting
-
-Start with:
-
-```bash
-cosmic-synapse doctor --json
-```
-
-Then check only the optional layer you are actually using.
-
-Docker:
-
-```bash
-docker compose -f infrastructure/docker-compose.yml ps
-```
-
-God Music:
-
-```bash
-cd "god music"
-npm test
-npm run build
-```
-
-HRCS:
-
-```bash
-cd coms/hrcs
-pytest
-```
+`a_lmi.benchmarking.benchmark_core()` measures bounded CST and continuity operations and records environment metadata. It has no universal speed threshold. Report measured results only for the machine/environment that produced them.
 
 ## Evidence rules
 
-Use the categories defined in `docs/REPRODUCIBILITY.md` and the claim boundary in `docs/CLAIMS_AND_LIMITATIONS.md`.
+For any stronger claim, retain the exact commit SHA, environment/configuration, raw outputs, controls/baselines when relevant, negative/null results, and limitations. Preserve blocked external gates as blocked; never relabel them as deterministic passes.
 
-Preserve failures and blocked/null results. Do not convert a skipped hardware/service test into a pass.
+See `docs/REPRODUCIBILITY.md`, `docs/CLAIMS_AND_LIMITATIONS.md`, and `docs/FINAL_CLOSURE_EVIDENCE.md`.

@@ -10,7 +10,10 @@ license: GPL-3.0-only
 repository-code: "https://github.com/NavisWORLD/cosmic-synapse-A-lmi-v.2"
 url: "https://github.com/NavisWORLD/cosmic-synapse-A-lmi-v.2"
 abstract: >-
-  Preserved and modernized research software containing A-LMI, COSMIC SYNAPSE,
-  deterministic CST state/replay tooling, optional multimodal memory and
-  infrastructure integrations, HRCS communications research, God Music, Unity
-  IPC source, and historical theory/publication artifacts.
+  Research-oriented persistent AI runtime and preserved research lineage. The
+  active product separates user-owned memory, computational state, provenance,
+  routing, artifacts/knowledge surfaces, and authority from replaceable model
+  providers; it includes deterministic portable continuity tooling, A-LMI data
+  structures and optional multimodal/infrastructure integrations, CST software
+  state/replay, HRCS communications research, God Music, Unity IPC source, and
+  preserved historical theory/publication artifacts.

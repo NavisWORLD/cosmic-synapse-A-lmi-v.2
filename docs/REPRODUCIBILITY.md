@@ -1,71 +1,65 @@
 # Reproducibility Guide
 
-This restoration separates deterministic software verification from integration/hardware validation so a passing CI run has a precise meaning.
+COSMIC SYNAPSE / A-LMI separates deterministic software verification from external service, model, browser, device, Unity, GPU, and RF validation. A passing CI run has a deliberately narrow meaning: the listed software contracts passed on the exact tested commit.
+
+## Exact-SHA rule
+
+Any closure or release statement must identify the exact commit SHA and the GitHub Actions run that tested it. A successful run on an earlier commit is not evidence that a later documentation/code head is green.
+
+After merging product closure, the final acceptance gate requires a fresh push-triggered CI run on the exact resulting `main` SHA.
 
 ## Deterministic CI
 
-The restoration workflow runs on Python 3.11 and 3.12 and covers the active contracts for configuration, crypto envelopes, LightToken/vector dimensions, raw-artifact provenance, multimodal-space labeling, memory/graph helpers, optional audio boundaries, CST state/replay, hypothesis provenance, federated terminology, Docker Compose safety, HRCS software behavior, Python IPC, and Unity IPC source contracts.
+The active workflow runs Python 3.11 and 3.12 contracts covering configuration, encryption, LightToken, artifacts, multimodal provenance, vector/memory/graph helpers, audio optionality, CST replay, hypothesis provenance, federated terminology, Compose contracts, continuity bundles, provider/runtime behavior, CLI flow, benchmark integrity, active security regressions, HRCS software behavior, and Python/Unity IPC contracts.
 
-Run the same dependency-light suite from a checkout with:
+The exact command is maintained in `.github/workflows/restoration-ci.yml` and summarized in `TESTING.md`.
 
-```bash
-python -m pip install --upgrade pip
-python -m pip install pytest pytest-cov numpy scipy pyyaml cryptography
-PYTHONPATH=.:coms/hrcs/src python -m pytest -q \
-  tests/test_config_contract.py \
-  tests/test_light_token_contract.py \
-  tests/test_password_encryption.py \
-  tests/test_object_storage_contract.py \
-  tests/test_artifact_persistence.py \
-  tests/test_multimodal_contract.py \
-  tests/test_embedding_spaces.py \
-  tests/test_vector_schema_contract.py \
-  tests/test_memory_schema.py \
-  tests/test_tkg_contract.py \
-  tests/test_tkg_visualization.py \
-  tests/test_audio_optional_contract.py \
-  tests/test_optional_audio.py \
-  tests/test_cst_state.py \
-  tests/test_cst_replay.py \
-  tests/test_hypothesis_provenance.py \
-  tests/test_federated_claims.py \
-  tests/test_packaging_contract.py \
-  tests/test_compose_contract.py \
-  coms/hrcs/tests/test_packet_protocol_v2.py \
-  coms/hrcs/tests/test_acoustic_roundtrip.py \
-  coms/hrcs/tests/test_mesh_replay.py \
-  coms/hrcs/tests/test_simulated_e2e.py \
-  coms/hrcs/tests/test_radio_contract.py \
-  cosmic_synapse/tests/test_ipc_schema.py \
-  cosmic_synapse/tests/test_ipc_bridge_contract.py \
-  cosmic_synapse/tests/test_unity_ipc_source_contract.py
+## Security-static job
+
+A separate job runs the active-surface security regression test. It verifies selected direct dynamic-execution patterns, root `.env` tracking, placeholder secrets, config secret fallbacks, and loopback Compose port bindings.
+
+This job is a regression check, not a complete security assessment or dependency vulnerability scan.
+
+## Package / installed-product gate
+
+CI builds both wheel and source distribution, installs the wheel into a clean virtual environment, runs `cosmic-synapse doctor --json`, imports representative classes, and executes the portable CLI round trip:
+
+```text
+init -> inspect -> export -> verify -> import -> inspect -> providers
 ```
 
-## Package build gate
+This distinguishes a valid installed artifact from code that only works when imported from a checkout.
 
-CI separately builds the Python source distribution and wheel, installs the built wheel into a fresh virtual environment, runs:
+## Portable continuity determinism
 
-```bash
-cosmic-synapse doctor --json
-```
+For a frozen workspace, `.cosmos` export uses canonical JSON and fixed ZIP metadata so repeated exports are byte-identical. Every payload is declared with SHA-256 and byte size. Verification detects undeclared/missing members and integrity mismatches before import.
 
-and imports representative core classes. This prevents a checkout-only import path from being mistaken for a valid installed package.
+Workspace creation includes timestamps; determinism applies to repeated export of the same frozen workspace, not to separately initialized workspaces at different times.
 
-Local equivalent:
+## Model revision discipline
 
-```bash
-python -m pip install --upgrade pip build
-python -m build
-python -m venv .clean-venv
-. .clean-venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install dist/*.whl
-cosmic-synapse doctor --json
-```
+The intended external model snapshots are pinned in active code:
 
-On Windows PowerShell, activate the environment with the platform-appropriate script instead of `. .clean-venv/bin/activate`.
+- CLIP: `openai/clip-vit-large-patch14@32bd64288804d66eefd0ccbe215aa642df71cc41`
+- WavLM: `microsoft/wavlm-base-plus@4c66d4806a428f2e922ccfa1a962776e232d487b`
 
-## God Music gate
+The deterministic suite protects these revision identities and embedding-space labels without downloading the weights. A true model integration report must additionally record the runtime/dependency versions, resolved/downloaded artifacts or local hashes where appropriate, input fixtures, outputs, device, and failures.
+
+Vosk remains a documented optional local speech-model path and requires a separately recorded installed model/runtime test.
+
+## Provider reproducibility
+
+Provider identity includes provider ID, model ID, optional revision, capabilities, endpoint, and context information when known. Deterministic test providers exist only for contract testing. A real Ollama result requires an actual local service/model run; the provider contract alone is not model-execution evidence.
+
+Provider swaps are tested against the same persistent workspace so memory continuity and unchanged authority can be reproduced independently of a specific model implementation.
+
+## Benchmark / soak discipline
+
+`a_lmi.benchmarking.benchmark_core()` performs bounded local measurements of CST and continuity operations. It records elapsed values, operation counts, environment metadata, errors, and integrity status.
+
+It intentionally has no universal speed threshold. Timing results are only claims about the environment that produced them and should not be generalized to target hardware or production capacity without a controlled benchmark report.
+
+## God Music
 
 From `god music/`:
 
@@ -75,97 +69,41 @@ npm test
 npm run build
 ```
 
-CI runs both the deterministic Node tests and a Vite production build. That verifies utility behavior/buildability, not microphone hardware or every browser/device.
-
-## Core installation
-
-```bash
-python -m pip install .
-cosmic-synapse doctor
-```
-
-Optional extras can be installed individually or together:
-
-```bash
-python -m pip install '.[audio]'
-python -m pip install '.[ml]'
-python -m pip install '.[infra]'
-python -m pip install '.[viz]'
-python -m pip install '.[ipc]'
-python -m pip install '.[dev]'
-```
-
-For a broad research environment:
-
-```bash
-python -m pip install '.[audio,ml,infra,viz,ipc,dev]'
-```
-
-Some extras may require platform system libraries or large model downloads.
+This verifies deterministic utility behavior and web buildability. Microphone permissions and browser/device behavior remain external evidence.
 
 ## Local infrastructure
 
-Copy the variable names from `.env.example` into your shell or local secret-loading mechanism and replace all placeholder values before starting shared/non-disposable environments.
+A real Kafka/MinIO/Milvus/Neo4j integration report should record exact container/service versions, host environment, non-secret configuration, commands, startup/health, write/read/search or event-flow evidence, restart persistence, failure behavior, and shutdown/restart results.
 
-Start the local stack from the repository root with:
+The deterministic Compose contract verifies configuration/security properties only; it does not claim the services were run.
 
-```bash
-docker compose -f infrastructure/docker-compose.yml up -d
-```
+## Unity, audio, GPU, and RF
 
-The active Compose file binds published service ports to `127.0.0.1`.
+Record these as distinct evidence categories. Source inspection or simulation cannot substitute for:
 
-Check status with:
+- Unity editor compile/player build/runtime IPC;
+- microphone/browser/device permission and capture lifecycle;
+- GPU/CUDA inference/performance;
+- SDR transmit/receive/range/error measurements.
 
-```bash
-docker compose -f infrastructure/docker-compose.yml ps
-```
+## Seeds and state
 
-Stop it with:
+CST replay exposes explicit seeds/state snapshots. HRCS deterministic hop planning uses stable SHA-derived data instead of Python process-randomized `hash()`. When randomness is part of an experiment, record the seed and distinguish deterministic replay from statistical evidence.
 
-```bash
-docker compose -f infrastructure/docker-compose.yml down
-```
+## Evidence labels
 
-Persisted volumes are not deleted by the normal `down` command.
-
-## Integration gates that CI does not claim
-
-The deterministic workflow intentionally does not require or claim success for:
-
-- a live Kafka broker pipeline;
-- real MinIO/Milvus/Neo4j persistence across all production paths;
-- downloaded CLIP/WavLM/Vosk weights;
-- live microphone capture;
-- browser microphone routing on every supported browser;
-- SDR transmit/receive hardware;
-- synchronized RF frequency hopping;
-- a Unity editor/player build;
-- internet/network crawler behavior;
-- GPU/CUDA execution.
-
-When validating one of these, record the exact hardware/service versions, operating system, configuration, model revision/checksum, commands, raw outputs, and failure cases.
-
-## Determinism and seeds
-
-CST replay contracts expose explicit seeds/state snapshots. HRCS radio hop planning derives its deterministic seed from SHA-256 data rather than Python's process-randomized `hash()`.
-
-Whenever randomness is part of an experiment, record the seed and distinguish deterministic replay from statistical evidence.
-
-## Evidence categories
-
-Use these labels consistently in reports:
+Use these labels consistently:
 
 - **verified software result** — deterministic test/build passed;
-- **integration result** — external service/model path executed in a specified environment;
-- **hardware result** — physical device path executed with recorded hardware/config;
-- **simulation result** — produced by a modeled/simulated environment;
+- **integration result** — external service/model path actually executed in a specified environment;
+- **device/hardware result** — physical/runtime device path actually executed;
+- **simulation result** — produced by modeled/simulated environment;
 - **hypothesis** — proposed relationship not yet established;
-- **historical claim** — preserved statement from earlier project material;
-- **blocked/null result** — attempted test could not establish the target result.
+- **historical claim** — preserved statement from earlier material;
+- **blocked/null result** — target result was not established.
 
 Do not promote one category into another without new evidence.
 
-## Provenance
+## Provenance retention
 
-Use `docs/PROVENANCE.md` for the preservation branch/base commit and the restoration method. Keep raw logs/artifacts and commit SHAs alongside any future benchmark or scientific report so results can be traced back to the implementation that produced them.
+Keep exact commit SHAs, CI run IDs/links, raw logs/artifacts, negative results, and environment details alongside any future benchmark, scientific claim, model integration, hardware test, or release note. See `PROVENANCE.md` and `FINAL_CLOSURE_EVIDENCE.md`.

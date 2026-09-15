@@ -7,6 +7,7 @@ Contributions are welcome when they preserve the repository's historical lineage
 Read:
 
 - `README.md`
+- `docs/PRODUCT_WORKFLOW.md`
 - `docs/ARCHITECTURE.md`
 - `docs/CLAIMS_AND_LIMITATIONS.md`
 - `docs/HISTORY_AND_MIGRATION.md`
@@ -33,53 +34,65 @@ For an executable bug or behavior change:
 5. run the relevant expanded suite;
 6. preserve limitations and blocked/null results.
 
-Do not weaken a meaningful assertion merely to turn CI green. If the test encoded the wrong contract, document why and correct the contract rather than modifying production behavior to match a mistake.
+Do not weaken a meaningful assertion merely to turn CI green. If a test encoded the wrong contract, document why and correct the test rather than modifying production behavior to match a mistake.
 
-## Deterministic verification
+## Current CI expectations
 
-Use `TESTING.md` and `docs/REPRODUCIBILITY.md` for the current commands.
+Use `TESTING.md` and `docs/REPRODUCIBILITY.md` for current commands. Pull requests affecting the active Python product should keep these gates green:
 
-At minimum, changes to the Python core should keep the restoration Python 3.11/3.12 jobs green. Packaging changes should also pass the clean wheel-install job. God Music changes should pass `npm test` and `npm run build`.
+- deterministic core on Python 3.11;
+- deterministic core on Python 3.12;
+- active-surface security-static regression;
+- wheel/sdist build + clean install + installed portable-product smoke;
+- God Music tests/build when applicable.
+
+Changes to continuity/provider/runtime/CLI behavior should include focused tests and preserve the installed-wheel `init -> export -> verify -> import` path.
+
+## Persistent-runtime invariants
+
+Do not couple user-owned continuity or authority to a specific model provider.
+
+Preserve:
+
+- MODEL != SYSTEM
+- MODEL != MEMORY
+- MODEL != AUTHORITY
+
+A provider change must not implicitly grant shell, filesystem, network, cloud, deployment, actuator, or tool authority. If a future tool layer is introduced, authorization must remain an explicit surrounding-system decision.
 
 ## Optional integrations
 
-For Kafka, MinIO, Milvus, Neo4j, downloaded ML models, microphones, SDR, browsers, or Unity, include environment-specific evidence rather than treating an unavailable integration as a pass.
+For Kafka, MinIO, Milvus, Neo4j, downloaded ML models, microphones, SDR, browsers, GPU/CUDA, or Unity, include environment-specific evidence rather than treating an unavailable integration as a pass.
 
-A useful integration report includes:
-
-- exact commit SHA;
-- OS/runtime versions;
-- service/model/hardware versions;
-- relevant configuration with secrets removed;
-- commands;
-- raw success/failure output;
-- known limitations.
+A useful integration report includes exact commit SHA, OS/runtime versions, service/model/hardware versions, non-secret configuration, commands, raw outputs, failures, and limitations.
 
 ## Claim discipline
 
-Use the following labels accurately:
+Use these labels accurately:
 
 - verified software result
 - integration result
-- hardware result
+- device/hardware result
 - simulation result
 - hypothesis
 - historical claim
 - blocked/null result
 
-Avoid upgrading language such as “works,” “secure,” “validated,” “optimal,” “production ready,” “anti-jamming,” “differentially private,” “conscious,” or “AGI” beyond the evidence that accompanies the change.
+Avoid upgrading words such as “works,” “secure,” “validated,” “optimal,” “production ready,” “anti-jamming,” “differentially private,” “conscious,” or “AGI” beyond the actual accompanying evidence.
 
 ## Security
 
-Never commit live credentials, API keys, private keys, tokens, or personal secrets.
+Never commit live credentials, API keys, private keys, tokens, or personal secrets. Keep `.env` untracked and `.env.example` limited to placeholders.
 
-Use `.env.example` only as a variable-name/template file and keep `.env` untracked. Any credential previously committed anywhere in history should be treated as exposed and rotated before reuse.
+Provider endpoints that would persist embedded URL credentials are intentionally rejected. Portable bundle changes must continue to fail closed on path/integrity/security violations.
 
-See `docs/SECURITY.md`.
+The current security-static CI job is a regression gate, not a full security audit. Security-sensitive changes should add narrowly targeted tests and document any external review/scanner used.
+
+Any credential previously committed anywhere in history should be treated as exposed and rotated before reuse.
 
 ## Historical terminology
 
-Names such as CST, 12D, vibrational information, phi/golden-ratio, resonance, bio/psi, and similar terms may be important to project lineage. Preserve names where compatibility/history requires them, but document the active software mechanism precisely.
+CST, 12D, vibrational information, phi/golden-ratio, resonance, bio/psi, and related names may matter to lineage. Preserve names where compatibility/history requires them while describing current software mechanisms and evidence precisely.
 
 ## Documentation changes
 
@@ -87,14 +100,6 @@ Active user/developer docs may be corrected when they contain stale commands, cr
 
 ## Pull requests
 
-A useful pull request should state:
+A useful pull request states the goal, preservation impact, affected subsystems, tests/CI, deterministic vs external evidence, security/compatibility considerations, and known limitations. Keep unrelated cleanup out of a focused repair unless it is required by the same root cause.
 
-- problem/goal;
-- preservation impact;
-- files/subsystems affected;
-- tests run;
-- deterministic vs integration/hardware evidence;
-- security/compatibility considerations;
-- known limitations.
-
-Keep unrelated cleanup out of a focused repair unless it is required by the same root cause.
+Before merge, verify the exact PR head. After a release-significant merge to `main`, verify the exact resulting `main` SHA rather than relying on an earlier branch run.
