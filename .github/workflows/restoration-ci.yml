@@ -181,3 +181,16 @@ jobs:
         run: python -m pip install . 'pymilvus>=2.3,<2.4'
       - name: Run live Milvus insert-search-restart-search gate
         run: bash integration/vm/run_milvus_gate.sh
+
+  ollama-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install product
+        run: python -m pip install .
+      - name: Run real Ollama CPU inference through product provider
+        run: bash integration/vm/run_ollama_gate.sh
