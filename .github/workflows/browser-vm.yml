@@ -1,0 +1,46 @@
+name: Browser VM Integration
+
+on:
+  push:
+    branches:
+      - main
+      - integration/vm-gates-2026-09-15
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-fake-media:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: god music
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install app and browser harness
+        run: |
+          npm install --no-audit --no-fund
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Build browser application
+        run: npm run build
+      - name: Start local preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 >/tmp/god-music-preview.log 2>&1 &
+          echo $! >/tmp/god-music-preview.pid
+          for i in {1..60}; do
+            curl -fsS http://127.0.0.1:4173 >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/god-music-preview.log
+          exit 1
+      - name: Exercise microphone lifecycle with Chromium fake media
+        run: node test/browser-media.mjs
+      - name: Show preview log on failure
+        if: failure()
+        run: cat /tmp/god-music-preview.log || true
