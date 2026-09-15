@@ -105,13 +105,16 @@ def test_import_rejects_symlink_members(tmp_path: Path):
 def test_verify_detects_payload_hash_corruption(tmp_path: Path):
     workspace = tmp_path / "source"
     initialize_workspace(workspace, name="Integrity")
+    append_memory_record(workspace, {"role": "user", "content": "original"})
     bundle = tmp_path / "good.cosmos"
     export_bundle(workspace, bundle)
 
     with zipfile.ZipFile(bundle, "r") as original:
         members = {info.filename: original.read(info.filename) for info in original.infolist()}
 
-    members["memory/ledger.jsonl"] = b"tampered\n"
+    tampered = bytearray(members["memory/ledger.jsonl"])
+    tampered[0] = ord("[") if tampered[0] != ord("[") else ord("{")
+    members["memory/ledger.jsonl"] = bytes(tampered)
     corrupted = tmp_path / "corrupted.cosmos"
     with zipfile.ZipFile(corrupted, "w") as archive:
         for name in sorted(members):
