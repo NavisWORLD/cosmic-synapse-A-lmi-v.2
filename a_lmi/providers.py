@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol
+from urllib.parse import urlsplit
 
 
 DEFAULT_OLLAMA_ENDPOINT = "http://127.0.0.1:11434"
@@ -70,7 +71,8 @@ class OllamaProvider:
 
     The default endpoint is loopback. Constructing this provider performs no
     network access. ``health`` and ``generate`` report only what an actual HTTP
-    request establishes.
+    request establishes. Endpoint credentials are rejected so they cannot leak
+    through provider provenance or error reporting.
     """
 
     def __init__(
@@ -84,8 +86,13 @@ class OllamaProvider:
         retries: int = 0,
     ) -> None:
         endpoint = endpoint.rstrip("/")
-        if not endpoint.startswith(("http://", "https://")):
+        parsed_endpoint = urlsplit(endpoint)
+        if parsed_endpoint.scheme not in {"http", "https"}:
             raise ValueError("Ollama endpoint must use http:// or https://")
+        if not parsed_endpoint.hostname:
+            raise ValueError("Ollama endpoint must include a hostname")
+        if parsed_endpoint.username is not None or parsed_endpoint.password is not None:
+            raise ValueError("Ollama endpoint must not embed credentials")
         if not model_id.strip():
             raise ValueError("model_id must not be empty")
         if timeout <= 0:
