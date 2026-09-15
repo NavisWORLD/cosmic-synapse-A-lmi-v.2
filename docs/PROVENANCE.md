@@ -1,10 +1,10 @@
-# Provenance and Restoration Record
+# Provenance and Product-Closure Record
 
-This repository preserves a long-running research and software lineage. The 2026-09-14 restoration is intentionally additive: it does not rewrite Git history, delete historical generations, or replace theory artifacts with a clean-room rewrite.
+This repository preserves a long-running research and software lineage. The 2026-09-14 restoration and 2026-09-15 product-closure work are additive: they do not rewrite Git history, erase earlier terminology, or delete historical papers/demos/archives merely to simplify the current product surface.
 
 ## Preservation boundary
 
-Before restoration work began, the active repository head was:
+Before restoration work began, the repository head was:
 
 `1770061052f7ac92292f7a27e84df874a4a31098`
 
@@ -12,61 +12,77 @@ That state is preserved on:
 
 `preservation/pre-restoration-2026-09-14`
 
-Restoration work is isolated on:
+The restoration work was developed on `restoration/complete-system-2026-09-14` and merged through pull request #1. The verified post-restoration `main` head used as the product-closure base was:
 
-`restoration/complete-system-2026-09-14`
+`cbe856931a902ff7c38db906a360f68a9b5ccf69`
 
-Draft review is tracked in pull request #1.
+Product closure is developed on:
 
-## Restoration method
+`closure/final-product-2026-09-15`
 
-The restoration uses a red/green contract sequence wherever practical:
+and reviewed through pull request #2 before merge.
 
-1. Preserve the pre-restoration state.
-2. Inspect source behavior and identify a concrete seam.
-3. Add a deterministic contract that fails on the existing behavior.
-4. Repair the smallest active implementation boundary.
-5. Run the expanded suite in GitHub Actions.
-6. Keep optional-service/hardware claims separate from deterministic software results.
+## Engineering method
 
-The failed runs are part of the evidence trail; they are not erased or reclassified as passes.
+For executable behavior, the project uses a red/green repair sequence where practical:
 
-## Major restoration checkpoints
+1. preserve the prior valid state;
+2. inspect the actual implementation;
+3. add a deterministic failing contract for the intended behavior;
+4. confirm the failure is meaningful;
+5. implement the narrow fix;
+6. run the expanded CI surface;
+7. retain failed runs as evidence rather than rewriting them as success;
+8. keep external/model/device/hardware claims separate from software tests.
 
-The branch contains staged repairs covering:
+The final acceptance rule is stricter: after product closure merges, a fresh push-triggered CI run must pass on the exact resulting `main` SHA before closure is described as complete.
 
-- configuration loading and startup contracts;
-- password-encryption round trips and derivation metadata;
-- LightToken spectral representation and vector-schema consistency;
-- raw-artifact persistence and provenance;
-- explicit multimodal embedding spaces;
-- lazy optional imports for audio/ML/infrastructure/visualization stacks;
-- Neo4j graph loading/visualization boundaries;
-- deterministic CST state and replay interface;
+## Restoration phase
+
+The restoration repaired and/or bounded:
+
+- configuration/startup mapping vs path behavior;
+- password-encryption derivation/salt persistence;
+- LightToken vector/spectral dimensions and terminology;
+- raw-artifact storage/provenance;
+- multimodal space separation and deterministic dimension adaptation;
+- optional audio/ML/infrastructure/UI dependency boundaries;
+- vector/graph schema/query behavior;
+- canonical deterministic CST state/replay;
 - hypothesis provenance/uncertainty;
-- federated-learning terminology and reproducible experimental noise;
-- HRCS packet/crypto/acoustic/mesh/simulation/radio contracts;
-- versioned Python/Unity IPC;
-- root packaging, CLI diagnostics, clean wheel installation;
-- God Music deterministic tests and production web build;
-- local Docker Compose hardening and credential/port contracts.
+- federated privacy/security terminology;
+- HRCS packet/crypto/acoustic/mesh/simulation/radio software contracts;
+- Python/Unity IPC schema/source behavior;
+- root packaging/CLI diagnostics;
+- God Music deterministic tests/build;
+- localhost Compose and active secret handling;
+- active evidence/claim documentation.
 
-A fully green code/config checkpoint after the Compose contract repair is:
+Historical red/green runs and intermediate commits remain part of the public Git history.
 
-`cdbd5b9c0cb5f2071437e33cbf5a89241881e8d2`
+## Product-closure phase
 
-GitHub Actions run #102 for that commit completed successfully.
+The 2026-09-15 closure adds the user-facing persistent substrate around the restored research runtime:
 
-Later commits in the same branch update active documentation and metadata while preserving that implementation boundary.
+- versioned user-owned continuity workspace;
+- deterministic integrity-addressed `.cosmos` export/verify/import;
+- explicit model-provider contract and provider provenance;
+- persistent runtime demonstrating provider swaps without authority transfer;
+- installed CLI workflow for init/inspect/run/export/verify/import/providers;
+- bounded benchmark/soak measurement harness;
+- installed-wheel portable product smoke;
+- archive/security hardening and scoped active-surface security gate;
+- provider endpoint credential rejection;
+- pinned intended CLIP/WavLM Hub revisions;
+- product workflow, closure evidence, architecture, security, reproducibility, claim, and migration documentation.
 
-## Historical material
+## Preserved historical material
 
-Historical artifacts remain intentionally present, including older HTML demos, publications, PDFs, ZIP archives, CST terminology, God Music generations, Unity material, and communications experiments.
-
-Examples visible in the preserved repository include:
+Historical artifacts remain intentionally present, including examples such as:
 
 - `The Cosmic Synapse Madsens theory.pdf`
 - `The-theory-of-CST-main (2).zip`
+- `Cosmicsol-main.zip`
 - `Harmonic_Resonance_AI_Music_Conductor_Complete_Publication.md`
 - `Harmonic_Resonance_AI_Music_Conductor_Complete_Publication.md.pdf`
 - `12D_Cosmic_Synapse_Audio_Engine-demo.html`
@@ -75,32 +91,22 @@ Examples visible in the preserved repository include:
 - `cosmic_synapse/Unity/`
 - `coms/hrcs/`
 
-Their presence is evidence of project history, not automatic validation of every claim made inside them.
+Their preservation establishes lineage/provenance. It does not automatically validate every claim in the artifact.
 
-## Active-vs-historical rule
+## Active vs historical rule
 
-The root README and the files under `docs/` define the current engineering/evidence boundary. Historical documents are preserved as authored unless a file is part of the active user/developer path and would otherwise mislead a new user about installation, security, test status, or scientific validation.
+Current engineering status is defined by exact-SHA CI and the active root/docs files. Historical publications/status files should generally remain as authored and be contextualized rather than silently rewritten.
 
-When active documentation conflicts with a historical claim, use the active documentation for current software status and use Git history/preservation branch to inspect the original statement.
+When active documentation conflicts with an older status/scientific/security claim, use the active documentation for the current software boundary and Git history/preservation branches for the historical statement.
+
+## Failure provenance
+
+Known red runs are intentionally retained, including failures used to establish missing continuity, provider/runtime, CLI, benchmark, and provider-endpoint security behavior before the corresponding fixes. A red run proves only that the tested commit failed the stated contract; a later green run is required for the repaired implementation.
 
 ## Authorship
 
-Repository authorship metadata identifies Cory Shane Davis as the project author/maintainer in the active package metadata. This provenance record does not attempt to adjudicate priority claims beyond what the repository history itself can demonstrate.
+Active package/citation metadata identifies Cory Shane Davis as project author/maintainer. This provenance document records repository/software history and does not make a legal or scientific priority determination beyond evidence present in the repository/timestamps themselves.
 
 ## Non-claims
 
-The restoration record does not convert repository history into proof of:
-
-- consciousness or sentience;
-- AGI;
-- biological life;
-- a new physical law;
-- additional physical dimensions;
-- quantum advantage or quantum consciousness;
-- golden-ratio superiority;
-- formal differential privacy;
-- cryptographic secure aggregation;
-- radio anti-jamming superiority;
-- hardware performance not measured in a controlled test.
-
-Those require evidence beyond preserving code, commits, and deterministic software tests.
+Preserving history and demonstrating persistent software continuity do not establish consciousness, sentience, AGI, biological life, personal identity persistence/resurrection, new physics, extra physical dimensions, quantum consciousness/advantage, golden-ratio superiority, formal differential privacy, cryptographic secure aggregation, RF anti-jamming superiority, or unmeasured hardware performance.
