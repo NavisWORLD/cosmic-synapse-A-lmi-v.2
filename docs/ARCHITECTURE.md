@@ -1,21 +1,72 @@
 # Active Architecture
 
-This document describes the active software architecture on `restoration/complete-system-2026-09-14`. Historical papers, demos, ZIP archives, earlier engines, and terminology are preserved separately and are not silently promoted into active-runtime claims.
+COSMIC SYNAPSE / A-LMI is a research-oriented persistent AI runtime built around one central separation:
 
-## System boundary
+```text
+MODEL != SYSTEM
+MODEL != MEMORY
+MODEL != AUTHORITY
+```
 
-The repository is a research-software ecosystem with several related but separable surfaces:
+The model is a replaceable inference component. User-owned continuity, software state, provenance, routing, storage, policy, and authority belong to the surrounding runtime.
 
-1. **A-LMI Python package** — data structures, multimodal processing adapters, memory clients, reasoning utilities, security helpers, and CLI diagnostics.
-2. **COSMIC SYNAPSE Python state/simulation layer** — deterministic CST software state plus simulation and IPC helpers.
-3. **HRCS communications package** — packet, crypto, acoustic, mesh, simulation, and experimental SDR radio code.
-4. **God Music web application** — browser audio analysis, deterministic timing/harmonic rules, prediction helpers, synthesis, and visualization.
-5. **Unity client source** — optional C# visualization/IPC client surface.
-6. **Optional infrastructure** — Kafka, MinIO, Milvus, Neo4j, and supporting containers.
+Historical papers, demos, ZIPs, earlier CST engines, and terminology remain preserved and are not silently promoted into active-runtime claims.
 
-These pieces can be inspected and tested independently. The minimal Python installation does not require the full infrastructure, microphone stack, ML stack, visualization stack, or WebSocket stack.
+## Product spine
 
-## Active data flow
+```text
+USER / EVENT
+    |
+    v
+PORTABLE CONTINUITY WORKSPACE
+    |-- system identity + format version
+    |-- memory ledger
+    |-- CST computational state
+    |-- knowledge / artifact references
+    |-- provider provenance
+    |-- routing state
+    `-- policy / authority
+             |
+             v
+EXPLICIT MODEL PROVIDER CONTRACT
+             |
+             v
+MODEL RESPONSE + PROVENANCE
+             |
+             v
+POLICY / AUTHORITY BOUNDARY
+             |
+             +--> optional tools/services/devices only when separately authorized
+```
+
+A provider swap changes the inference component, not ownership of memory/state and not authority. Deterministic tests verify that provider replacement preserves prior memory and leaves the authority file unchanged.
+
+## Portable continuity workspace
+
+`a_lmi.continuity` defines the versioned user-owned workspace and deterministic `.cosmos` bundle format. The canonical workspace contains:
+
+- `system.json`
+- `memory/ledger.jsonl`
+- `state/cst.json`
+- `knowledge/graph.json`
+- `artifacts/manifest.json`
+- `provenance/provider.json`
+- `routing/state.json`
+- `policy/authority.json`
+
+New workspaces start with no tool, network, or filesystem authority. Export records SHA-256 and byte sizes for all declared payloads. Import verifies the archive before materialization and rejects unsafe paths, symlinks, duplicate/undeclared members, corruption, secret-bearing filenames, unsupported versions, oversize/file-count limits, and non-empty destinations.
+
+## Model provider boundary
+
+`a_lmi.providers` defines explicit provider identity, request, response, health, capabilities, model ID/revision, endpoint, timeout/retry behavior, and provenance. `a_lmi.runtime.PersistentRuntime` persists interactions into the surrounding user workspace.
+
+The first concrete dependency-light provider is Ollama. Its default endpoint is loopback and construction performs no network access. Embedded endpoint credentials are rejected before the endpoint can enter persisted provider provenance or request error reporting.
+
+Provider output is not authority. A provider cannot automatically gain shell, filesystem, network, cloud, deployment, actuator, or service permissions.
+
+## A-LMI data path
+
+The wider A-LMI research path remains independently usable:
 
 ```text
 input/event
@@ -29,7 +80,7 @@ modality/service adapter
    |
    +--> LightToken
           |-- semantic embedding: 1536 values
-          |-- spectral representation: 769-bin real FFT of that embedding
+          |-- spectral representation: 769-bin real FFT
           |-- provenance / modality / storage metadata
           |
           +--> vector memory (optional Milvus)
@@ -37,92 +88,76 @@ modality/service adapter
           +--> reasoning / hypothesis utilities
 ```
 
-The 769-bin spectral representation is `numpy.fft.rfft` over the 1536-value embedding. It is a one-dimensional Fourier representation of software data. It is **not** a Graph Fourier Transform and is not evidence of a new physical frequency domain.
-
-## Canonical CST software state
-
-`cosmic_synapse.cst_state` provides the restoration branch's stable deterministic interface for the historical CST state terminology. The adapter exposes explicit software state such as `x12`, `m12`, phase, seed, event progression, snapshot serialization, and deterministic replay.
-
-The historical `12D` naming is preserved as project lineage. In the active documentation it means a twelve-channel computational state representation; it is not presented as a claim that spacetime has twelve experimentally established physical dimensions.
-
-## Memory and provenance
-
-The active memory path separates three concerns:
-
-- **Object storage:** raw bytes, object URI, SHA-256 digest, byte size, and content metadata.
-- **Vector memory:** explicit embedding space, dimensions, semantic vector, and spectral vector.
-- **Temporal knowledge graph:** entities/relationships plus queryable graph records for visualization and reasoning.
-
-Clients for MinIO, Milvus, and Neo4j are optional dependencies and are imported lazily so the core package remains installable without external services.
+The 769-bin representation is `numpy.fft.rfft` over a 1536-value software embedding. It is not a Graph Fourier Transform and is not evidence of a new physical frequency domain.
 
 ## Multimodal boundary
 
-The code treats embedding spaces honestly:
+The active multimodal adapter preserves embedding-space identity and pins the intended Hub snapshots:
 
-- CLIP-style text/image representations may share their model's semantic space.
-- WavLM-style audio representations are identified as a different embedding space unless an explicit trained alignment is supplied.
-- Production code does not use random vectors as successful multimodal outputs.
-- An untrained random projection is not described as semantic alignment.
+- CLIP text/image: `openai/clip-vit-large-patch14@32bd64288804d66eefd0ccbe215aa642df71cc41`
+- WavLM audio/speech: `microsoft/wavlm-base-plus@4c66d4806a428f2e922ccfa1a962776e232d487b`
 
-## Hypothesis generation
+CLIP text/image may share their pretrained space. WavLM audio is a separate space unless a real trained alignment is introduced. The 1536-value carrier adaptation is deterministic; random production vectors/untrained random projections are not treated as successful semantic inference.
 
-Hypothesis generation records the observation/pattern, evidence inputs, uncertainty/confidence, provider provenance, and provider results. It does not manufacture placeholder search URLs as evidence.
+Pinning the revision specifies the intended external snapshot. It does not imply the weights were downloaded or executed by dependency-light CI.
 
-A generated hypothesis is a candidate for testing, not a verified discovery.
+## Canonical CST software state
 
-## Security boundary
+`cosmic_synapse.cst_state` is the stable deterministic adapter for the historical CST/12D engineering lineage. It exposes explicit seeded state, phase, memory terms, snapshots, serialization, and replay.
 
-Verified dependency-light security behavior includes AES-GCM helpers and password-based encryption with stored derivation parameters/salt sufficient for decryption.
+Historical `12D` naming is retained as software/project terminology. The active adapter does not establish extra physical dimensions or new physics.
 
-The repository also preserves experimental or optional homomorphic-encryption, secure-computation, and federated-learning code. The active federated API distinguishes ordinary weighted averaging and experimental Gaussian-noise injection from formal differential privacy or cryptographic secure aggregation.
+## Memory and provenance
 
-See `SECURITY.md` and `CLAIMS_AND_LIMITATIONS.md`.
+The architecture separates:
+
+- raw object bytes + URI + SHA-256 + byte size;
+- semantic/spectral vectors + explicit embedding-space identity;
+- temporal graph records;
+- portable continuity memory/state;
+- provider/model provenance;
+- authority configuration.
+
+MinIO, Milvus, and Neo4j remain optional lazy integrations rather than requirements for the base package.
+
+## Security / authority boundary
+
+Active software protections include authenticated encryption helpers, password envelopes with persistent derivation metadata, portable archive hardening, secret-file exclusion, localhost Compose bindings, env-driven service secrets, provider endpoint credential rejection, and a scoped static security regression gate.
+
+These protections do not amount to production authentication/authorization, complete dependency vulnerability analysis, or a third-party security audit.
 
 ## HRCS boundary
 
-The HRCS package contains:
+HRCS preserves versioned packets, authenticated symmetric encryption, software acoustic round trips, replay handling, simulated multi-hop communication, deterministic radio planning, and experimental transmit retuning when compatible hardware exists.
 
-- versioned packet serialization and integrity checking;
-- authenticated symmetric encryption;
-- deterministic acoustic modem round-trip tests;
-- replay/duplicate handling and simulated multi-hop communication;
-- deterministic radio hop planning and transmit-side SDR retuning when compatible hardware exists.
-
-The current restoration does **not** claim cryptographic forward secrecy from a static/pre-shared key, proven anti-jamming superiority, or verified synchronized receive-side SDR hopping.
+The current evidence does not establish forward secrecy from static/pre-shared keys, synchronized RX hopping, anti-jamming superiority, field range, or emergency reliability.
 
 ## IPC / Unity boundary
 
-Python and Unity share a versioned JSON message envelope. Python serialization/processing is dependency-light; the WebSocket transport is optional. The Unity source uses Task-based asynchronous receive logic rather than mixing `await` into a non-async iterator.
-
-CI performs source-contract tests for the Unity IPC code. A full Unity editor/player build is a separate integration gate and is not implied by those tests.
+Python and Unity share a versioned JSON envelope. Python transport handling is optional and dependency-light; Unity source uses Task-based async receive logic and handles fragmented WebSocket messages. CI verifies source/schema contracts. A real Unity editor/player compile/build/runtime remains an environment-specific gate.
 
 ## God Music boundary
 
-God Music is an algorithmic browser music experiment. CI runs deterministic Node tests for core analysis/prediction utilities and builds the Vite application. Live browser microphone behavior remains a browser/hardware integration surface.
+God Music remains an algorithmic Vite/Web Audio research app. CI verifies deterministic Node tests and the production build. Live browser microphone behavior is a separate device/browser result.
 
 ## Optional infrastructure
 
-`infrastructure/docker-compose.yml` publishes development service ports on `127.0.0.1` only and takes active credentials from environment variables. The Compose stack is for local research/development and should not be treated as a production deployment template without additional network, secret-management, TLS, backup, monitoring, and hardening work.
+`infrastructure/docker-compose.yml` supplies a localhost research stack for Kafka, MinIO, Milvus, Neo4j and dependencies. Published host ports bind to `127.0.0.1`; secret-bearing values come from environment variables. Configuration contracts do not substitute for live service startup/write/read/restart evidence.
 
-## Packaging
+## Packaging and product interface
 
-The root `pyproject.toml` provides a dependency-light default package plus named extras:
+The root package keeps lightweight defaults with explicit extras: `audio`, `ml`, `infra`, `viz`, `ipc`, `dev`.
 
-- `audio`
-- `ml`
-- `infra`
-- `viz`
-- `ipc`
-- `dev`
-
-The `cosmic-synapse doctor --json` command reports core import health and optional capability availability without requiring the heavyweight stacks to be installed.
+The installed `cosmic-synapse` CLI exposes diagnostics, CST demo, continuity initialization/inspection/export/import/verification, provider listing, and explicit provider execution. CI builds the wheel/sdist, installs the wheel into a clean virtual environment, and runs the portable continuity round trip through the installed executable.
 
 ## Verification layers
 
-The restoration CI intentionally separates:
+The active workflow separates:
 
 - deterministic Python contracts on Python 3.11 and 3.12;
-- wheel/sdist build plus fresh-environment installation;
-- God Music Node tests and Vite production build.
+- a scoped security-static regression job;
+- wheel/sdist + clean-install + installed-product smoke;
+- God Music Node tests/build;
+- explicit external/model/device/hardware gates documented separately.
 
-External databases, downloaded model weights, microphones, SDR hardware, and the Unity editor remain explicit integration/hardware gates rather than silent passes.
+See `FINAL_CLOSURE_EVIDENCE.md` for the exact verified-versus-external boundary.
