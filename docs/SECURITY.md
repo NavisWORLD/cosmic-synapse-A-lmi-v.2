@@ -1,18 +1,41 @@
 # Security Notes
 
-This document describes the current engineering security posture of the restoration branch. It is not a third-party security audit or a claim that the complete historical repository is production-hardened.
+This document describes the active engineering security posture of COSMIC SYNAPSE / A-LMI. It is not a third-party security audit, penetration test, dependency-vulnerability certification, or claim that the complete historical repository is production-hardened.
 
 ## Default posture
 
-The dependency-light core is designed to be inspectable without automatically connecting to external services or importing heavyweight optional stacks.
+The dependency-light core can be installed and inspected without automatically contacting external services, opening audio devices, loading heavyweight model stacks, or granting model output tool authority.
 
-Local Docker Compose services publish development ports on `127.0.0.1` rather than all interfaces. Active MinIO and Neo4j credentials are supplied through environment variables. Historical credentials remain visible in Git history/preserved files where they originally appeared and must not be reused.
+New continuity workspaces start with empty tool, network, and filesystem authority. Provider selection changes inference only; it does not silently transfer those permissions.
+
+## Portable continuity bundle
+
+The `.cosmos` import/export path is designed to fail closed around common archive/data risks:
+
+- every declared payload has SHA-256 and byte-size metadata;
+- verification occurs before import materializes files;
+- traversal/absolute/backslash path tricks are rejected;
+- symlink and directory archive members are rejected;
+- duplicate and undeclared archive entries are rejected;
+- missing, size-mismatched, or hash-mismatched payloads are rejected;
+- unsupported format versions fail explicitly;
+- bundle size/file-count limits are enforced;
+- secret-bearing filenames such as `.env*` and private-key formats are excluded;
+- import refuses a non-empty destination rather than overwriting unrelated user data.
+
+The bundle stores user data/state/provenance. It does not intentionally embed service credentials or model parameters by default.
+
+## Provider endpoints and provenance
+
+The first concrete provider client is Ollama. Its default endpoint is loopback. Provider construction performs no network access.
+
+Custom Ollama endpoints must use HTTP(S), include a hostname, and must not embed URL username/password credentials. Credential-bearing endpoints are rejected before they can be persisted in provider provenance or reflected in request-error context.
+
+A model response does not carry authority. The runtime records explicit provider identity/provenance separately from policy.
 
 ## Local environment variables
 
-See `.env.example` for local-development variable names. Do not commit real credentials.
-
-The active configuration recognizes variables including:
+`.env.example` is a placeholder/template file; the real root `.env` must remain untracked. Active service credential variables include:
 
 - `A_LMI_MINIO_ACCESS_KEY`
 - `A_LMI_MINIO_SECRET_KEY`
@@ -21,77 +44,58 @@ The active configuration recognizes variables including:
 - `MILVUS_MINIO_ACCESS_KEY`
 - `MILVUS_MINIO_SECRET_KEY`
 
-Use unique secrets for any environment beyond an isolated disposable local setup.
-
-## Encryption
-
-The active dependency-light encryption path uses AES-GCM authenticated encryption. Password-based encryption persists the random salt/derivation metadata required for decryption rather than deriving with an unrelated new salt.
-
-Authenticated encryption protects confidentiality/integrity of correctly handled ciphertexts, but it does not by itself provide identity/authentication of users, authorization policy, key rotation, secure backup, forward secrecy, or endpoint security.
-
-## HRCS cryptography
-
-The restored HRCS path uses authenticated symmetric cryptography. Static/pre-shared key designs do **not** provide cryptographic forward secrecy simply because authenticated encryption is used.
-
-Do not describe the current HRCS key exchange/storage design as forward-secret unless a separate ephemeral authenticated key-agreement protocol is implemented, tested, and documented.
-
-## Federated / privacy terminology
-
-The active federated helper distinguishes:
-
-- weighted averaging;
-- optional experimental Gaussian-noise injection;
-- explicit metadata indicating that formal differential privacy and cryptographic secure aggregation are not provided by those helpers.
-
-A privacy guarantee requires a complete mechanism/accountant/threat-model analysis, not merely adding Gaussian noise to a tensor.
-
-## Optional security research modules
-
-Historical/optional homomorphic-encryption and secure-computation modules remain preserved. Their presence does not establish production deployment safety, protocol correctness, or resistance to malicious participants.
-
-Treat them as research/optional components until separately reviewed and integration-tested.
-
-## Object and graph storage
-
-Raw artifact metadata includes content hashes and storage references so callers can retain provenance. A hash detects changes when compared to a trusted expected digest; it is not an access-control mechanism.
-
-MinIO, Milvus, Neo4j, and Kafka require their own deployment hardening if used outside localhost development, including as applicable:
-
-- network segmentation;
-- TLS;
-- authentication/authorization;
-- secret management;
-- backups and restore testing;
-- resource limits;
-- monitoring/logging;
-- image/version pinning and vulnerability management.
+Secret-bearing values are supplied from the environment rather than committed fallback passwords. Any credential ever committed in historical Git material should be treated as exposed and rotated before reuse.
 
 ## Docker Compose
 
-`infrastructure/docker-compose.yml` is a local research/development convenience stack, not a production orchestrator.
+`infrastructure/docker-compose.yml` is a local research/development stack, not a production orchestrator. Published host ports are required by tests to stay bound to `127.0.0.1`.
 
-Current protections include loopback host bindings, env-driven active credentials, corrected Kafka internal hostname/advertising, and separated data volumes. Before any remote/shared deployment, replace local defaults and add production controls.
+A remote/shared deployment would need target-specific TLS, network policy, authentication/authorization, secret management, backups/restore tests, resource limits, monitoring, rate limiting, vulnerability management, incident response, and real service integration testing.
 
-## Microphone and browser permissions
+## Active-surface static regression gate
 
-Audio components require explicit operating-system/browser permission when live capture is used. The dependency-light package can be installed without PyAudio or browser microphone access.
+CI runs a scoped static test over selected active product Python modules. It checks for direct uses of selected dangerous shortcuts such as `eval`, `exec`, `pickle.load`, unsafe `yaml.load`, `shell=True`, and `os.system`; it also verifies `.env` tracking, placeholder secret examples, config fallback rules, and loopback port bindings.
 
-God Music intends a separate microphone analysis path and synthesized output path. Browser/audio-graph behavior should still be integration-tested on target browsers/devices.
+This is intentionally narrow. It is not proof that arbitrary code execution is impossible, does not recursively certify every historical artifact, and does not replace CodeQL/SAST/DAST, dependency/image vulnerability scanning, or expert security review.
 
-## SDR / radio
+## Encryption
 
-Radio code is experimental. Do not transmit outside a lawful, configured test environment. Frequency, bandwidth, gain, antenna, duty cycle, licensing, and local regulations are outside the guarantees of this repository.
+The active dependency-light encryption path uses AES-GCM authenticated encryption. Password-based envelopes preserve salt/derivation metadata required for decryption.
 
-No current restoration result demonstrates anti-jamming security or synchronized hopping reliability.
+Authenticated encryption does not by itself provide user identity, authorization, key rotation, secure backups, endpoint security, or forward secrecy.
+
+## HRCS cryptography
+
+The active HRCS software path uses authenticated symmetric cryptography. Static/pre-shared keys are not described as cryptographic forward secrecy. Forward secrecy would require an appropriate ephemeral authenticated key-agreement/ratchet design plus tests and documentation.
+
+## Federated/privacy terminology
+
+Weighted averaging and experimental Gaussian-noise injection are not called formal differential privacy or cryptographic secure aggregation. Stronger privacy guarantees require a defined threat model, correct mechanism/accounting, and evidence.
+
+## Object, vector, and graph storage
+
+Object hashes provide integrity/provenance when compared with trusted expected values; they are not access control. MinIO, Milvus, Neo4j, and Kafka need their own production hardening if deployed beyond an isolated localhost research environment.
+
+## Model and multimodal supply chain
+
+The active CLIP and WavLM adapters pin intended Hugging Face revisions. Revision pinning narrows the intended snapshot but does not by itself verify downloaded file hashes, dependency provenance, model behavior, or model security. A real deployment should record the resolved artifacts/cache and review the model/dependency supply chain appropriate to that environment.
+
+## Microphone/browser/device permissions
+
+Live audio and browser capture require explicit target-device permissions. Optional audio imports do not open hardware merely by importing the base package. Live permission/capture/start-stop behavior still requires real-device testing.
 
 ## Unity / IPC
 
-The shared IPC schema validates message version/type/payload shape, but a schema is not an authorization system. A remotely reachable WebSocket bridge would require authentication, authorization, origin/network policy, rate limits, and transport security appropriate to the deployment.
+The shared IPC schema validates version/type/payload structure but is not an authorization system. Any remotely reachable WebSocket bridge would need authentication, authorization, transport security, network/origin controls, input/rate limits, and deployment-specific threat analysis.
 
-## Historical secrets
+## SDR / radio
 
-Because history is intentionally preserved, removing a credential string from the current branch does not erase it from Git history. Any credential that was ever committed should be treated as exposed and rotated/revoked before reuse.
+Radio support is experimental software. No active result establishes anti-jamming superiority, synchronized RX hopping reliability, RF range, regulatory suitability, or emergency readiness. Real transmission must follow applicable hardware limits and law.
 
-## Reporting issues
+## Historical material
 
-When reporting a security issue, include the affected path/component, exact version/commit, reproduction steps, impact, and whether the issue affects only historical material or the active restoration path. Avoid posting live secrets in issues or pull requests.
+History is intentionally preserved. Removing a secret-like string from the active branch would not erase it from Git history or archived artifacts. Do not reuse historical credentials. Active security claims apply only to the explicitly documented current product surface.
+
+## Reporting
+
+When reporting a security issue, identify the exact commit/path/component, reproducible steps, impact, whether the issue affects the active product or only preserved historical material, and remove live secrets from public reports.
