@@ -1,13 +1,10 @@
 # Quick Start
 
-This guide covers the active restoration branch. Historical setup guides may reference older dependency files, default credentials, or all-in-one startup assumptions; use this file for the current install path.
+Use this guide for the current product-facing research runtime. Historical setup guides remain preserved for lineage but may describe older dependency models or credentials.
 
-## 1. Core install
+## 1. Install the dependency-light core
 
-Requirements:
-
-- Python 3.11+
-- Git
+Requirements: Python 3.11+ and Git.
 
 ```bash
 git clone https://github.com/NavisWORLD/cosmic-synapse-A-lmi-v.2.git
@@ -16,11 +13,7 @@ python -m pip install .
 cosmic-synapse doctor --json
 ```
 
-The default package is intentionally dependency-light.
-
-## 2. Optional extras
-
-Install only what you need:
+Optional extras remain opt-in:
 
 ```bash
 python -m pip install '.[audio]'
@@ -31,27 +24,57 @@ python -m pip install '.[ipc]'
 python -m pip install '.[dev]'
 ```
 
-For a broad research environment:
+## 2. Create your continuity workspace
 
 ```bash
-python -m pip install '.[audio,ml,infra,viz,ipc,dev]'
+cosmic-synapse init ./my-cosmos --name "My Cosmos" --seed 2026 --json
+cosmic-synapse inspect ./my-cosmos --json
 ```
 
-Some extras require platform libraries, model downloads, device permissions, or substantial disk/RAM.
+A new workspace separates memory, CST software state, provider provenance, routing, artifacts/knowledge surfaces, and policy. It starts with no tool/network/filesystem authority.
 
-## 3. Local infrastructure
+## 3. Export, verify, and restore
 
-Docker and Docker Compose are required only if you want the local Kafka/MinIO/Milvus/Neo4j stack.
+```bash
+cosmic-synapse export ./my-cosmos ./my-cosmos.cosmos --json
+cosmic-synapse verify ./my-cosmos.cosmos --json
+cosmic-synapse import ./my-cosmos.cosmos ./restored-cosmos --json
+cosmic-synapse inspect ./restored-cosmos --json
+```
 
-Create a local environment file from the non-secret template:
+The `.cosmos` bundle is integrity-addressed with SHA-256 and byte sizes. Import verifies the whole bundle before writing and rejects unsafe archive paths, symlinks, duplicate/undeclared files, corruption, unsupported versions, excessive size/count, secret-bearing filenames, and non-empty destinations.
+
+## 4. Use a replaceable model provider
+
+List supported provider clients without networking:
+
+```bash
+cosmic-synapse providers --json
+```
+
+The first concrete provider is Ollama. If a real local Ollama service and model are installed:
+
+```bash
+cosmic-synapse run ./my-cosmos \
+  --provider ollama \
+  --model qwen2:latest \
+  --prompt "Continue from my saved history." \
+  --json
+```
+
+The default endpoint is `http://127.0.0.1:11434`. Provider selection does not grant tool authority. A successful response means the provider call returned a structurally valid response that was persisted; it does not establish factual correctness of the response.
+
+See `docs/PRODUCT_WORKFLOW.md` for backup/recovery and provider-swap details.
+
+## 5. Optional local infrastructure
+
+Docker/Compose are needed only for the Kafka/MinIO/Milvus/Neo4j research stack.
 
 ```bash
 cp .env.example .env
 ```
 
-Replace **every** `replace-with-*` value in `.env` before starting the stack. The root `.gitignore` excludes `.env`.
-
-Required secret-bearing variables are:
+Replace every placeholder locally. Required secret-bearing variables include:
 
 ```text
 A_LMI_MINIO_ACCESS_KEY
@@ -61,41 +84,21 @@ MILVUS_MINIO_ACCESS_KEY
 MILVUS_MINIO_SECRET_KEY
 ```
 
-`A_LMI_NEO4J_USERNAME` defaults to `neo4j` in Compose but can be overridden.
+`A_LMI_NEO4J_USERNAME` may default to `neo4j`.
 
-Start the local stack from the repository root:
+Start/inspect/stop:
 
 ```bash
 docker compose -f infrastructure/docker-compose.yml up -d
-```
-
-Check service state:
-
-```bash
 docker compose -f infrastructure/docker-compose.yml ps
-```
-
-Stop services:
-
-```bash
 docker compose -f infrastructure/docker-compose.yml down
 ```
 
-Published development ports bind to `127.0.0.1`. This Compose file is a local research/development stack, not a production deployment template.
+Published development ports bind to `127.0.0.1`. The Compose file is not a production deployment template. Live service success is a separate integration gate.
 
-## 4. Configuration
+## 6. Optional infrastructure initialization
 
-Active configuration lives in:
-
-```text
-infrastructure/config.yaml
-```
-
-It supports environment expansion for active service credentials. Do not put real secrets directly into tracked YAML/Markdown files.
-
-## 5. Optional infrastructure initialization
-
-If you installed the `infra` extra and started the local stack, the historical initialization helpers are available under `infrastructure/`:
+With the `infra` extra and disposable/local services running:
 
 ```bash
 python infrastructure/setup_kafka.py
@@ -103,27 +106,9 @@ python infrastructure/init_milvus.py
 python infrastructure/init_neo4j.py
 ```
 
-These commands are integration paths and are not part of the dependency-light deterministic CI gate. Run them only against a disposable/local environment until you have reviewed the scripts and your service configuration.
-
-## 6. Optional UI / IPC surfaces
-
-Visualization dependencies:
-
-```bash
-python -m pip install '.[viz]'
-```
-
-WebSocket IPC dependencies:
-
-```bash
-python -m pip install '.[ipc]'
-```
-
-The restoration keeps optional UI/network imports lazy so installing the core package does not require Dash, Plotly, or WebSockets.
+Review these scripts and your service configuration before use. Deterministic CI does not claim a live service deployment from configuration tests alone.
 
 ## 7. God Music
-
-God Music is a separate Vite/Web Audio app:
 
 ```bash
 cd "god music"
@@ -138,54 +123,44 @@ Production build:
 npm run build
 ```
 
-Live microphone analysis requires browser microphone permission. The deterministic CI result does not substitute for browser/device integration testing.
+CI verifies deterministic Node tests and Vite buildability. Live microphone/browser behavior requires target-device testing.
 
 ## 8. HRCS
 
-HRCS is a separate nested Python package and is not included in the root wheel:
+HRCS is a nested package, not part of the root wheel:
 
 ```bash
 cd coms/hrcs
-python -m pip install -e .
-```
-
-For development:
-
-```bash
 python -m pip install -e '.[dev]'
 pytest
 ```
 
-The restored software tests do not establish RF range, anti-jamming superiority, synchronized receive hopping, or emergency/production readiness.
+Software tests do not establish RF range, anti-jamming superiority, synchronized receive hopping, or emergency/production readiness.
 
-## 9. Run verification
+## 9. Verification
 
-For the exact deterministic commands used by CI, see:
+The root CI separately verifies:
 
-- `TESTING.md`
-- `docs/REPRODUCIBILITY.md`
+- deterministic Python contracts on 3.11 and 3.12;
+- portable bundle/provider/runtime/CLI security contracts;
+- bounded local benchmark integrity;
+- wheel/sdist build and clean-wheel install;
+- an installed-wheel init/export/verify/import round trip;
+- God Music tests and build.
 
-The package-build gate separately builds a wheel/sdist, installs the wheel into a fresh virtual environment, and runs `cosmic-synapse doctor --json`.
+See `TESTING.md`, `docs/REPRODUCIBILITY.md`, and `docs/FINAL_CLOSURE_EVIDENCE.md`.
 
-## 10. What is not automatic
+## 10. External gates
 
-A successful core install does not automatically mean the following are available:
+A successful core install does not automatically establish:
 
-- downloaded CLIP/WavLM/Vosk weights;
-- live microphone capture;
-- Kafka/MinIO/Milvus/Neo4j services;
-- browser microphone behavior;
-- SDR hardware;
-- Unity editor/player execution;
-- GPU/CUDA execution.
+- a live Ollama model response;
+- live Kafka/MinIO/Milvus/Neo4j operation;
+- downloaded CLIP/WavLM/Vosk snapshots;
+- microphone/browser/device behavior;
+- SDR hardware/RF performance;
+- Unity editor/player runtime;
+- GPU/CUDA behavior;
+- production deployment/security readiness.
 
-Use `cosmic-synapse doctor --json` to see which optional Python capabilities are present, then validate external services/hardware separately.
-
-## Next reading
-
-- `README.md` — project front door
-- `docs/ARCHITECTURE.md` — active architecture
-- `docs/PROVENANCE.md` — preservation/restoration record
-- `docs/CLAIMS_AND_LIMITATIONS.md` — evidence boundary
-- `docs/SECURITY.md` — security posture
-- `docs/REPRODUCIBILITY.md` — exact verification model
+Those require separate recorded evidence in the actual target environment.
