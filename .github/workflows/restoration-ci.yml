@@ -3,6 +3,7 @@ name: Restoration CI
 on:
   push:
     branches:
+      - main
       - restoration/complete-system-2026-09-14
   pull_request:
 
