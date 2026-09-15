@@ -109,6 +109,25 @@ class MultimodalEncoder:
             vector = vector / norm
         return adapt_embedding_dimension(vector, LIGHTTOKEN_DIMENSION)
 
+    @staticmethod
+    def _feature_tensor(features):
+        """Return the projected feature tensor across Transformers API versions.
+
+        Transformers 4.x returned a tensor directly from CLIP
+        ``get_*_features``. Transformers 5.x returns a
+        ``BaseModelOutputWithPooling`` whose ``pooler_output`` is replaced with
+        the projected CLIP feature. Supporting both forms keeps the active model
+        snapshot compatible without discarding provenance or pinning the whole
+        optional stack to one Transformers major.
+        """
+
+        if hasattr(features, "detach"):
+            return features
+        pooled = getattr(features, "pooler_output", None)
+        if pooled is not None and hasattr(pooled, "detach"):
+            return pooled
+        raise RuntimeError("model feature output does not contain a tensor")
+
     def _load_torch(self):
         if self._torch is not None:
             return self._torch
@@ -201,7 +220,7 @@ class MultimodalEncoder:
         )
         inputs = {key: value.to(self.device) for key, value in inputs.items()}
         with torch.no_grad():
-            features = self.clip_model.get_text_features(**inputs)
+            features = self._feature_tensor(self.clip_model.get_text_features(**inputs))
         packed = self._normalize_and_pack(features.detach().cpu().numpy())
         return packed[0] if is_single else packed
 
@@ -223,7 +242,7 @@ class MultimodalEncoder:
         inputs = self.clip_processor(images=image, return_tensors="pt")
         inputs = {key: value.to(self.device) for key, value in inputs.items()}
         with torch.no_grad():
-            features = self.clip_model.get_image_features(**inputs)
+            features = self._feature_tensor(self.clip_model.get_image_features(**inputs))
         return self._normalize_and_pack(features.detach().cpu().numpy())[0]
 
     def encode_audio(

@@ -29,7 +29,7 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: cosmic-minio
     ports:
       - "127.0.0.1:9000:9000"
@@ -63,7 +63,7 @@ services:
       --data-dir=/etcd
 
   minio-storage:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: cosmic-milvus-minio
     environment:
       MINIO_ROOT_USER: "${MILVUS_MINIO_ACCESS_KEY:?set MILVUS_MINIO_ACCESS_KEY}"
@@ -81,8 +81,9 @@ services:
       retries: 3
 
   milvus:
-    image: milvusdb/milvus:v2.3.3
+    image: milvusdb/milvus:v2.4.23
     container_name: cosmic-milvus-standalone
+    command: ["milvus", "run", "standalone"]
     depends_on:
       - etcd
       - minio-storage

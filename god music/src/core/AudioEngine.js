@@ -77,6 +77,9 @@ export class AudioEngine {
         }
 
         try {
+            // Replace any prior source before attaching the new stream.
+            this.disconnectMicrophone();
+
             // Create microphone source from stream
             this.microphone = this.audioContext.createMediaStreamSource(stream);
 
@@ -92,6 +95,22 @@ export class AudioEngine {
             console.error('Microphone connection failed:', error);
             throw error;
         }
+    }
+
+    /**
+     * Disconnect the Web Audio microphone source without owning MediaStream tracks.
+     * Track lifetime is controlled by the conductor that requested getUserMedia().
+     */
+    disconnectMicrophone() {
+        if (!this.microphone) {
+            return;
+        }
+        try {
+            this.microphone.disconnect();
+        } catch (error) {
+            console.warn('Microphone disconnect warning:', error);
+        }
+        this.microphone = null;
     }
 
     /**
@@ -177,10 +196,7 @@ export class AudioEngine {
      * Cleanup
      */
     destroy() {
-        if (this.microphone) {
-            this.microphone.disconnect();
-            this.microphone = null;
-        }
+        this.disconnectMicrophone();
         if (this.analyzer) {
             this.analyzer.disconnect();
             this.analyzer = null;
@@ -200,4 +216,3 @@ export class AudioEngine {
         this.isInitialized = false;
     }
 }
-

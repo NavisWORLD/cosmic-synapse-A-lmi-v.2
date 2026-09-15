@@ -1,0 +1,45 @@
+name: Security VM
+
+on:
+  push:
+    branches:
+      - main
+      - integration/vm-gates-2026-09-15
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install product and security tooling
+        run: |
+          python -m pip install --upgrade 'setuptools>=83.0.0'
+          python -m pip install . pip-audit bandit
+      - name: Audit installed Python dependencies
+        run: pip-audit --local --skip-editable
+      - name: Scan active Python product surfaces
+        run: bandit -r a_lmi cosmic_synapse interfaces -ll
+
+  god-music-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: god music
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install application dependencies
+        run: npm install --no-audit --no-fund
+      - name: Audit high and critical application dependency findings
+        run: npm audit --audit-level=high

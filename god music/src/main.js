@@ -36,6 +36,7 @@ class GodMusicConductor {
         
         this.isPlaying = false;
         this.microphoneStream = null;
+        this.calibrationTimer = null;
         this.grooveLocked = false;
     }
 
@@ -237,10 +238,28 @@ class GodMusicConductor {
     }
 
     /**
+     * Release microphone resources owned by the conductor.
+     */
+    releaseMicrophone() {
+        if (this.calibrationTimer !== null) {
+            clearTimeout(this.calibrationTimer);
+            this.calibrationTimer = null;
+        }
+        if (this.audioEngine) {
+            this.audioEngine.disconnectMicrophone();
+        }
+        if (this.microphoneStream) {
+            this.microphoneStream.getTracks().forEach(track => track.stop());
+            this.microphoneStream = null;
+        }
+    }
+
+    /**
      * Calibrate bio-signature
      */
     async calibrate() {
         this.logger.info('🎤 Starting calibration...');
+        this.releaseMicrophone();
         
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -258,13 +277,15 @@ class GodMusicConductor {
             this.updateStatus('Calibrating...');
 
             // Sample for 3 seconds
-            setTimeout(() => {
+            this.calibrationTimer = setTimeout(() => {
+                this.calibrationTimer = null;
                 this.bioSignature.update();
                 this.logger.success('✅ Calibration complete!');
                 this.updateStatus('Calibration complete');
             }, 3000);
 
         } catch (error) {
+            this.releaseMicrophone();
             this.logger.error(`❌ Calibration failed: ${error.message}`);
         }
     }
@@ -312,8 +333,9 @@ class GodMusicConductor {
         this.predictiveEngine.stop();
         this.visualizer.stop();
 
-        // Stop all instruments
+        // Stop all instruments and release any active analysis microphone.
         Object.values(this.instruments).forEach(inst => inst.stop());
+        this.releaseMicrophone();
 
         document.getElementById('startBtn').disabled = false;
         document.getElementById('stopBtn').disabled = true;
@@ -593,5 +615,3 @@ window.addEventListener('load', async () => {
     await conductor.init();
     window.conductor = conductor; // For debugging
 });
-
-

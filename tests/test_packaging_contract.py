@@ -17,6 +17,9 @@ def test_root_pyproject_keeps_heavy_stacks_behind_named_extras():
 
     extras = project["optional-dependencies"]
     assert {"audio", "ml", "infra", "viz", "ipc", "dev"} <= set(extras)
+    infra = {dependency.lower() for dependency in extras["infra"]}
+    assert "pymilvus==2.4.15" in infra
+    assert "marshmallow>=3,<4" in infra
     assert project["scripts"]["cosmic-synapse"] == "a_lmi.cli:main"
 
 

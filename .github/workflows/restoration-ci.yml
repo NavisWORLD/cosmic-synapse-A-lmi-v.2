@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - restoration/complete-system-2026-09-14
+      - integration/vm-gates-2026-09-15
   pull_request:
 
 permissions:
@@ -128,3 +129,107 @@ jobs:
         run: npm test
       - name: Build God Music web application
         run: npm run build
+
+  minio-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install MinIO integration dependencies
+        run: python -m pip install . 'minio>=7.2'
+      - name: Run live MinIO write-restart-read gate
+        run: bash integration/vm/run_minio_gate.sh
+
+  kafka-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Kafka integration dependencies
+        run: python -m pip install . 'kafka-python==2.0.2'
+      - name: Run live Kafka produce-restart-consume gate
+        run: bash integration/vm/run_kafka_gate.sh
+
+  neo4j-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Neo4j integration dependencies
+        run: python -m pip install . 'neo4j>=5.14,<6'
+      - name: Run live Neo4j write-restart-read gate
+        run: bash integration/vm/run_neo4j_gate.sh
+
+  milvus-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Milvus integration dependencies
+        run: python -m pip install . 'pymilvus==2.4.15' 'marshmallow>=3,<4'
+      - name: Run live Milvus insert-search-restart-search gate
+        run: bash integration/vm/run_milvus_gate.sh
+
+  ollama-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install product
+        run: python -m pip install .
+      - name: Run real Ollama CPU inference through product provider
+        run: bash integration/vm/run_ollama_gate.sh
+
+  clip-live-cpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install active ML extra
+        run: python -m pip install '.[ml]'
+      - name: Execute pinned CLIP text and image inference
+        run: python integration/vm/live_models.py clip
+
+  wavlm-live-cpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install active ML extra
+        run: python -m pip install '.[ml]'
+      - name: Execute pinned WavLM audio inference
+        run: python integration/vm/live_models.py wavlm
+
+  vosk-live-cpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Vosk execution dependency
+        run: python -m pip install . 'vosk>=0.3.45'
+      - name: Execute real Vosk model through audio processor boundary
+        run: python integration/vm/live_models.py vosk

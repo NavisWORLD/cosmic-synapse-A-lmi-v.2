@@ -7,11 +7,10 @@ into response provenance by the surrounding runtime.
 
 from __future__ import annotations
 
+import http.client
 import json
 import socket
 import time
-import urllib.error
-import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol
 from urllib.parse import urlsplit
@@ -93,6 +92,8 @@ class OllamaProvider:
             raise ValueError("Ollama endpoint must include a hostname")
         if parsed_endpoint.username is not None or parsed_endpoint.password is not None:
             raise ValueError("Ollama endpoint must not embed credentials")
+        if parsed_endpoint.query or parsed_endpoint.fragment:
+            raise ValueError("Ollama endpoint must not include a query or fragment")
         if not model_id.strip():
             raise ValueError("model_id must not be empty")
         if timeout <= 0:
@@ -118,18 +119,41 @@ class OllamaProvider:
         method: str | None = None,
     ) -> dict[str, Any]:
         url = f"{self.identity.endpoint}{path}"
+        parsed = urlsplit(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ProviderError("Ollama request resolved to an invalid endpoint")
+
         data = None
         headers = {"Accept": "application/json"}
         if payload is not None:
             data = json.dumps(dict(payload), separators=(",", ":")).encode("utf-8")
             headers["Content-Type"] = "application/json"
-        request = urllib.request.Request(url, data=data, headers=headers, method=method)
+        request_method = method or ("POST" if data is not None else "GET")
+        target = parsed.path or "/"
+        if parsed.query:
+            target = f"{target}?{parsed.query}"
 
         last_error: Exception | None = None
         for attempt in range(self.retries + 1):
+            connection: http.client.HTTPConnection | http.client.HTTPSConnection | None = None
             try:
-                with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                    body = response.read()
+                connection_type = (
+                    http.client.HTTPSConnection
+                    if parsed.scheme == "https"
+                    else http.client.HTTPConnection
+                )
+                connection = connection_type(
+                    parsed.hostname,
+                    port=parsed.port,
+                    timeout=self.timeout,
+                )
+                connection.request(request_method, target, body=data, headers=headers)
+                response = connection.getresponse()
+                body = response.read()
+                if response.status < 200 or response.status >= 300:
+                    raise OSError(
+                        f"HTTP {response.status} {response.reason or 'provider error'}"
+                    )
                 decoded = json.loads(body.decode("utf-8"))
                 if not isinstance(decoded, dict):
                     raise ProviderError("provider returned a non-object JSON response")
@@ -137,8 +161,7 @@ class OllamaProvider:
             except ProviderError:
                 raise
             except (
-                urllib.error.HTTPError,
-                urllib.error.URLError,
+                http.client.HTTPException,
                 socket.timeout,
                 TimeoutError,
                 UnicodeDecodeError,
@@ -148,6 +171,9 @@ class OllamaProvider:
                 last_error = exc
                 if attempt < self.retries:
                     time.sleep(min(0.25 * (2**attempt), 1.0))
+            finally:
+                if connection is not None:
+                    connection.close()
         raise ProviderError(f"Ollama request failed for {url}: {last_error}") from last_error
 
     def health(self) -> dict[str, Any]:
