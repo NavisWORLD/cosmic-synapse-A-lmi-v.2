@@ -43,3 +43,8 @@ def test_minio_services_use_the_supported_quay_registry():
     compose = _compose()
     assert compose["services"]["minio"]["image"].startswith("quay.io/minio/minio")
     assert compose["services"]["minio-storage"]["image"].startswith("quay.io/minio/minio")
+
+
+def test_milvus_runs_the_standalone_server_process():
+    milvus = _compose()["services"]["milvus"]
+    assert milvus["command"] == ["milvus", "run", "standalone"]
