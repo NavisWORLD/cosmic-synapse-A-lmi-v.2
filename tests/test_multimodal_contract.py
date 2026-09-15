@@ -1,10 +1,12 @@
 import numpy as np
+import pytest
 
 from a_lmi.services.multimodal_encoder import (
     CLIP_MODEL_ID,
     CLIP_MODEL_REVISION,
     WAVLM_MODEL_ID,
     WAVLM_MODEL_REVISION,
+    MultimodalEncoder,
     adapt_embedding_dimension,
     embedding_space_for,
 )
@@ -32,3 +34,24 @@ def test_embedding_space_provenance_pins_exact_hub_revisions():
     assert all(character in "0123456789abcdef" for character in WAVLM_MODEL_REVISION)
     assert embedding_space_for("text") == f"clip:{CLIP_MODEL_ID}@{CLIP_MODEL_REVISION}"
     assert embedding_space_for("audio") == f"wavlm:{WAVLM_MODEL_ID}@{WAVLM_MODEL_REVISION}"
+
+
+def test_feature_tensor_accepts_transformers_structured_pooling_output():
+    class FakeTensor:
+        pass
+
+    class StructuredOutput:
+        def __init__(self):
+            self.pooler_output = FakeTensor()
+
+    output = StructuredOutput()
+    assert MultimodalEncoder._feature_tensor(output) is output.pooler_output
+
+
+def test_feature_tensor_rejects_output_without_tensor_candidate():
+    class EmptyOutput:
+        pooler_output = None
+        last_hidden_state = None
+
+    with pytest.raises(RuntimeError, match="tensor"):
+        MultimodalEncoder._feature_tensor(EmptyOutput())
