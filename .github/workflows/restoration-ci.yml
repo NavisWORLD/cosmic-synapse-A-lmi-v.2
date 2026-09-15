@@ -142,3 +142,16 @@ jobs:
         run: python -m pip install . 'minio>=7.2'
       - name: Run live MinIO write-restart-read gate
         run: bash integration/vm/run_minio_gate.sh
+
+  kafka-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Kafka integration dependencies
+        run: python -m pip install . 'kafka-python==2.0.2'
+      - name: Run live Kafka produce-restart-consume gate
+        run: bash integration/vm/run_kafka_gate.sh
