@@ -1,28 +1,49 @@
 # COSMIC SYNAPSE / A-LMI
 
-Preserved and modernized research software by Cory Shane Davis.
+**A research-oriented persistent AI runtime that separates user-owned memory, state, provenance, routing, and authority from replaceable model providers.**
 
-This repository contains the A-LMI Python package, COSMIC SYNAPSE computational-state/simulation code, HRCS communications research, the God Music browser experiment, Unity IPC source, historical theory/publication artifacts, and optional local data infrastructure.
+COSMIC SYNAPSE / A-LMI is preserved and modernized research software by Cory Shane Davis. The current engineering path treats the model as one replaceable component of a larger system:
 
-The active restoration layer is intentionally evidence-bounded: historical terminology and experiments are preserved, while the current README/docs distinguish verified software behavior from theory, hypothesis, simulation, optional integration, hardware work, and unverified claims.
+```text
+USER-OWNED CONTINUITY
+  memory + CST software state + provenance + routing + artifact references + policy
+                                  │
+                                  ▼
+                        REPLACEABLE MODEL PROVIDER
+                                  │
+                                  ▼
+                       EXPLICIT AUTHORITY BOUNDARY
+```
 
-## Current status
+Core invariants:
+
+- **MODEL != SYSTEM**
+- **MODEL != MEMORY**
+- **MODEL != AUTHORITY**
+
+The repository also preserves the wider COSMIC SYNAPSE research lineage: HRCS communications work, God Music, Unity IPC, CST experiments, historical papers/demos/ZIPs, and optional local data infrastructure. Preservation of an artifact records provenance; it does not automatically validate every historical claim inside it.
+
+## Status
 
 **Research/alpha software, not a production-ready platform.**
 
-The restoration branch currently verifies:
+Current deterministic CI verifies:
 
-- deterministic Python contracts on Python 3.11 and 3.12;
-- root wheel/sdist build plus installation into a fresh virtual environment;
-- dependency-light CLI diagnostics;
-- God Music deterministic Node tests plus a Vite production build;
-- local Docker Compose safety/configuration contracts;
-- selected HRCS packet, crypto, acoustic, mesh, simulated E2E, and radio-planning behavior;
-- Python/Unity IPC schema/source contracts.
+- Python 3.11 and 3.12 active contracts;
+- portable continuity workspace creation and inspection;
+- deterministic `.cosmos` export, SHA-256 verification, safe import, and corruption/security rejection;
+- memory continuity across replaceable model-provider swaps while authority remains unchanged;
+- dependency-light CLI product workflow;
+- wheel/sdist build, clean virtualenv install, and installed-wheel portable round trip;
+- bounded local CST/continuity benchmark harness without performance thresholds;
+- selected HRCS packet/crypto/acoustic/mesh/simulated-E2E/radio-planning behavior;
+- Python/Unity IPC schema and source contracts;
+- God Music deterministic Node tests plus Vite build;
+- local Compose configuration/safety contracts.
 
-The fully green code/config checkpoint after Compose hardening is `cdbd5b9c0cb5f2071437e33cbf5a89241881e8d2` (Restoration CI run #102). Later commits on the restoration branch are documentation/metadata cleanup unless otherwise noted.
+Live databases, downloaded model weights, Ollama model execution, microphones/browser devices, SDR hardware, Unity editor/player execution, GPU/CUDA, and production deployment remain separate external gates. See [docs/FINAL_CLOSURE_EVIDENCE.md](docs/FINAL_CLOSURE_EVIDENCE.md).
 
-## Quick start: dependency-light core
+## Install
 
 Requires Python 3.11+.
 
@@ -35,7 +56,7 @@ cosmic-synapse doctor --json
 
 The default install intentionally does **not** force microphone libraries, Torch/Transformers, Kafka/MinIO/Milvus/Neo4j clients, Dash/Plotly, or WebSockets.
 
-Install only the optional surfaces you need:
+Optional extras:
 
 ```bash
 python -m pip install '.[audio]'
@@ -46,20 +67,69 @@ python -m pip install '.[ipc]'
 python -m pip install '.[dev]'
 ```
 
-For a broad research environment:
+## Own the continuity bundle
+
+Create a local user-owned workspace:
 
 ```bash
-python -m pip install '.[audio,ml,infra,viz,ipc,dev]'
+cosmic-synapse init ./my-cosmos --name "My Cosmos" --seed 2026 --json
+cosmic-synapse inspect ./my-cosmos --json
 ```
 
-See [QUICK_START.md](QUICK_START.md) for local infrastructure and optional integration setup.
+The workspace keeps continuity surfaces outside model parameters:
+
+```text
+my-cosmos/
+├── system.json
+├── memory/ledger.jsonl
+├── state/cst.json
+├── knowledge/graph.json
+├── artifacts/manifest.json
+├── provenance/provider.json
+├── routing/state.json
+└── policy/authority.json
+```
+
+A new workspace starts with no tool, network, or filesystem authority.
+
+Export, verify, and restore it:
+
+```bash
+cosmic-synapse export ./my-cosmos ./my-cosmos.cosmos --json
+cosmic-synapse verify ./my-cosmos.cosmos --json
+cosmic-synapse import ./my-cosmos.cosmos ./restored-cosmos --json
+```
+
+For the complete workflow and security boundary, see [docs/PRODUCT_WORKFLOW.md](docs/PRODUCT_WORKFLOW.md).
+
+## Replace the model, keep the user-owned history
+
+The first concrete dependency-light provider is Ollama over its local HTTP API. Listing providers is intentionally non-networking:
+
+```bash
+cosmic-synapse providers --json
+```
+
+With a real local Ollama service/model configured:
+
+```bash
+cosmic-synapse run ./my-cosmos \
+  --provider ollama \
+  --model qwen2:latest \
+  --prompt "Continue from my saved history." \
+  --json
+```
+
+The provider is inference, not authority. Selecting or swapping a provider does not grant shell, filesystem, cloud, deployment, or actuator permissions.
+
+A successful `run` proves a structurally valid provider response was received and persisted; it does not certify the factual correctness of model output.
 
 ## Architecture
 
-The active system is split into independently testable surfaces:
-
 ```text
-A-LMI Python core
+A-LMI product core
+  ├─ portable continuity workspace / .cosmos bundles
+  ├─ replaceable provider contract + persistent runtime
   ├─ LightToken / provenance
   ├─ multimodal adapters
   ├─ object/vector/graph memory clients
@@ -77,8 +147,8 @@ HRCS (nested project)
   ├─ mesh routing
   └─ experimental SDR radio path
 
-God Music (web app)
-  ├─ audio analysis
+God Music
+  ├─ browser audio analysis
   ├─ deterministic timing/harmonic rules
   ├─ prediction helpers
   └─ synthesis + visualization
@@ -87,129 +157,105 @@ Optional local infrastructure
   └─ Kafka / MinIO / Milvus / Neo4j
 ```
 
-Full architecture details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## LightToken and spectral representation
+## Portable-bundle security
 
-The active LightToken contract uses a 1536-value semantic embedding and a 769-bin `numpy.fft.rfft` representation.
+The `.cosmos` format is a deterministic ZIP container for a frozen workspace. The manifest records SHA-256 and byte size for every declared payload.
 
-That 769-bin vector is a one-dimensional Fourier transform of software embedding values. It is **not** described as a Graph Fourier Transform or as evidence of a new physical frequency domain.
+Import/export fail closed on relevant conditions including:
 
-## Multimodal boundary
-
-The restoration does not pretend all model outputs occupy one universal semantic space.
-
-- CLIP-family text/image vectors may share their model's learned space.
-- WavLM-family audio vectors are labeled as a separate embedding space unless a trained alignment is explicitly supplied.
-- Random production embeddings and untrained random “alignment” projections are not accepted as successful inference.
-
-## CST / `12D` terminology
-
-Historical CST and `12D` terminology is preserved. In the canonical active adapter, `12D` refers to a twelve-channel computational state representation (`x12`/`m12`, phase, seed, snapshots, replay). It is not a claim that physical spacetime has twelve experimentally established dimensions.
-
-## Memory and provenance
-
-The active path distinguishes:
-
-- raw object bytes + storage URI + SHA-256 + byte size;
-- semantic/spectral vector records with explicit embedding-space metadata;
-- temporal graph records for query/visualization.
-
-MinIO, Milvus, and Neo4j are optional integrations rather than import-time requirements.
-
-## Security boundary
-
-Verified dependency-light security includes AES-GCM helpers and password envelopes that preserve the salt/derivation data required for decryption.
-
-The active documentation does **not** claim:
-
-- forward secrecy from static/pre-shared keys;
-- formal differential privacy from simple Gaussian-noise injection;
-- cryptographic secure aggregation from ordinary federated averaging;
-- a third-party audit of every preserved security experiment.
+- secret-bearing filenames (`.env*`, common credential files, private-key formats);
+- path traversal/absolute/backslash archive paths;
+- symlink members;
+- duplicate or undeclared archive members;
+- missing declared payloads;
+- size/hash mismatch;
+- unsupported format versions;
+- bounded file-count/uncompressed-size limits;
+- importing over a non-empty destination.
 
 See [docs/SECURITY.md](docs/SECURITY.md).
 
-## HRCS
+## CST and `12D` terminology
 
-`coms/hrcs/` is a separate nested Python project. The restoration verifies software packet/crypto/acoustic/mesh/simulation behavior and deterministic radio hop planning/transmit retuning boundaries.
+Historical CST/`12D` terminology remains preserved. In the canonical active adapter, the state is a bounded computational/software representation with deterministic seed, replay, phase, diagnostic energy/entropy, and serialization. It is not evidence of experimentally established extra physical dimensions.
 
-It does not establish synchronized receive hopping, anti-jamming superiority, RF range/reliability, or emergency/production readiness. See [coms/hrcs/README.md](coms/hrcs/README.md).
+## LightToken and multimodal boundary
 
-## God Music
+The active LightToken contract uses a 1536-value semantic embedding and a 769-bin `numpy.fft.rfft` representation. The spectral vector is a software transform, not a physical-frequency or Graph Fourier Transform claim.
 
-`god music/` is an algorithmic browser music experiment with audio analysis, deterministic timing/harmonic rules, predictive helpers, synthesis, and visualization.
+The multimodal path also keeps representation spaces explicit:
 
-CI runs its Node tests and a Vite production build. Live microphone/browser behavior remains an integration surface. The active docs do not claim biological inference, trained musical intelligence, “world first” status, or golden-ratio superiority.
+- CLIP-family text/image vectors use their learned CLIP space;
+- WavLM-family audio vectors are a separate space unless a trained alignment is explicitly supplied;
+- random production embeddings and untrained random projections are not treated as successful semantic alignment.
+
+Exact model-weight execution/revision evidence requires a real downloaded model snapshot and remains an external integration gate in this closure.
 
 ## Local infrastructure
 
-Set local-development credential variables using `.env.example` as a name/reference guide, then start the stack from the repository root:
+Use `.env.example` as the variable-name guide, supply your own local-development credentials, then:
 
 ```bash
 docker compose -f infrastructure/docker-compose.yml up -d
 ```
 
-Published development ports bind to `127.0.0.1`. The Compose stack is a local research convenience, not a production deployment template.
+Published Compose ports bind to `127.0.0.1`, and secret-bearing MinIO/Milvus/Neo4j values have no known active fallback password. This Compose file is a local research/development configuration, not a production deployment template.
 
-## Verification
+## Measured local benchmark
 
-See [TESTING.md](TESTING.md) and [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md).
+`a_lmi.benchmarking.benchmark_core()` measures bounded CST replay plus portable bundle export/verify/import on the machine where it is executed. The result includes environment metadata, elapsed time, operation counts, integrity outcome, and error count.
 
-CI separates deterministic verification into:
+There is intentionally no CI performance threshold and no cross-machine/production capacity claim.
 
-1. Python 3.11 contracts
-2. Python 3.12 contracts
-3. clean package build/install smoke test
-4. God Music tests/build
+## HRCS
 
-External databases, downloaded model weights, microphones, SDR hardware, browser behavior, and Unity editor/player execution require separate integration/hardware evidence.
+`coms/hrcs/` is a separate nested research project. Deterministic tests cover packet/integrity, authenticated symmetric crypto contracts, acoustic software round trips, replay/mesh behavior, simulated node-to-node communication, and deterministic radio planning/transmit retuning boundaries.
 
-## Historical material and provenance
+They do not establish synchronized receive hopping, anti-jamming superiority, RF range/reliability, or emergency/production readiness. Actual RF claims require compatible SDR hardware and measurement.
 
-The project deliberately keeps earlier papers, PDFs, ZIPs, HTML demos, Unity material, terminology, and experimental generations. Their presence documents the project lineage; it does not automatically validate every statement inside them.
+## God Music
 
-See:
+`god music/` is an algorithmic browser music experiment. CI runs deterministic Node tests and a Vite production build. Live microphone/browser behavior remains a device integration gate. Active docs do not claim biological inference, trained musical intelligence, “world first” status, or golden-ratio superiority.
 
-- [docs/PROVENANCE.md](docs/PROVENANCE.md)
+## Verification and evidence
+
+- [TESTING.md](TESTING.md)
+- [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)
+- [docs/FINAL_CLOSURE_EVIDENCE.md](docs/FINAL_CLOSURE_EVIDENCE.md)
 - [docs/CLAIMS_AND_LIMITATIONS.md](docs/CLAIMS_AND_LIMITATIONS.md)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/PROVENANCE.md](docs/PROVENANCE.md)
 
-Pre-restoration state is preserved at:
+Pre-restoration state remains preserved at:
 
 `preservation/pre-restoration-2026-09-14`
 
-Restoration work is isolated at:
+The completed restoration lineage remains visible through the merged restoration history. Final product-closure work is developed through review/CI rather than history rewrite.
 
-`restoration/complete-system-2026-09-14`
+## Claims this repository does not establish
 
-## Claims this repository does not currently establish
-
-The current evidence does not establish consciousness, sentience, AGI, biological life, a soul, identity persistence, new physics, extra physical dimensions, quantum advantage/consciousness, golden-ratio performance superiority, formal DP, secure aggregation, RF anti-jamming superiority, or unmeasured hardware performance.
-
-For the exact boundary and criteria for promoting stronger claims, read [docs/CLAIMS_AND_LIMITATIONS.md](docs/CLAIMS_AND_LIMITATIONS.md).
+Current evidence does not establish consciousness, sentience, AGI, biological life, a soul, identity resurrection/persistence, new physics, extra physical dimensions, quantum advantage/consciousness, golden-ratio superiority, formal differential privacy, cryptographic secure aggregation, RF anti-jamming superiority, or unmeasured hardware performance.
 
 ## Project structure
 
 ```text
 .
-├── a_lmi/                  # installable Python core
-├── cosmic_synapse/         # state/simulation/IPC + Unity source
-├── coms/hrcs/              # nested HRCS communications project
-├── god music/              # Vite/Web Audio music experiment
+├── a_lmi/                  # installable persistent-runtime Python core
+├── cosmic_synapse/         # CST state/simulation/IPC + Unity source
+├── coms/hrcs/              # nested communications research project
+├── god music/              # Vite/Web Audio experiment
 ├── interfaces/             # optional UI/visualization surfaces
 ├── infrastructure/         # local config/Compose/init helpers
-├── experiments/            # historical/current experiment code
-├── tests/                  # restoration contracts
-├── docs/                   # active architecture/evidence docs
+├── experiments/            # historical/current experiments
+├── tests/                  # deterministic software contracts
+├── docs/                   # active architecture/evidence/product docs
 └── pyproject.toml          # root package + optional extras
 ```
 
 ## License
 
-The repository root is licensed under GPL-3.0; see [LICENSE](LICENSE).
-
-Some preserved/nested historical components contain their own license metadata/files. In particular HRCS has a nested license file. The restoration does not silently rewrite those legal terms; redistribution of combined/derived work should follow the applicable licenses and, when needed, appropriate legal review.
+The repository root is GPL-3.0; see [LICENSE](LICENSE). Some preserved/nested historical components contain separate license metadata/files, including HRCS. This project does not silently rewrite those terms.
 
 ## Author
 
