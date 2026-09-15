@@ -155,3 +155,16 @@ jobs:
         run: python -m pip install . 'kafka-python==2.0.2'
       - name: Run live Kafka produce-restart-consume gate
         run: bash integration/vm/run_kafka_gate.sh
+
+  neo4j-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Neo4j integration dependencies
+        run: python -m pip install . 'neo4j>=5.14,<6'
+      - name: Run live Neo4j write-restart-read gate
+        run: bash integration/vm/run_neo4j_gate.sh
