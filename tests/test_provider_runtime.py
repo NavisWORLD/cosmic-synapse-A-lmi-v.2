@@ -75,6 +75,19 @@ def test_ollama_defaults_to_loopback_and_does_not_claim_health_without_contact()
     assert provider.identity.capabilities == ("text",)
 
 
+def test_ollama_rejects_endpoint_credentials_before_they_can_enter_provenance():
+    with pytest.raises(ValueError, match="credentials"):
+        OllamaProvider(
+            model_id="qwen2:latest",
+            endpoint="http://user:secret@127.0.0.1:11434",
+        )
+
+
+def test_ollama_rejects_endpoint_without_hostname():
+    with pytest.raises(ValueError, match="hostname"):
+        OllamaProvider(model_id="qwen2:latest", endpoint="http://")
+
+
 def test_runtime_persists_memory_across_provider_swap_without_transferring_authority(tmp_path: Path):
     workspace = tmp_path / "cosmos"
     initialize_workspace(workspace, name="Swap Test")
