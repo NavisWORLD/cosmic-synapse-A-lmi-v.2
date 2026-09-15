@@ -1,3 +1,4 @@
+import ast
 from pathlib import Path
 import subprocess
 
@@ -17,15 +18,6 @@ ACTIVE_PYTHON_FILES = (
     "cosmic_synapse/ipc/schema.py",
 )
 
-FORBIDDEN_DYNAMIC_EXECUTION = (
-    "eval(",
-    "exec(",
-    "pickle.load(",
-    "yaml.load(",
-    "shell=True",
-    "os.system(",
-)
-
 SECRET_VARIABLES = (
     "A_LMI_MINIO_ACCESS_KEY",
     "A_LMI_MINIO_SECRET_KEY",
@@ -35,11 +27,33 @@ SECRET_VARIABLES = (
 )
 
 
+def _attribute_name(node: ast.AST) -> tuple[str | None, str | None]:
+    if not isinstance(node, ast.Attribute) or not isinstance(node.value, ast.Name):
+        return None, None
+    return node.value.id, node.attr
+
+
 def test_active_product_python_has_no_direct_dynamic_execution_shortcuts():
     for relative in ACTIVE_PYTHON_FILES:
-        text = Path(relative).read_text(encoding="utf-8")
-        for forbidden in FORBIDDEN_DYNAMIC_EXECUTION:
-            assert forbidden not in text, f"{relative} contains forbidden active-surface pattern {forbidden!r}"
+        tree = ast.parse(Path(relative).read_text(encoding="utf-8"), filename=relative)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+
+            if isinstance(node.func, ast.Name) and node.func.id in {"eval", "exec"}:
+                raise AssertionError(f"{relative} calls builtin {node.func.id}()")
+
+            owner, method = _attribute_name(node.func)
+            if (owner, method) in {("os", "system"), ("pickle", "load"), ("yaml", "load")}:
+                raise AssertionError(f"{relative} calls {owner}.{method}()")
+
+            for keyword in node.keywords:
+                if (
+                    keyword.arg == "shell"
+                    and isinstance(keyword.value, ast.Constant)
+                    and keyword.value.value is True
+                ):
+                    raise AssertionError(f"{relative} invokes a call with shell=True")
 
 
 def test_root_env_file_is_not_tracked():
