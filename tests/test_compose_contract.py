@@ -45,6 +45,7 @@ def test_minio_services_use_the_supported_quay_registry():
     assert compose["services"]["minio-storage"]["image"].startswith("quay.io/minio/minio")
 
 
-def test_milvus_runs_the_standalone_server_process():
+def test_milvus_runs_the_multivector_capable_standalone_server():
     milvus = _compose()["services"]["milvus"]
+    assert milvus["image"] == "milvusdb/milvus:v2.4.23"
     assert milvus["command"] == ["milvus", "run", "standalone"]
