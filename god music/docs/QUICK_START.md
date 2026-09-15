@@ -1,37 +1,49 @@
-# Quick Start Guide
+# God Music Quick Start
 
-## Installation
+Use the Vite development path; it matches the current tested build workflow.
 
-### Option 1: Standalone (No Build)
-Simply open `index.html` in a modern browser (Chrome, Firefox, Safari, Edge).
+## Install and verify
 
-### Option 2: With Vite (Development)
 ```bash
+cd "god music"
 npm install
+npm test
 npm run dev
 ```
 
-## Usage
+Open the localhost URL printed by Vite.
 
-1. **Open the application** - Double-click `index.html` or visit local server
-2. **Calibrate** - Click "🎤 Calibrate" and allow microphone access
-3. **Speak/Hum/Sing** - Vocalize for 3 seconds to extract your bio-signature
-4. **Start Band** - Click "🎼 START BAND" to begin
-5. **Play Along** - The AI band will harmonize with you in real-time
+For a production-style preview:
 
-## Important Notes
+```bash
+npm run build
+npm run preview
+```
 
-- **Microphone is NEVER output** - It's used for analysis only. Only the AI band instruments play through speakers.
-- Calibrate before starting the band
-- The system learns your tempo and locks the groove after 4 bars
-- Watch the prediction log to see the AI anticipating your moves
+## Live use
 
-## Features
+1. Allow microphone access if you want live audio analysis.
+2. Use the calibration control and provide a short voice/instrument sample.
+3. Start the synthesized accompaniment.
+4. Monitor the visualizers/log for unexpected behavior.
 
-- ✅ Bio-frequency signature extraction
-- ✅ φ-harmonic generation<｜place▁holder▁no▁38｜>
-- ✅ Predictive chord changes
-- ✅ Groove lock mechanism
-- ✅ Real-time visualizations
-- ✅ Professional instrument synthesis
+The application analyzes pitch/spectrum/tempo-related features and feeds deterministic/rule-based timing/harmonic logic. Historical UI/code terms such as “bio-signature” or phi harmonics are project names, not validated biometric measurements or evidence of golden-ratio superiority.
 
+## Important boundaries
+
+- The intended graph keeps microphone input on the analysis path rather than intentionally routing it to speaker output. Verify this on the target browser/device when feedback safety matters.
+- “Prediction” is deterministic/rule-based in the current implementation, not learned behavior from a trained model.
+- CI verifies Node utility tests and a Vite build, not every microphone/browser/mobile combination.
+
+## Troubleshooting
+
+If the app does not behave as expected, first run:
+
+```bash
+npm test
+npm run build
+```
+
+Then check browser console output, microphone permissions, the Web Audio context, mixer controls, and the target device/audio interface.
+
+See `../RUN_LOCALLY.md` and `../README.md` for more detail.

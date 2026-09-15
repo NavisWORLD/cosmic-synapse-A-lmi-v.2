@@ -1,49 +1,44 @@
-version: '3.8'
-
 services:
-  # Zookeeper for Kafka
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
     hostname: zookeeper
-    container_name: zookeeper
+    container_name: cosmic-zookeeper
     ports:
-      - "2181:2181"
+      - "127.0.0.1:2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
-  # Kafka Message Bus
   kafka:
     image: confluentinc/cp-kafka:7.4.0
-    hostname: kafka will
-    container_name: kafka
+    hostname: kafka
+    container_name: cosmic-kafka
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
-      - "9093:9093"
+      - "127.0.0.1:9092:9092"
+      - "127.0.0.1:9093:9093"
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:9093
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:9093"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
-  # MinIO Object Storage
   minio:
     image: minio/minio:latest
-    container_name: minio
+    container_name: cosmic-minio
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - minio_data:/data
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: admin123456
+      MINIO_ROOT_USER: "${A_LMI_MINIO_ACCESS_KEY:?set A_LMI_MINIO_ACCESS_KEY}"
+      MINIO_ROOT_PASSWORD: "${A_LMI_MINIO_SECRET_KEY:?set A_LMI_MINIO_SECRET_KEY}"
     command: server /data --console-address ":9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
@@ -51,31 +46,34 @@ services:
       timeout: 20s
       retries: 3
 
-  # Milvus Vector Database (Standalone)
   etcd:
     image: quay.io/coreos/etcd:v3.5.5
-    container_name: milvus-etcd
+    container_name: cosmic-milvus-etcd
     environment:
-      - ETCD_AUTO_COMPACTION_MODE=revision
-      - ETCD_AUTO_COMPACTION_RETENTION=1000
-      - ETCD_QUOTA_BACKEND_BYTES=4294967296
-      - ETCD_SNAPSHOT_COUNT=50000
+      ETCD_AUTO_COMPACTION_MODE: revision
+      ETCD_AUTO_COMPACTION_RETENTION: 1000
+      ETCD_QUOTA_BACKEND_BYTES: 4294967296
+      ETCD_SNAPSHOT_COUNT: 50000
     volumes:
       - etcd_data:/etcd
-    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    command: >-
+      etcd
+      -advertise-client-urls=http://127.0.0.1:2379
+      -listen-client-urls=http://0.0.0.0:2379
+      --data-dir=/etcd
 
   minio-storage:
     image: minio/minio:latest
-    container_name: milvus-minio
+    container_name: cosmic-milvus-minio
     environment:
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
+      MINIO_ROOT_USER: "${MILVUS_MINIO_ACCESS_KEY:?set MILVUS_MINIO_ACCESS_KEY}"
+      MINIO_ROOT_PASSWORD: "${MILVUS_MINIO_SECRET_KEY:?set MILVUS_MINIO_SECRET_KEY}"
     ports:
-      - "9002:9000"
-      - "9003:9001"
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9003:9001"
     volumes:
-      - milvus_data:/minio_data
-    command: server /minio_data --console-address ":9001"
+      - milvus_minio_data:/data
+    command: server /data --console-address ":9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -84,13 +82,15 @@ services:
 
   milvus:
     image: milvusdb/milvus:v2.3.3
-    container_name: milvus-standalone
+    container_name: cosmic-milvus-standalone
     depends_on:
-      - "etcd"
-      - "minio-storage"
+      - etcd
+      - minio-storage
     environment:
-      ETCD_ENDPOINTS: etcd:2379
-      MINIO_ADDRESS: minio-storage:9000
+      ETCD_ENDPOINTS: "etcd:2379"
+      MINIO_ADDRESS: "minio-storage:9000"
+      MINIO_ACCESS_KEY_ID: "${MILVUS_MINIO_ACCESS_KEY:?set MILVUS_MINIO_ACCESS_KEY}"
+      MINIO_SECRET_ACCESS_KEY: "${MILVUS_MINIO_SECRET_KEY:?set MILVUS_MINIO_SECRET_KEY}"
     volumes:
       - milvus_data:/var/lib/milvus
     healthcheck:
@@ -100,18 +100,17 @@ services:
       retries: 5
       start_period: 90s
     ports:
-      - "19530:19530"
-      - "9091:9091"
+      - "127.0.0.1:19530:19530"
+      - "127.0.0.1:9091:9091"
 
-  # Neo4j Temporal Knowledge Graph
   neo4j:
     image: neo4j:5.14.0
-    container_name: neo4j
+    container_name: cosmic-neo4j
     ports:
-      - "7474:7474"  # HTTP
-      - "7687:7687"  # Bolt
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
     environment:
-      NEO4J_AUTH: neo4j/vibrational123
+      NEO4J_AUTH: "${A_LMI_NEO4J_USERNAME:-neo4j}/${A_LMI_NEO4J_PASSWORD:?set A_LMI_NEO4J_PASSWORD}"
       NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
       NEO4J_dbms_memory_heap_max__size: 2G
       NEO4J_dbms_memory_pagecache_size: 1G
@@ -127,11 +126,11 @@ services:
 volumes:
   minio_data:
   etcd_data:
+  milvus_minio_data:
   milvus_data:
   neo4j_data:
   neo4j_logs:
 
 networks:
   default:
-    name: vibrational-intelligence-network
-
+    name: cosmic-synapse-local

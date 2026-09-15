@@ -1,170 +1,196 @@
-"""
-IPC Bridge between A-LMI and Cosmic Synapse
+"""Versioned IPC bridge between A-LMI and Cosmic Synapse/Unity.
 
-Enables bidirectional communication using WebSockets.
+Message construction/validation is transport-independent. The optional
+``websockets`` dependency is loaded only when the server is actually run.
 """
 
-import logging
-import json
+from __future__ import annotations
+
 import asyncio
+import logging
 import time
-from typing import Dict, Any, Optional, Callable
-import websockets
-from websockets.server import serve
+from typing import Any, Callable, Dict, Optional
+
+from .schema import decode_message, encode_message
 
 
 class IPCBridge:
-    """
-    IPC bridge for A-LMI ↔ Cosmic Synapse communication.
-    
-    Protocol:
-    - Commands from A-LMI to spawn masses
-    - Status updates from simulation to A-LMI
-    - Pattern data export
-    - Synchronization
-    """
-    
+    """Bidirectional v1 JSON bridge with an optional WebSocket transport."""
+
     def __init__(self, host: str = "localhost", port: int = 8765):
-        """
-        Initialize IPC bridge.
-        
-        Args:
-            host: Host to bind to
-            port: Port for WebSocket server
-        """
         self.logger = logging.getLogger(__name__)
         self.host = host
-        self.port = port
-        self.clients = set()
-        
-        # Callbacks
-        self.on_command_received: Optional[Callable[[Dict], None]] = None
-        self.on_status_update: Optional[Callable[[Dict], None]] = None
-        
-        self.logger.info(f"IPC Bridge initialized on {host}:{port}")
-    
-    async def register_client(self, websocket):
-        """Register a client connection."""
+        self.port = int(port)
+        self.clients: set[Any] = set()
+        self.on_command_received: Optional[Callable[[Dict[str, Any]], None]] = None
+        self.on_status_update: Optional[Callable[[Dict[str, Any]], None]] = None
+
+    async def register_client(self, websocket: Any) -> None:
         self.clients.add(websocket)
-        self.logger.info(f"Client connected. Total: {len(self.clients)}")
-    
-    async def unregister_client(self, websocket):
-        """Unregister a client connection."""
+
+    async def unregister_client(self, websocket: Any) -> None:
         self.clients.discard(websocket)
-        self.logger.info(f"Client disconnected. Total: {len(self.clients)}")
-    
-    async def handle_client(self, websocket, path):
-        """Handle client connection."""
+
+    async def handle_client(self, websocket: Any, *_args: Any) -> None:
         await self.register_client(websocket)
-        
         try:
-            async for message in websocket:
-                data = json.loads(message)
-                await self.process_message(websocket, data)
-        except websockets.exceptions.ConnectionClosed:
-            pass
+            async for raw in websocket:
+                await self.process_raw_message(websocket, raw)
+        except Exception as exc:
+            # Connection shutdown/errors are transport concerns. Keep the core
+            # parser strict but do not crash the server loop on a disconnected client.
+            self.logger.debug("IPC client loop ended: %s", exc)
         finally:
             await self.unregister_client(websocket)
-    
-    async def process_message(self, websocket, data: Dict[str, Any]):
-        """
-        Process incoming message from client.
-        
-        Args:
-            websocket: Client connection
-            data: Message data
-        """
-        msg_type = data.get('type')
-        
-        if msg_type == 'command':
-            # Command from A-LMI to simulation
+
+    async def process_raw_message(self, websocket: Any, raw: str | bytes) -> None:
+        """Validate a serialized v1 message before dispatch."""
+
+        message = decode_message(raw)
+        await self.process_message(websocket, message)
+
+    async def process_message(self, websocket: Any, message: Dict[str, Any]) -> None:
+        """Dispatch an already-decoded v1 message."""
+
+        # Re-encode/decode to validate callers that bypass process_raw_message.
+        validated = decode_message(
+            encode_message(message["type"], message.get("payload", {}))
+        )
+        msg_type = validated["type"]
+        payload = validated["payload"]
+
+        if msg_type == "command":
             if self.on_command_received:
-                self.on_command_received(data)
-            
-            # Echo back confirmation
-            await websocket.send(json.dumps({
-                'type': 'command_received',
-                'command_id': data.get('id')
-            }))
-        
-        elif msg_type == 'status':
-            # Status update from simulation
-            if self.on_status_update:
-                self.on_status_update(data)
-        
-        elif msg_type == 'pattern_data':
-            # Pattern data export from simulation
-            self.logger.info(f"Received pattern data: {data.get('pattern_type')}")
-        
-        else:
-            self.logger.warning(f"Unknown message type: {msg_type}")
-    
-    async def send_to_all(self, message: Dict[str, Any]):
-        """
-        Send message to all connected clients.
-        
-        Args:
-            message: Message to send
-        """
-        if self.clients:
-            data = json.dumps(message)
-            await asyncio.gather(
-                *[client.send(data) for client in self.clients],
-                return_exceptions=True
+                self.on_command_received(payload)
+            await websocket.send(
+                encode_message(
+                    "command_received",
+                    {"command_id": payload.get("id")},
+                )
             )
-    
-    def send_spawn_command(self, mass_type: str, position: tuple, properties: Dict[str, Any]):
+            return
+
+        if msg_type == "status":
+            if self.on_status_update:
+                self.on_status_update(payload)
+            return
+
+        if msg_type == "pattern_data":
+            self.logger.info("Received pattern data: %s", payload.get("pattern_type"))
+            return
+
+        if msg_type == "command_received":
+            self.logger.debug("Received command acknowledgement: %s", payload.get("command_id"))
+            return
+
+        raise ValueError(f"Unsupported IPC message type: {msg_type}")
+
+    async def send_to_all(self, raw_message: str) -> None:
+        """Broadcast one already-validated serialized message."""
+
+        decode_message(raw_message)
+        if not self.clients:
+            return
+        await asyncio.gather(
+            *(client.send(raw_message) for client in tuple(self.clients)),
+            return_exceptions=True,
+        )
+
+    def build_spawn_command(
+        self,
+        mass_type: str,
+        position: tuple[float, ...],
+        properties: Dict[str, Any],
+        *,
+        command_id: str | None = None,
+    ) -> str:
+        """Build a v1 spawn command without requiring an event loop/transport."""
+
+        if not mass_type:
+            raise ValueError("mass_type must be non-empty")
+        if len(position) not in {2, 3}:
+            raise ValueError("position must contain two or three coordinates")
+        command_id = command_id or f"spawn_{time.time_ns()}"
+        return encode_message(
+            "command",
+            {
+                "command": "spawn_mass",
+                "id": command_id,
+                "mass_type": mass_type,
+                "position": [float(value) for value in position],
+                "properties": dict(properties),
+            },
+        )
+
+    async def broadcast_spawn_command(
+        self,
+        mass_type: str,
+        position: tuple[float, ...],
+        properties: Dict[str, Any],
+        *,
+        command_id: str | None = None,
+    ) -> str:
+        """Build and broadcast a spawn command from async code."""
+
+        raw = self.build_spawn_command(
+            mass_type, position, properties, command_id=command_id
+        )
+        await self.send_to_all(raw)
+        return raw
+
+    def send_spawn_command(
+        self,
+        mass_type: str,
+        position: tuple[float, ...],
+        properties: Dict[str, Any],
+        *,
+        command_id: str | None = None,
+    ) -> str:
+        """Compatibility helper: build a command and schedule only if a loop exists.
+
+        Synchronous callers always receive the serialized command. If called
+        inside an active asyncio loop the command is also scheduled for
+        broadcast. Outside a loop it does not pretend asynchronous delivery
+        occurred; callers can pass the returned message to ``send_to_all`` or
+        use ``broadcast_spawn_command``.
         """
-        Send spawn command to simulation.
-        
-        Args:
-            mass_type: Type of mass ('star', 'black_hole')
-            position: (x, y) position
-            properties: Additional properties
-        """
-        command = {
-            'type': 'command',
-            'command': 'spawn_mass',
-            'id': f"spawn_{int(time.time())}",
-            'payload': {
-                'mass_type': mass_type,
-                'position': position,
-                'properties': properties
-            }
-        }
-        
-        # Send asynchronously
-        asyncio.create_task(self.send_to_all(command))
-        self.logger.info(f"Sent spawn command: {mass_type} at {position}")
-    
-    async def run(self):
-        """Run the IPC bridge server."""
-        self.logger.info(f"Starting IPC bridge on ws://{self.host}:{self.port}")
-        
+
+        raw = self.build_spawn_command(
+            mass_type, position, properties, command_id=command_id
+        )
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return raw
+        loop.create_task(self.send_to_all(raw))
+        return raw
+
+    async def run(self) -> None:
+        """Run the optional WebSocket server until cancelled."""
+
+        try:
+            from websockets.asyncio.server import serve
+        except ImportError:
+            try:
+                from websockets.server import serve
+            except ImportError as exc:
+                raise RuntimeError(
+                    "WebSocket IPC transport is optional; install the ipc extra"
+                ) from exc
+
+        self.logger.info("Starting IPC bridge on ws://%s:%s", self.host, self.port)
         async with serve(self.handle_client, self.host, self.port):
-            await asyncio.Future()  # Run forever
+            await asyncio.Future()
 
 
-def main():
-    """Test IPC bridge."""
-    import time
-    
+def main() -> None:
     logging.basicConfig(level=logging.INFO)
-    
     bridge = IPCBridge()
-    
-    def on_command(cmd):
-        print(f"Received command: {cmd}")
-    
-    bridge.on_command_received = on_command
-    
-    # Run server
     try:
         asyncio.run(bridge.run())
     except KeyboardInterrupt:
-        print("\nStopping IPC bridge...")
+        pass
 
 
 if __name__ == "__main__":
     main()
-

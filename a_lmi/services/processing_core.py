@@ -1,203 +1,125 @@
-"""
-Processing Core Service
+"""Processing service that turns raw LightTokens into encoded LightTokens.
 
-Generates Light Tokens with embeddings, perceptual hashes, and spectral signatures.
-Uses multimodal models to create the three-layer representation.
+This compatibility layer now accepts the canonical configuration mapping or a
+path. Production image/audio paths no longer manufacture random vectors; if
+raw bytes cannot be resolved the token remains explicitly unembedded.
 """
 
-import logging
-from typing import Dict, Any, List
-import numpy as np
-from datetime import datetime, timezone
-import yaml
+from __future__ import annotations
+
+import hashlib
 import json
+import logging
+from pathlib import Path
+from typing import Any, Dict
+from urllib.parse import urlparse
+
+import numpy as np
 from kafka import KafkaConsumer, KafkaProducer
 
+from ..config import ConfigSource, load_config
+from ..core.light_token import LightToken
 from .multimodal_encoder import MultimodalEncoder
-from ..core.perceptual_hash import get_hasher
 
 
 class ProcessingCore:
-    """
-    Core processing service for Light Token generation.
-    
-    Implements the three-layer representation:
-    1. Joint embedding (semantic core)
-    2. Perceptual hash (fingerprint)
-    3. Spectral signature (frequency characteristics)
-    """
-    
-    def __init__(self, config_path: str = "infrastructure/config.yaml"):
-        """
-        Initialize processing core.
-        
-        Args:
-            config_path: Path to configuration file
-        """
-        with open(config_path, 'r') as f:
-            self.config = yaml.safe_load(f)
-        
+    def __init__(self, config_source: ConfigSource = "infrastructure/config.yaml"):
+        self.config = load_config(config_source)
         self.logger = logging.getLogger(__name__)
-        
-        # Load multimodal encoder (CLIP + audio)
-        self.logger.info("Loading multimodal encoder...")
         self.embedding_model = MultimodalEncoder()
-        
-        # Initialize perceptual hasher
-        self.hasher = get_hasher()
-        
-        # Kafka setup
-        bootstrap_servers = self.config['infrastructure']['kafka']['bootstrap_servers']
-        
-        # Consumer for raw Light Tokens
+        bootstrap_servers = self.config["infrastructure"]["kafka"]["bootstrap_servers"]
         self.consumer = KafkaConsumer(
-            'light_tokens',
+            "light_tokens",
             bootstrap_servers=bootstrap_servers,
-            value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-            enable_auto_commit=True
+            value_deserializer=lambda message: json.loads(message.decode("utf-8")),
+            enable_auto_commit=True,
         )
-        
-        # Producer for processed Light Tokens
         self.producer = KafkaProducer(
             bootstrap_servers=bootstrap_servers,
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            value_serializer=lambda value: json.dumps(value).encode("utf-8"),
         )
-        
-        self.logger.info("Processing core initialized")
-    
+
     def process_token(self, token_dict: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Process a raw Light Token, adding embeddings and hashes.
-        
-        Args:
-            token_dict: Raw Light Token dictionary
-            
-        Returns:
-            Processed Light Token dictionary with all three layers
-        """
-        modality = token_dict['modality']
-        content_text = token_dict.get('content_text', '')
-        raw_data_ref = token_dict.get('raw_data_ref')
-        
-        # Generate joint embedding
+        modality = token_dict["modality"]
+        content_text = token_dict.get("content_text", "")
+        raw_data_ref = token_dict.get("raw_data_ref") or ""
         embedding = self._generate_embedding(modality, content_text, raw_data_ref)
-        
-        # Generate perceptual hash
-        phash = self._generate_perceptual_hash(modality, raw_data_ref)
-        
-        # Create Light Token object
-        from ..core.light_token import LightToken
-        
+        phash = self._generate_perceptual_hash(modality, content_text, raw_data_ref)
         token = LightToken(
-            source_uri=token_dict['source_uri'],
+            source_uri=token_dict["source_uri"],
             modality=modality,
             raw_data_ref=raw_data_ref,
             content_text=content_text,
-            metadata=token_dict.get('metadata', {})
+            metadata=token_dict.get("metadata", {}),
         )
-        
-        # Set fields
-        token.token_id = token_dict['token_id']
-        token.timestamp = token_dict['timestamp']
-        
-        # Set embedding (automatically computes spectral signature)
+        token.token_id = token_dict["token_id"]
+        token.timestamp = token_dict["timestamp"]
         if embedding is not None:
             token.set_embedding(embedding)
-        
+            token.metadata.setdefault(
+                "embedding_space", self.embedding_model.embedding_space_for(modality)
+            )
         if phash:
             token.set_perceptual_hash(phash)
-        
-        # Convert back to dict
-        processed_dict = token.to_dict()
-        
-        self.logger.info(f"Processed token {token.token_id[:8]}: {modality}")
-        
-        return processed_dict
-    
-    def _generate_embedding(self, modality: str, content: str, raw_ref: str) -> np.ndarray:
-        """
-        Generate semantic embedding based on modality.
-        
-        Args:
-            modality: Data type
-            content: Text content
-            raw_ref: Reference to raw data
-            
-        Returns:
-            1536-dimensional embedding vector
-        """
-        try:
-            if modality == 'text':
-                if content:
-                    return self.embedding_model.encode_text(content)
-            
-            elif modality == 'image':
-                # TODO: Load image from raw_ref and encode
-                self.logger.warning("Image encoding requires loading file from raw_ref")
-                return np.random.rand(1536).astype(np.float32)
-            
-            elif modality in ['audio', 'speech']:
-                # TODO: Load audio from raw_ref and encode  
-                self.logger.warning("Audio encoding requires loading file from raw_ref")
-                return np.random.rand(1536).astype(np.float32)
-            
+        return token.to_dict()
+
+    def _resolve_raw_bytes(self, raw_ref: str) -> bytes | None:
+        if not raw_ref:
             return None
-        except Exception as e:
-            self.logger.error(f"Error generating embedding: {e}")
-            return None
-    
-    def _generate_perceptual_hash(self, modality: str, raw_ref: str) -> str:
-        """
-        Generate perceptual hash for duplicate detection.
-        
-        Args:
-            modality: Data type
-            raw_ref: Reference to raw data
-            
-        Returns:
-            Hex string of perceptual hash
-        """
-        if modality == 'image':
-            # Would load image and compute pHash
-            # For now, return placeholder
-            return 'placeholder_hash'
-        
-        elif modality == 'audio':
-            # Would compute audio fingerprint
-            # For now, return placeholder
-            return 'placeholder_hash'
-        
-        elif modality == 'text':
-            # Use SimHash for text
-            import hashlib
-            return hashlib.md5(raw_ref.encode()).hexdigest()
-        
+        parsed = urlparse(raw_ref)
+        if parsed.scheme in ("", "file"):
+            path = Path(parsed.path if parsed.scheme == "file" else raw_ref)
+            if path.is_file():
+                return path.read_bytes()
+        if parsed.scheme == "minio":
+            from ..memory.object_storage_client import ObjectStorageClient
+
+            return ObjectStorageClient(self.config).retrieve_uri(raw_ref)
+        self.logger.warning("Unsupported raw artifact reference: %s", raw_ref)
         return None
-    
-    def run(self):
-        """Run processing loop."""
-        self.logger.info("Starting processing core...")
-        
+
+    def _generate_embedding(
+        self, modality: str, content: str, raw_ref: str
+    ) -> np.ndarray | None:
+        try:
+            if modality == "text":
+                return self.embedding_model.encode_text(content) if content else None
+            if modality == "image":
+                raw = self._resolve_raw_bytes(raw_ref)
+                return self.embedding_model.encode_image(raw) if raw else None
+            if modality in {"audio", "speech"}:
+                raw = self._resolve_raw_bytes(raw_ref)
+                return self.embedding_model.encode_audio(raw) if raw else None
+            return None
+        except Exception as exc:
+            self.logger.error("Embedding generation failed for %s: %s", modality, exc)
+            return None
+
+    def _generate_perceptual_hash(
+        self, modality: str, content: str, raw_ref: str
+    ) -> str | None:
+        raw = None
+        if modality in {"image", "audio", "speech"}:
+            raw = self._resolve_raw_bytes(raw_ref)
+        if raw is not None:
+            return hashlib.sha256(raw).hexdigest()
+        if modality == "text" and content:
+            return hashlib.sha256(content.encode("utf-8")).hexdigest()
+        return None
+
+    def run(self) -> None:
         for message in self.consumer:
             try:
-                token_dict = message.value
-                
-                # Process token
-                processed_token = self.process_token(token_dict)
-                
-                # Send to processed queue
-                self.producer.send('light_tokens_processed', processed_token)
-                
-            except Exception as e:
-                self.logger.error(f"Error processing token: {e}", exc_info=True)
+                self.producer.send(
+                    "light_tokens_processed", self.process_token(message.value)
+                )
+            except Exception as exc:
+                self.logger.error("Token processing failed: %s", exc, exc_info=True)
 
 
-def main():
-    """Main entry point."""
-    processor = ProcessingCore()
-    processor.run()
+def main() -> None:
+    ProcessingCore().run()
 
 
 if __name__ == "__main__":
     main()
-

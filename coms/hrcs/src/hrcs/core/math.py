@@ -1,152 +1,99 @@
+"""Experimental mathematical utilities used by HRCS prototypes.
+
+Golden-ratio channel placement, Lorenz-derived index sequences, stochastic
+noise experiments, and FFT codecs are preserved as software mechanisms. This
+module does not claim those choices outperform conventional communications
+methods without comparative reproducible measurements.
 """
-Unified Mathematical Framework for HRCS
-Implements golden ratio frequencies, Lorenz attractor, stochastic resonance, and spectral encoding
-"""
+
+from __future__ import annotations
 
 import numpy as np
 
-# Constants
-PHI = 1.618033988749895  # Golden Ratio
-SIGMA = 10.0  # Prandtl number for Lorenz
-RHO = 28.0  # Rayleigh number for Lorenz
-BETA = 8/3  # Geometric factor for Lorenz
+PHI = 1.618033988749895
+SIGMA = 10.0
+RHO = 28.0
+BETA = 8 / 3
 
 
 class UnifiedMath:
-    """
-    Implements the 8D Unified Mathematical Framework
-    """
+    PHI = PHI
+    SIGMA = SIGMA
+    RHO = RHO
+    BETA = BETA
 
     @staticmethod
     def golden_ratio_frequencies(base_freq, num_channels):
-        """
-        Generate golden ratio spaced frequencies
-        
-        Args:
-            base_freq: Base frequency in Hz
-            num_channels: Number of frequency channels to generate
-            
-        Returns:
-            Array of frequencies in Hz
-        """
         freqs = []
-        for i in range(num_channels):
-            freq = base_freq * (PHI ** (i / 4))
-            if freq < 18000:  # Keep in audible range
-                freqs.append(freq)
-        return np.array(freqs)
-    
+        for index in range(num_channels):
+            frequency = base_freq * (PHI ** (index / 4))
+            if frequency < 18000:
+                freqs.append(frequency)
+        return np.asarray(freqs, dtype=float)
+
     @staticmethod
-    def lorenz_sequence(x0, y0, z0, length, dt=0.01):
-        """
-        Generate Lorenz attractor sequence for frequency hopping
-        
-        Args:
-            x0, y0, z0: Initial conditions (shared secret between nodes)
-            length: Number of hops to generate
-            dt: Time step
-            
-        Returns:
-            Array of frequency indices (0-255)
-        """
-        x, y, z = x0, y0, z0
+    def lorenz_sequence(
+        x0,
+        y0,
+        z0,
+        length=None,
+        dt=0.01,
+        *,
+        num_hops=None,
+    ):
+        if length is None:
+            length = num_hops
+        if length is None or int(length) < 0:
+            raise ValueError("Lorenz sequence length must be a non-negative integer")
+        x, y, z = float(x0), float(y0), float(z0)
         sequence = []
-        
-        for _ in range(length):
-            # Lorenz equations
+        for _ in range(int(length)):
             dx = SIGMA * (y - x) * dt
             dy = (x * (RHO - z) - y) * dt
             dz = (x * y - BETA * z) * dt
-            
             x += dx
             y += dy
             z += dz
-            
-            # Map to 0-255
             value = int((x + 30) / 60 * 255) % 256
             sequence.append(value)
-        
-        return np.array(sequence)
-    
+        return np.asarray(sequence, dtype=np.uint8)
+
     @staticmethod
-    def stochastic_enhance(signal, noise_level=0.1):
+    def stochastic_enhance(signal, noise_level=0.1, rng=None):
+        """Apply the historical nonlinear noise transform as an experiment.
+
+        A caller-provided RNG makes the experiment reproducible. No performance
+        advantage is implied by this function alone.
         """
-        Apply stochastic resonance enhancement
-        
-        Stochastic resonance enhances signal detection by adding optimal noise levels.
-        
-        Args:
-            signal: Input signal array
-            noise_level: Optimal noise intensity (typically 0.1-0.3 of signal amplitude)
-            
-        Returns:
-            Enhanced signal
-        """
-        # Add white noise at calculated optimal level
-        noise = np.random.normal(0, noise_level, len(signal))
+
+        signal = np.asarray(signal, dtype=float)
+        generator = np.random.default_rng() if rng is None else rng
+        noise = generator.normal(0.0, noise_level, len(signal))
         enhanced = signal + noise
-        
-        # Nonlinear transformation (bistable potential)
         threshold = 0.3
-        output = np.where(enhanced > threshold, 1.0,
-                         np.where(enhanced < -threshold, -1.0, enhanced))
-        
-        return output
-    
+        return np.where(
+            enhanced > threshold,
+            1.0,
+            np.where(enhanced < -threshold, -1.0, enhanced),
+        )
+
     @staticmethod
     def spectral_encode(data_bytes, num_channels=256):
-        """
-        Encode data as spectral signature
-        
-        Instead of traditional binary encoding, encodes information in the frequency spectrum.
-        
-        Args:
-            data_bytes: Raw data to transmit
-            num_channels: Number of frequency channels available (for compatibility)
-            
-        Returns:
-            Complex spectral signature
-        """
-        # Convert bytes to bit array
         bit_array = np.unpackbits(np.frombuffer(data_bytes, dtype=np.uint8))
-        
-        # Pad to match FFT size (power of 2)
+        if len(bit_array) == 0:
+            return np.asarray([], dtype=np.complex128)
         fft_size = 2 ** int(np.ceil(np.log2(len(bit_array))))
         padded = np.pad(bit_array, (0, fft_size - len(bit_array)))
-        
-        # Apply FFT to create spectral signature
         spectrum = np.fft.fft(padded.astype(float))
-        
-        # Apply golden ratio weighting for robustness
-        weights = np.array([PHI ** (i / fft_size) for i in range(fft_size)])
-        weighted_spectrum = spectrum * weights
-        
-        return weighted_spectrum
-    
+        weights = np.asarray([PHI ** (i / fft_size) for i in range(fft_size)])
+        return spectrum * weights
+
     @staticmethod
     def spectral_decode(spectrum):
-        """
-        Decode data from spectral signature
-        
-        Args:
-            spectrum: Received spectral signature
-            
-        Returns:
-            Original data bytes
-        """
-        # Remove golden ratio weighting
+        spectrum = np.asarray(spectrum)
+        if spectrum.size == 0:
+            return b""
         fft_size = len(spectrum)
-        weights = np.array([PHI ** (i / fft_size) for i in range(fft_size)])
-        unweighted = spectrum / weights
-        
-        # Inverse FFT
-        recovered_signal = np.fft.ifft(unweighted).real
-        
-        # Threshold to binary
-        bit_array = (recovered_signal > 0.5).astype(np.uint8)
-        
-        # Convert back to bytes
-        byte_array = np.packbits(bit_array)
-        
-        return byte_array.tobytes()
-
+        weights = np.asarray([PHI ** (i / fft_size) for i in range(fft_size)])
+        recovered_signal = np.fft.ifft(spectrum / weights).real
+        return np.packbits((recovered_signal > 0.5).astype(np.uint8)).tobytes()

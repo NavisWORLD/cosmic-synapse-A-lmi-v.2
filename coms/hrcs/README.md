@@ -1,184 +1,110 @@
 # Harmonic Resonance Communication System (HRCS)
 
-**Infrastructure-Free Communication Through Vibrational Information Dynamics**
+HRCS is a research communications prototype preserved inside the COSMIC SYNAPSE / A-LMI repository. It contains packet, authenticated-encryption, acoustic-modem, mesh-routing, simulated transport, and experimental SDR-radio code.
 
-[![License](https://img.shields.io/badge/License-MIT%20%2B%20Emergency-yellow.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
-[![Status](https://img.shields.io/badge/Status-Alpha-orange.svg)](https://github.com/your-repo/hrcs)
+The restoration branch verifies deterministic software behavior. It does **not** claim proven infrastructure independence in all environments, golden-ratio performance superiority, anti-jamming superiority, field reliability, or production/emergency readiness.
 
-## Overview
+## Current verified software surface
 
-HRCS is a complete, buildable communication system requiring **ZERO infrastructure** - no towers, no satellites, no internet, no power grid dependency. It operates purely through **frequency-domain information encoding** based on the Unified Vibrational Information Theory.
+The root restoration CI exercises HRCS contracts for:
 
-### Key Features
+- versioned packet serialization and integrity checking;
+- ChaCha20-Poly1305 authenticated symmetric encryption behavior;
+- deterministic acoustic BPSK encode/decode round trips using software-generated samples;
+- duplicate/replay handling and multi-hop forwarding logic;
+- simulated end-to-end node communication;
+- deterministic SHA-256-derived radio hop planning;
+- transmit-side frequency retuning behavior through an injected/fake SDR boundary.
 
-- 🌊 **Multi-Band Operation**: Acoustic (20Hz-20kHz), VHF (30-300 MHz), UHF (300-3000 MHz)
-- 📡 **Mesh Networking**: Automatic peer-to-peer mesh formation with multi-hop routing
-- 🔐 **Strong Encryption**: ChaCha20-Poly1305 authenticated encryption
-- 📈 **Golden Ratio Optimization**: φ-based frequency spacing for optimal performance
-- 🌪️ **Lorenz Frequency Hopping**: Chaotic anti-jamming spread spectrum
-- 🔊 **Stochastic Resonance**: Signal enhancement in noisy environments
-- ⚡ **Acoustic-First**: Works fully without any SDR hardware (uses audio only)
+These are software results. They are not RF range, hardware robustness, regulatory, security-audit, or anti-jamming results.
 
-## Quick Start
+## Installation
 
-### Installation
+HRCS is a nested Python project and is not bundled into the root `cosmic-synapse-a-lmi` wheel.
 
 ```bash
-# Clone repository
-git clone https://github.com/your-repo/hrcs.git
-cd hrcs
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install package
-pip install -e .
+cd coms/hrcs
+python -m pip install -e .
 ```
 
-### Basic Usage
+For development:
+
+```bash
+python -m pip install -e '.[dev]'
+pytest
+```
+
+The repository-level restoration workflow also runs selected HRCS tests with `PYTHONPATH=.:coms/hrcs/src`.
+
+## Basic API
 
 ```python
 from hrcs.node import HRCSNode
 
-# Create and start node
-node = HRCSNode(node_id=0x0001, network_key="secret-key", acoustic_only=True)
+node = HRCSNode(node_id=0x0001, network_key="replace-with-a-test-key", acoustic_only=True)
 node.start()
 
-# Send message
-node.send_message(0x0002, "Hello, world!")
+# A second compatible node/transport is required for real delivery.
+node.send_message(0x0002, "Hello")
 
-# Receive message
-sender, message = node.receive_message(timeout=5.0)
-print(f"From {sender}: {message}")
-
-# Stop node
 node.stop()
 ```
 
-### CLI Usage
-
-```bash
-# Show status
-hrcs status
-
-# Send message
-hrcs send 0x0002 "Test message"
-
-# Receive messages
-hrcs recv
-```
-
-## System Requirements
-
-### Minimum (Acoustic Only)
-- Python 3.8+
-- Audio input/output (speaker, microphone)
-- Standard PC/Laptop
-
-### Recommended (Full Features)
-- Raspberry Pi 4 or equivalent
-- LimeSDR Mini or HackRF One (SDR)
-- High-quality audio interface
-- Solar power system for field deployment
+Use disposable test keys for examples. Do not treat a string embedded in source/config as a production key-management strategy.
 
 ## Architecture
 
-```
-┌─────────────────────────────────────┐
-│  Application Layer                  │
-│  - Messaging, CLI                   │
-├─────────────────────────────────────┤
-│  Network Layer                      │
-│  - Mesh Networking                  │
-│  - Golden Ratio Routing             │
-│  - Neighbor Discovery               │
-├─────────────────────────────────────┤
-│  Physical Layer                     │
-│  - Acoustic OFDM Modem             │
-│  - SDR Radio Modem                 │
-│  - Spectral Encoding                │
-├─────────────────────────────────────┤
-│  Core                               │
-│  - Math Framework (φ, Lorenz, SR)  │
-│  - Packet Protocol                  │
-│  - Security (ChaCha20-Poly1305)    │
-└─────────────────────────────────────┘
+```text
+Application
+  └─ messaging / CLI
+Network
+  └─ mesh / discovery / routing
+Physical / transport
+  ├─ acoustic modem
+  ├─ simulated modem
+  └─ experimental SDR radio modem
+Core
+  ├─ packet protocol
+  ├─ authenticated symmetric crypto
+  └─ mathematical/signal helpers
 ```
 
-## Use Cases
+Historical names involving phi/golden-ratio, Lorenz dynamics, resonance, or vibrational information are retained as project lineage and software mechanisms. Their presence in an algorithm is not evidence that they provide a physical or communications advantage.
 
-- 🚨 **Emergency Communications**: When infrastructure fails
-- 🏔️ **Remote Areas**: No cellular coverage
-- 🛡️ **Resilience**: EMP/solar storm preparation
-- 🎯 **Secure Mesh**: Private networks without internet
-- 🔬 **Research**: Frequency-domain communication experiments
+## Acoustic path
 
-## Documentation
+The restored acoustic contract checks modulation/demodulation in software-generated sample buffers. Live speaker/microphone operation depends on host audio devices, permissions, room acoustics, levels, noise, sample clocks, and platform libraries and therefore requires a separate hardware integration test.
 
-- [Theory](docs/theory.md) - Mathematical foundation
-- [Hardware Guide](docs/hardware.md) - Build your own node
-- [Deployment](docs/deployment.md) - Field deployment guide
-- [API Reference](docs/api.md) - Complete API documentation
+## SDR radio path
 
-## Development
+The radio path:
 
-### Running Tests
+- derives repeatable hop seeds from SHA-256 instead of Python's process-randomized `hash()`;
+- produces deterministic channel plans;
+- retunes the transmit frequency per planned hop when a compatible SDR boundary is available.
 
-```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
+The restoration does **not** establish synchronized receive-side frequency hopping, anti-jamming performance, operating range, throughput, packet error rate, or compatibility with a particular SDR in the field.
 
-# Run tests
-pytest
+Transmit only in a lawful configured test environment and comply with frequency, power, bandwidth, licensing, and equipment rules for your jurisdiction.
 
-# With coverage
-pytest --cov=hrcs
-```
+## Cryptography boundary
 
-### Code Quality
+Authenticated symmetric encryption is implemented. A static/pre-shared key architecture does not provide cryptographic forward secrecy by itself.
 
-```bash
-# Format code
-black src/
-
-# Lint
-flake8 src/
-pylint src/
-
-# Type checking
-mypy src/
-```
-
-## Contributing
-
-Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Emergency Use
-
-**As stated in the license**, in declared emergencies or infrastructure failures, all restrictions are waived for humanitarian deployment.
-
-## License
-
-MIT License + Emergency Use Clause - See [LICENSE](LICENSE) for details.
-
-## Credits
-
-**Author**: Cory Shane Davis  
-**Based on**: The Unified Theory of Vibrational Information Processing  
-**Publication Date**: October 28, 2025
+The current tests are software contracts, not a third-party cryptographic audit.
 
 ## Status
 
-⚠️ **Alpha Stage**: Core functionality implemented, field testing in progress.  
-📋 **Ready for**: Laboratory testing, prototype deployment, research use.  
-🚧 **Not Ready for**: Production critical systems, commercial deployment.
+**Research/alpha prototype.** Appropriate current uses are source review, deterministic simulation/software testing, and controlled laboratory integration work.
 
-## Disclaimer
+It should not be used as the sole communications path for safety-critical, emergency, commercial, or adversarial deployments without substantial independent engineering, hardware testing, protocol/security review, and regulatory work.
 
-This system is provided for research, education, and emergency preparedness purposes. Users must comply with all applicable regulations regarding radio frequency transmission in their jurisdiction.
+## License
 
----
+HRCS contains its own historical `LICENSE` file titled `MIT License + Emergency Use Clause`. The 2026 restoration does not alter those nested legal terms. Because the repository root also contains a GPL-3.0 license, downstream redistribution of combined/derived work should receive appropriate legal review rather than relying on this README as licensing advice.
 
-*"In the frequency, we find freedom."*
+## Author
 
+Cory Shane Davis
+
+See the repository root `docs/CLAIMS_AND_LIMITATIONS.md`, `docs/SECURITY.md`, and `docs/REPRODUCIBILITY.md` for the restoration-wide evidence boundary.

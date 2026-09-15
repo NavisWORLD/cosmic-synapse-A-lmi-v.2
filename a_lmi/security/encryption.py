@@ -1,231 +1,197 @@
-"""
-Core Encryption Module
+"""Authenticated AES-256-GCM helpers for active A-LMI storage.
 
-AES-256-GCM encryption for data at rest and in transit.
-Implements secure key management and encryption/decryption utilities.
+Password-based encryption uses a versioned self-contained envelope carrying
+its PBKDF2 salt and parameters. Historical callers that use ``encrypt_data``
+retain the two-field return shape; password mode prefixes the ciphertext with
+its KDF salt so decryption can reproduce the same key.
 """
 
-import os
+from __future__ import annotations
+
 import base64
+import json
 import logging
-from typing import Union, Tuple
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import os
+from typing import Tuple, Union
+
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
-from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+PASSWORD_ENVELOPE_VERSION = 1
+DEFAULT_PBKDF2_ITERATIONS = 600_000
 
 
 class AESCipher:
-    """
-    AES-256-GCM encryption for secure data storage.
-    
-    Uses:
-    - AES-256-GCM (authenticated encryption)
-    - PBKDF2 for key derivation
-    - Random nonces for each encryption
-    """
-    
-    def __init__(self, key: bytes = None):
-        """
-        Initialize AES cipher.
-        
-        Args:
-            key: Encryption key (32 bytes for AES-256). If None, generates random key.
-        """
+    """AES-256-GCM authenticated encryption using a caller-owned 32-byte key."""
+
+    def __init__(self, key: bytes | None = None):
         self.logger = logging.getLogger(__name__)
-        
-        if key is None:
-            # Generate random key
-            key = os.urandom(32)
-        
+        key = os.urandom(32) if key is None else key
         if len(key) != 32:
             raise ValueError("Key must be 32 bytes for AES-256")
-        
         self.key = key
         self.aesgcm = AESGCM(self.key)
-        self.logger.info("AES cipher initialized")
-    
+
     def encrypt(self, plaintext: Union[str, bytes]) -> Tuple[str, str]:
-        """
-        Encrypt plaintext data.
-        
-        Args:
-            plaintext: Data to encrypt (string or bytes)
-            
-        Returns:
-            Tuple of (encrypted_data_base64, nonce_base64)
-        """
-        try:
-            # Convert to bytes if needed
-            if isinstance(plaintext, str):
-                plaintext = plaintext.encode('utf-8')
-            
-            # Generate random nonce
-            nonce = os.urandom(12)  # 96 bits for GCM
-            
-            # Encrypt
-            ciphertext = self.aesgcm.encrypt(nonce, plaintext, None)
-            
-            # Encode to base64 for storage
-            ciphertext_b64 = base64.b64encode(ciphertext).decode('utf-8')
-            nonce_b64 = base64.b64encode(nonce).decode('utf-8')
-            
-            return ciphertext_b64, nonce_b64
-            
-        except Exception as e:
-            self.logger.error(f"Encryption error: {e}")
-            raise
-    
+        if isinstance(plaintext, str):
+            plaintext = plaintext.encode("utf-8")
+        nonce = os.urandom(12)
+        ciphertext = self.aesgcm.encrypt(nonce, plaintext, None)
+        return (
+            base64.b64encode(ciphertext).decode("ascii"),
+            base64.b64encode(nonce).decode("ascii"),
+        )
+
     def decrypt(self, ciphertext_b64: str, nonce_b64: str) -> bytes:
-        """
-        Decrypt ciphertext data.
-        
-        Args:
-            ciphertext_b64: Encrypted data (base64 encoded)
-            nonce_b64: Nonce (base64 encoded)
-            
-        Returns:
-            Decrypted bytes
-        """
-        try:
-            # Decode from base64
-            ciphertext = base64.b64decode(ciphertext_b64)
-            nonce = base64.b64decode(nonce_b64)
-            
-            # Decrypt
-            plaintext = self.aesgcm.decrypt(nonce, ciphertext, None)
-            
-            return plaintext
-            
-        except Exception as e:
-            self.logger.error(f"Decryption error: {e}")
-            raise
-    
+        ciphertext = base64.b64decode(ciphertext_b64, validate=True)
+        nonce = base64.b64decode(nonce_b64, validate=True)
+        if len(nonce) != 12:
+            raise ValueError("AES-GCM nonce must be 12 bytes")
+        return self.aesgcm.decrypt(nonce, ciphertext, None)
+
     def encrypt_to_string(self, plaintext: Union[str, bytes]) -> str:
-        """
-        Encrypt and return as single base64 string (includes nonce).
-        
-        Args:
-            plaintext: Data to encrypt
-            
-        Returns:
-            Combined encrypted data + nonce as base64 string
-        """
         ciphertext, nonce = self.encrypt(plaintext)
-        
-        # Combine nonce and ciphertext
-        combined = f"{nonce}:{ciphertext}"
-        return combined
-    
+        return f"{nonce}:{ciphertext}"
+
     def decrypt_from_string(self, encrypted_data: str) -> bytes:
-        """
-        Decrypt from combined base64 string.
-        
-        Args:
-            encrypted_data: Combined nonce:ciphertext base64 string
-            
-        Returns:
-            Decrypted bytes
-        """
-        parts = encrypted_data.split(':', 1)
+        parts = encrypted_data.split(":", 1)
         if len(parts) != 2:
             raise ValueError("Invalid encrypted data format")
-        
         nonce_b64, ciphertext_b64 = parts
         return self.decrypt(ciphertext_b64, nonce_b64)
 
 
-def derive_key(password: Union[str, bytes], salt: bytes = None, iterations: int = 100000) -> Tuple[bytes, bytes]:
-    """
-    Derive encryption key from password using PBKDF2.
-    
-    Args:
-        password: Password string or bytes
-        salt: Salt bytes (if None, generates random)
-        iterations: PBKDF2 iterations
-        
-    Returns:
-        Tuple of (derived_key, salt)
-    """
-    if isinstance(password, str):
-        password = password.encode('utf-8')
-    
-    if salt is None:
-        salt = os.urandom(16)
-    
-    kdf = PBKDF2(
+def derive_key(
+    password: Union[str, bytes],
+    salt: bytes | None = None,
+    iterations: int = DEFAULT_PBKDF2_ITERATIONS,
+) -> Tuple[bytes, bytes]:
+    """Derive an AES-256 key with PBKDF2-HMAC-SHA256 and return its salt."""
+
+    if iterations < 1:
+        raise ValueError("PBKDF2 iterations must be positive")
+    password_bytes = password.encode("utf-8") if isinstance(password, str) else password
+    if not isinstance(password_bytes, bytes) or not password_bytes:
+        raise ValueError("Password must not be empty")
+    actual_salt = os.urandom(16) if salt is None else salt
+    if len(actual_salt) < 16:
+        raise ValueError("PBKDF2 salt must be at least 16 bytes")
+    kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
-        salt=salt,
+        salt=actual_salt,
         iterations=iterations,
-        backend=default_backend()
     )
-    
-    key = kdf.derive(password)
-    return key, salt
+    return kdf.derive(password_bytes), actual_salt
 
 
-def encrypt_data(data: Union[str, bytes], key: bytes = None, password: Union[str, bytes] = None) -> Tuple[str, str]:
-    """
-    Convenience function to encrypt data.
-    
-    Args:
-        data: Data to encrypt
-        key: Encryption key (32 bytes)
-        password: Password for key derivation (if key not provided)
-        
-    Returns:
-        Tuple of (encrypted_data_base64, nonce_base64)
-    """
-    if key is None:
-        if password is None:
-            # Generate random key
-            key = os.urandom(32)
-        else:
-            key, _ = derive_key(password)
-    
-    cipher = AESCipher(key)
-    return cipher.encrypt(data)
+def encrypt_with_password(
+    data: Union[str, bytes],
+    password: Union[str, bytes],
+    *,
+    iterations: int = DEFAULT_PBKDF2_ITERATIONS,
+) -> str:
+    """Return a portable JSON password-encryption envelope."""
+
+    key, salt = derive_key(password, iterations=iterations)
+    ciphertext, nonce = AESCipher(key).encrypt(data)
+    envelope = {
+        "version": PASSWORD_ENVELOPE_VERSION,
+        "cipher": "AES-256-GCM",
+        "kdf": "PBKDF2-HMAC-SHA256",
+        "iterations": iterations,
+        "salt": base64.b64encode(salt).decode("ascii"),
+        "nonce": nonce,
+        "ciphertext": ciphertext,
+    }
+    return json.dumps(envelope, separators=(",", ":"), sort_keys=True)
 
 
-def decrypt_data(encrypted_data: str, nonce: str, key: bytes = None, password: Union[str, bytes] = None) -> bytes:
+def decrypt_with_password(
+    envelope_json: str, password: Union[str, bytes]
+) -> bytes:
+    """Decrypt a version-1 password envelope using its stored KDF material."""
+
+    try:
+        envelope = json.loads(envelope_json)
+    except json.JSONDecodeError as exc:
+        raise ValueError("Invalid password-encryption envelope") from exc
+
+    if envelope.get("version") != PASSWORD_ENVELOPE_VERSION:
+        raise ValueError(f"Unsupported encryption envelope version: {envelope.get('version')}")
+    if envelope.get("cipher") != "AES-256-GCM":
+        raise ValueError("Unsupported encryption cipher")
+    if envelope.get("kdf") != "PBKDF2-HMAC-SHA256":
+        raise ValueError("Unsupported encryption KDF")
+
+    try:
+        salt = base64.b64decode(envelope["salt"], validate=True)
+        iterations = int(envelope["iterations"])
+        nonce = envelope["nonce"]
+        ciphertext = envelope["ciphertext"]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("Incomplete password-encryption envelope") from exc
+
+    key, _ = derive_key(password, salt=salt, iterations=iterations)
+    return AESCipher(key).decrypt(ciphertext, nonce)
+
+
+def encrypt_data(
+    data: Union[str, bytes],
+    key: bytes | None = None,
+    password: Union[str, bytes, None] = None,
+) -> Tuple[str, str]:
+    """Compatibility API for key- or password-based encryption.
+
+    Password mode preserves the historical two-value return shape while
+    embedding the salt into the first value as ``pbe1:<salt>:<ciphertext>``.
     """
-    Convenience function to decrypt data.
-    
-    Args:
-        encrypted_data: Encrypted data (base64)
-        nonce: Nonce (base64)
-        key: Encryption key
-        password: Password for key derivation
-        
-    Returns:
-        Decrypted bytes
-    """
-    if key is None:
-        if password is None:
-            raise ValueError("Either key or password must be provided")
-        key, _ = derive_key(password)
-    
-    cipher = AESCipher(key)
-    return cipher.decrypt(encrypted_data, nonce)
+
+    if key is not None and password is not None:
+        raise ValueError("Provide either key or password, not both")
+    if key is None and password is None:
+        key = os.urandom(32)
+
+    if password is not None:
+        key, salt = derive_key(password)
+        ciphertext, nonce = AESCipher(key).encrypt(data)
+        salt_b64 = base64.b64encode(salt).decode("ascii")
+        return f"pbe1:{salt_b64}:{ciphertext}", nonce
+
+    return AESCipher(key).encrypt(data)
+
+
+def decrypt_data(
+    encrypted_data: str,
+    nonce: str,
+    key: bytes | None = None,
+    password: Union[str, bytes, None] = None,
+) -> bytes:
+    """Compatibility decryption API with repaired password salt handling."""
+
+    if key is not None and password is not None:
+        raise ValueError("Provide either key or password, not both")
+
+    if password is not None:
+        parts = encrypted_data.split(":", 2)
+        if len(parts) != 3 or parts[0] != "pbe1":
+            raise ValueError(
+                "Password ciphertext is missing its stored PBKDF2 salt; "
+                "legacy broken password ciphertext cannot be reconstructed"
+            )
+        salt = base64.b64decode(parts[1], validate=True)
+        key, _ = derive_key(password, salt=salt)
+        encrypted_data = parts[2]
+    elif key is None:
+        raise ValueError("Either key or password must be provided")
+
+    return AESCipher(key).decrypt(encrypted_data, nonce)
 
 
 def generate_key() -> bytes:
-    """
-    Generate a random encryption key.
-    
-    Returns:
-        32-byte random key suitable for AES-256
-    """
     return os.urandom(32)
 
 
 def generate_key_hex() -> str:
-    """
-    Generate a random encryption key as hex string.
-    
-    Returns:
-        Hex string of 32-byte key
-    """
     return os.urandom(32).hex()
-
