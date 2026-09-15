@@ -1,6 +1,6 @@
 # Product Workflow
 
-COSMIC SYNAPSE / A-LMI is a research-oriented persistent AI runtime. The user-owned continuity workspace stores memory, computational state, provenance, routing state, artifact references, and policy/authority separately from the model provider.
+COSMIC SYNAPSE / A-LMI is a research-oriented persistent AI runtime. The user-owned continuity workspace stores memory, computational state, provenance, routing state, artifact/knowledge references, and policy/authority separately from the model provider.
 
 The model is replaceable. The workspace is the continuity boundary.
 
@@ -28,7 +28,7 @@ A new workspace starts with:
 - `state/cst.json` — deterministic CST software state;
 - `knowledge/graph.json` — portable graph export surface;
 - `artifacts/manifest.json` — artifact references/provenance surface;
-- `provenance/provider.json` — last verified provider identity/provenance;
+- `provenance/provider.json` — selected/last provider identity/provenance;
 - `routing/state.json` — routing state;
 - `policy/authority.json` — authority configuration.
 
@@ -45,7 +45,7 @@ cosmic-synapse providers --json
 
 ## Use an explicit model provider
 
-The first dependency-light concrete provider is Ollama over its local HTTP API. Construction performs no network access; `run` performs the actual request.
+The first dependency-light concrete provider is Ollama over its HTTP API. Construction performs no network access; `run` performs the actual request.
 
 ```bash
 cosmic-synapse run ./my-cosmos \
@@ -55,9 +55,11 @@ cosmic-synapse run ./my-cosmos \
   --json
 ```
 
-The default endpoint is `http://127.0.0.1:11434`. A successful `run` verifies that the selected provider returned a structurally valid response. It does **not** certify the factual correctness of model output.
+The default endpoint is `http://127.0.0.1:11434`. Custom endpoints must use HTTP(S), contain a hostname, and must not embed `user:password@host` credentials because provider identity/provenance is user-visible persistent state.
 
-Provider selection never grants tools, shell, filesystem, cloud, deployment, or actuator authority. Those remain separate policy concerns.
+A successful `run` verifies that the selected provider returned a structurally valid response that the runtime persisted. It does **not** certify the factual correctness of model output.
+
+Provider selection never grants tools, shell, filesystem, cloud, deployment, network, or actuator authority. Those remain separate policy concerns.
 
 ## Swap the model without swapping the story
 
@@ -71,7 +73,7 @@ cosmic-synapse run ./my-cosmos \
   --json
 ```
 
-Deterministic tests verify that provider swaps preserve the existing memory ledger and leave the authority file unchanged.
+Deterministic tests verify that provider swaps preserve the existing memory ledger and leave the authority file unchanged. The system does not claim that two providers have the same internal identity or behavior; it claims that the surrounding software history remains available across the swap.
 
 ## Export a portable continuity bundle
 
@@ -91,24 +93,22 @@ cosmic-synapse import ./my-cosmos.cosmos ./restored-cosmos --json
 cosmic-synapse inspect ./restored-cosmos --json
 ```
 
-Import verifies the complete archive before materializing files and rejects:
-
-- absolute or traversal paths;
-- backslash path tricks;
-- symlink members;
-- duplicate archive names;
-- undeclared payloads;
-- missing declared payloads;
-- size or SHA-256 mismatches;
-- unsupported format versions;
-- oversized bundles/file counts;
-- non-empty destinations.
+Import verifies the complete archive before materializing files and rejects absolute/traversal/backslash paths, symlinks/directories, duplicate/undeclared members, missing payloads, size/SHA mismatches, unsupported versions, oversized bundles/file counts, secret-bearing members, and non-empty destinations.
 
 ## Backup and recovery
 
-Treat the verified `.cosmos` bundle as the portable user-owned backup artifact. Keep credentials outside the bundle. After copying a bundle to another machine, run `cosmic-synapse verify` before import.
+Treat the verified `.cosmos` bundle as the portable user-owned backup artifact. Keep service credentials outside the bundle. After copying a bundle to another machine, run `cosmic-synapse verify` before import.
 
-Format versioning is explicit. Future migrations must preserve the previous reader or provide a documented migration path rather than silently reinterpreting old data.
+Format versioning is explicit. Future migrations should preserve the previous reader or provide a documented migration path rather than silently reinterpreting old data.
+
+## Multimodal provenance
+
+The optional multimodal adapter pins intended external model snapshots:
+
+- `openai/clip-vit-large-patch14@32bd64288804d66eefd0ccbe215aa642df71cc41`
+- `microsoft/wavlm-base-plus@4c66d4806a428f2e922ccfa1a962776e232d487b`
+
+Those revisions are provenance/configuration, not evidence that the models have been downloaded or executed. Real inference requires the optional ML stack and a separately recorded integration result.
 
 ## Local performance observation
 
@@ -116,6 +116,6 @@ Format versioning is explicit. Future migrations must preserve the previous read
 
 ## Optional infrastructure
 
-Kafka, MinIO, Milvus, and Neo4j remain optional integration surfaces. The Compose stack is a local research/development configuration, not a production deployment template.
+Kafka, MinIO, Milvus, and Neo4j remain optional integration surfaces. The Compose stack is a local research/development configuration, not a production deployment template. Configuration tests do not prove live service startup/persistence.
 
-See `QUICK_START.md` for setup and `docs/FINAL_CLOSURE_EVIDENCE.md` for the verified-versus-external gate boundary.
+See `QUICK_START.md` for setup, `TESTING.md` for executable gates, and `docs/FINAL_CLOSURE_EVIDENCE.md` for the verified-versus-external boundary.
