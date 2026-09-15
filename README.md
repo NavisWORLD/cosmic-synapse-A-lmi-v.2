@@ -7,11 +7,11 @@ COSMIC SYNAPSE / A-LMI is preserved and modernized research software by Cory Sha
 ```text
 USER-OWNED CONTINUITY
   memory + CST software state + provenance + routing + artifact references + policy
-                                  │
-                                  ▼
+                                  |
+                                  v
                         REPLACEABLE MODEL PROVIDER
-                                  │
-                                  ▼
+                                  |
+                                  v
                        EXPLICIT AUTHORITY BOUNDARY
 ```
 
@@ -36,12 +36,13 @@ Current deterministic CI verifies:
 - dependency-light CLI product workflow;
 - wheel/sdist build, clean virtualenv install, and installed-wheel portable round trip;
 - bounded local CST/continuity benchmark harness without performance thresholds;
+- active-surface security regression checks;
 - selected HRCS packet/crypto/acoustic/mesh/simulated-E2E/radio-planning behavior;
 - Python/Unity IPC schema and source contracts;
 - God Music deterministic Node tests plus Vite build;
 - local Compose configuration/safety contracts.
 
-Live databases, downloaded model weights, Ollama model execution, microphones/browser devices, SDR hardware, Unity editor/player execution, GPU/CUDA, and production deployment remain separate external gates. See [docs/FINAL_CLOSURE_EVIDENCE.md](docs/FINAL_CLOSURE_EVIDENCE.md).
+Live databases, model-weight execution, Ollama model execution, microphones/browser devices, SDR hardware, Unity editor/player execution, GPU/CUDA, and production deployment remain separate external gates. See [docs/FINAL_CLOSURE_EVIDENCE.md](docs/FINAL_CLOSURE_EVIDENCE.md).
 
 ## Install
 
@@ -104,13 +105,13 @@ For the complete workflow and security boundary, see [docs/PRODUCT_WORKFLOW.md](
 
 ## Replace the model, keep the user-owned history
 
-The first concrete dependency-light provider is Ollama over its local HTTP API. Listing providers is intentionally non-networking:
+The first concrete dependency-light provider is Ollama over HTTP. Listing providers is intentionally non-networking:
 
 ```bash
 cosmic-synapse providers --json
 ```
 
-With a real local Ollama service/model configured:
+With a real Ollama service/model configured:
 
 ```bash
 cosmic-synapse run ./my-cosmos \
@@ -120,7 +121,9 @@ cosmic-synapse run ./my-cosmos \
   --json
 ```
 
-The provider is inference, not authority. Selecting or swapping a provider does not grant shell, filesystem, cloud, deployment, or actuator permissions.
+The default endpoint is `http://127.0.0.1:11434`. Custom provider endpoints reject embedded URL credentials before they can be persisted in provenance/error context.
+
+The provider is inference, not authority. Selecting or swapping a provider does not grant shell, filesystem, network, cloud, deployment, or actuator permissions.
 
 A successful `run` proves a structurally valid provider response was received and persisted; it does not certify the factual correctness of model output.
 
@@ -139,7 +142,7 @@ A-LMI product core
 COSMIC SYNAPSE
   ├─ deterministic CST software state/replay
   ├─ simulation code
-  └─ versioned Python ↔ Unity IPC
+  └─ versioned Python <-> Unity IPC
 
 HRCS (nested project)
   ├─ packet + authenticated crypto
@@ -163,17 +166,9 @@ Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 The `.cosmos` format is a deterministic ZIP container for a frozen workspace. The manifest records SHA-256 and byte size for every declared payload.
 
-Import/export fail closed on relevant conditions including:
+Import/export fail closed on relevant conditions including secret-bearing filenames, path traversal/absolute/backslash archive paths, symlinks, duplicate/undeclared members, missing declared payloads, size/hash mismatch, unsupported versions, bounded file-count/uncompressed-size limits, and importing over a non-empty destination.
 
-- secret-bearing filenames (`.env*`, common credential files, private-key formats);
-- path traversal/absolute/backslash archive paths;
-- symlink members;
-- duplicate or undeclared archive members;
-- missing declared payloads;
-- size/hash mismatch;
-- unsupported format versions;
-- bounded file-count/uncompressed-size limits;
-- importing over a non-empty destination.
+The separate CI security-static job also checks selected active product paths for direct dynamic-execution shortcuts, root `.env` tracking, secret placeholders/fallbacks, and loopback Compose port bindings. It is a regression gate, not a complete security audit.
 
 See [docs/SECURITY.md](docs/SECURITY.md).
 
@@ -185,13 +180,14 @@ Historical CST/`12D` terminology remains preserved. In the canonical active adap
 
 The active LightToken contract uses a 1536-value semantic embedding and a 769-bin `numpy.fft.rfft` representation. The spectral vector is a software transform, not a physical-frequency or Graph Fourier Transform claim.
 
-The multimodal path also keeps representation spaces explicit:
+The intended optional external model snapshots are pinned in active code/provenance:
 
-- CLIP-family text/image vectors use their learned CLIP space;
-- WavLM-family audio vectors are a separate space unless a trained alignment is explicitly supplied;
-- random production embeddings and untrained random projections are not treated as successful semantic alignment.
+- CLIP text/image: `openai/clip-vit-large-patch14@32bd64288804d66eefd0ccbe215aa642df71cc41`
+- WavLM audio/speech: `microsoft/wavlm-base-plus@4c66d4806a428f2e922ccfa1a962776e232d487b`
 
-Exact model-weight execution/revision evidence requires a real downloaded model snapshot and remains an external integration gate in this closure.
+CLIP text/image and WavLM audio are not treated as one universal space. Random production embeddings and untrained random projections are not treated as successful semantic alignment.
+
+Revision pinning identifies the intended snapshot; dependency-light CI does **not** claim those weights were downloaded or executed.
 
 ## Local infrastructure
 
@@ -201,13 +197,13 @@ Use `.env.example` as the variable-name guide, supply your own local-development
 docker compose -f infrastructure/docker-compose.yml up -d
 ```
 
-Published Compose ports bind to `127.0.0.1`, and secret-bearing MinIO/Milvus/Neo4j values have no known active fallback password. This Compose file is a local research/development configuration, not a production deployment template.
+Published Compose ports bind to `127.0.0.1`, and secret-bearing MinIO/Milvus/Neo4j values have no active fallback password. This Compose file is a local research/development configuration, not a production deployment template.
 
 ## Measured local benchmark
 
 `a_lmi.benchmarking.benchmark_core()` measures bounded CST replay plus portable bundle export/verify/import on the machine where it is executed. The result includes environment metadata, elapsed time, operation counts, integrity outcome, and error count.
 
-There is intentionally no CI performance threshold and no cross-machine/production capacity claim.
+There is intentionally no CI performance threshold and no cross-machine/production-capacity claim.
 
 ## HRCS
 
@@ -227,11 +223,7 @@ They do not establish synchronized receive hopping, anti-jamming superiority, RF
 - [docs/CLAIMS_AND_LIMITATIONS.md](docs/CLAIMS_AND_LIMITATIONS.md)
 - [docs/PROVENANCE.md](docs/PROVENANCE.md)
 
-Pre-restoration state remains preserved at:
-
-`preservation/pre-restoration-2026-09-14`
-
-The completed restoration lineage remains visible through the merged restoration history. Final product-closure work is developed through review/CI rather than history rewrite.
+Pre-restoration state remains preserved at `preservation/pre-restoration-2026-09-14`. The completed restoration lineage remains visible through merged history. Product-closure work is developed through review/CI rather than history rewrite.
 
 ## Claims this repository does not establish
 
