@@ -18,6 +18,36 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  format-writeback:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/native/almi-core-rust-001'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Apply rustfmt and resolve lockfile
+        working-directory: native/almi-core-rs
+        run: |
+          cargo generate-lockfile
+          cargo fmt --all
+      - name: Commit mechanical formatter output
+        shell: bash
+        run: |
+          if git diff --quiet -- native/almi-core-rs; then
+            echo 'Native workspace already formatted and locked.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add native/almi-core-rs
+          git commit -m 'style(native): apply rustfmt and lock dependencies'
+          git push origin HEAD:native/almi-core-rust-001
+
   quality:
     runs-on: ubuntu-latest
     defaults:
