@@ -31,11 +31,31 @@ The active CI verifies software contracts for:
 
 These are software results only where stated.
 
+## A-LMI Native Core / Rust claim boundary
+
+The native subsystem under `native/almi-core-rs/` is an additive implementation of active continuity/runtime contracts. The Python implementation remains the compatibility oracle for this closure. A native claim is considered verified only when the corresponding Native Core CI job succeeds on the exact commit cited in evidence.
+
+When those exact gates succeed, the supported native claims are limited to the executed results, such as:
+
+- Rust can verify/import synthetic Python-generated `.cosmos` bundles;
+- Python can verify/import synthetic Rust-generated `.cosmos` bundles;
+- deterministic unchanged-workspace exports are byte reproducible within the tested format contract;
+- Rust can replay the supported active CST computational-state transition from a persisted Python canonical state with numerical snapshot parity;
+- provider swaps in the native runtime preserve software continuity while authority remains unchanged;
+- the PyO3 extension exposes the tested native continuity functions without replacing the Python implementation;
+- the C ABI can be compiled/linked/called by the tested external C program;
+- malformed bundle/property/fuzz inputs exercised by the gates return errors or normal results rather than establishing a crash in the tested paths;
+- a Windows native executable can be built, installed, verified, run, packaged, and uninstalled through the tested BAT/PowerShell path on the cited Windows runner.
+
+These are interoperability and software-continuity claims. They do not establish language-independent equivalence for unimplemented historical experiments, production security certification, arbitrary platform support beyond tested runners, real model quality, consciousness, identity, or hardware behavior.
+
 ## User-owned persistent substrate claim
 
 The current software supports a portable workspace in which memory, CST computational state, provider provenance, routing, artifact/knowledge surfaces, and policy/authority exist outside model parameters. Deterministic tests demonstrate that replacing a test provider preserves prior memory while leaving authority unchanged. Export/import verifies that this software state can be serialized into an integrity-checked portable bundle and restored.
 
 This supports an engineering claim about **persistent software continuity across replaceable providers**. It does not establish consciousness, personal identity, biological continuity, or equivalence between different models.
+
+Changing implementation language does not, by itself, move memory/state/authority into the model. Native cross-language evidence is therefore interpreted as a compatibility result for the tested contracts, not a metaphysical identity claim.
 
 ## Model provider claims
 
@@ -76,6 +96,8 @@ In the active engineering layer:
 
 Supported engineering properties include AES-GCM helpers, password envelopes with stored derivation metadata, portable-bundle integrity/security checks, loopback Compose bindings, env-driven active secrets, zero default workspace authority, and credential-bearing provider endpoint rejection.
 
+The native implementation additionally tests deny-by-default authority serialization, archive-path properties, memory-ledger properties, an external FFI caller, and a bounded hostile `.cosmos` fuzz smoke when those exact native CI gates succeed.
+
 The current repository does **not** establish:
 
 - a complete security audit or penetration test;
@@ -88,7 +110,7 @@ The current repository does **not** establish:
 - complete dependency/image vulnerability clearance;
 - resistance to sophisticated network/RF adversaries.
 
-The active security-static job is a scoped regression gate, not certification.
+The active security-static and native security/quality jobs are scoped regression gates, not certification. A clean `cargo audit` result applies to the resolved dependency set and advisory database available during that run; it is not a permanent vulnerability guarantee.
 
 ## HRCS claims
 
@@ -108,7 +130,7 @@ No current repository result establishes a new physical law, breaks quantum mech
 
 ## Performance claims
 
-The benchmark harness records measured timings from the environment in which it runs and intentionally defines no universal threshold. Do not publish CI timing as representative production capacity or hardware superiority without a controlled benchmark report.
+The benchmark harness records measured timings from the environment in which it runs and intentionally defines no universal threshold. The native Python/Rust comparison records environment, sample count, median, and p95 for synthetic operations and explicitly carries no language-superiority claim. Do not publish CI timing as representative production capacity or hardware superiority without a controlled benchmark report.
 
 ## Promoting a stronger claim
 
