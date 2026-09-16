@@ -16,6 +16,7 @@ almi-cosmos.workspace = true
 almi-memory.workspace = true
 almi-provider.workspace = true
 almi-runtime.workspace = true
+almi-state.workspace = true
 clap.workspace = true
 serde_json.workspace = true
 
