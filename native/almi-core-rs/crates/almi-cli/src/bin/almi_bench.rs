@@ -6,7 +6,7 @@ use almi_state::NativeCstState;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 fn percentile(values: &[f64], percentile: f64) -> f64 {
@@ -78,9 +78,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut samples = Vec::with_capacity(iterations);
         for index in 0..iterations {
             let workspace = base.join(format!("init-{index}"));
-            let (outcome, elapsed) = timed(|| {
-                initialize_workspace(&workspace, "Rust Benchmark", index as i64)
-            });
+            let (outcome, elapsed) =
+                timed(|| initialize_workspace(&workspace, "Rust Benchmark", index as i64));
             outcome?;
             samples.push(elapsed);
         }
@@ -165,6 +164,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", serde_json::to_string(&result?)?);
     Ok(())
 }
-
-#[allow(dead_code)]
-fn _assert_path_is_used(_: &Path) {}
