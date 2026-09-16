@@ -78,7 +78,14 @@ function Read-AlmiJson([string]$Binary, [string[]]$Arguments) {
 }
 
 function Assert-DenyAuthority($Inspection) {
-    foreach ($name in @('tool_authority', 'network_authority', 'filesystem_authority')) {
+    foreach ($name in @(
+        'tool_authority',
+        'network_authority',
+        'filesystem_authority',
+        'cloud_authority',
+        'deployment_authority',
+        'actuator_authority'
+    )) {
         $value = $Inspection.authority.$name
         if ($null -eq $value -or @($value).Count -ne 0) {
             throw "Authority default check failed: $name must be empty."
