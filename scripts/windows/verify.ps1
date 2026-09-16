@@ -42,7 +42,7 @@ try {
 
     $imported = Read-AlmiJson $binary @('import', $bundleA, $restored)
     $restoredInspection = Read-AlmiJson $binary @('inspect', $restored)
-    if ($restoredInspection.name -ne 'Windows Verify') { throw 'Imported workspace identity mismatch.' }
+    if ($restoredInspection.system.name -ne 'Windows Verify') { throw 'Imported workspace identity mismatch.' }
     Assert-DenyAuthority $restoredInspection
 
     Write-Step "Deterministic bundle SHA-256: $hashA"
