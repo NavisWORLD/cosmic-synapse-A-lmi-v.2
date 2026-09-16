@@ -17,7 +17,7 @@ members = [
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.82"
-license = "MIT"
+license = "GPL-3.0-only"
 authors = ["Cory Shane Davis"]
 repository = "https://github.com/NavisWORLD/cosmic-synapse-A-lmi-v.2"
 
