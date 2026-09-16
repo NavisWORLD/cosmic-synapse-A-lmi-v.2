@@ -43,8 +43,14 @@ pub extern "C" fn almi_context_new() -> *mut AlmiContext {
     .unwrap_or(ptr::null_mut())
 }
 
+/// Releases a context allocated by [`almi_context_new`].
+///
+/// # Safety
+///
+/// `context` must be null or a live pointer returned by `almi_context_new` that has not already
+/// been freed. After this call returns, the pointer must not be used again.
 #[no_mangle]
-pub extern "C" fn almi_context_free(context: *mut AlmiContext) {
+pub unsafe extern "C" fn almi_context_free(context: *mut AlmiContext) {
     if context.is_null() {
         return;
     }
@@ -53,8 +59,15 @@ pub extern "C" fn almi_context_free(context: *mut AlmiContext) {
     }));
 }
 
+/// Returns a borrowed pointer to the context's most recent error message.
+///
+/// # Safety
+///
+/// `context` must be null or a valid live `AlmiContext` pointer returned by `almi_context_new`.
+/// The returned pointer, when non-null, is borrowed and remains valid only until the context is
+/// mutated by another ABI call or freed. Callers must not free the returned pointer.
 #[no_mangle]
-pub extern "C" fn almi_last_error(context: *const AlmiContext) -> *const c_char {
+pub unsafe extern "C" fn almi_last_error(context: *const AlmiContext) -> *const c_char {
     if context.is_null() {
         return ptr::null();
     }
@@ -67,16 +80,32 @@ pub extern "C" fn almi_last_error(context: *const AlmiContext) -> *const c_char 
     .unwrap_or(ptr::null())
 }
 
+/// Validates an A-LMI continuity workspace.
+///
+/// # Safety
+///
+/// `context` must be a valid live context pointer and `path` must point to a valid NUL-terminated
+/// UTF-8 string for the duration of the call.
 #[no_mangle]
-pub extern "C" fn almi_workspace_validate(context: *mut AlmiContext, path: *const c_char) -> i32 {
+pub unsafe extern "C" fn almi_workspace_validate(
+    context: *mut AlmiContext,
+    path: *const c_char,
+) -> i32 {
     ffi_call(context, || {
         almi_continuity::validate_workspace(c_path(path)?)?;
         Ok(())
     })
 }
 
+/// Verifies a `.cosmos` bundle and returns owned JSON metadata through `out_json`.
+///
+/// # Safety
+///
+/// `context` must be a valid live context pointer, `path` must point to a valid NUL-terminated
+/// UTF-8 string, and `out_json` must be a valid writable pointer. On success, the returned string
+/// must be released exactly once with [`almi_string_free`].
 #[no_mangle]
-pub extern "C" fn almi_cosmos_verify_json(
+pub unsafe extern "C" fn almi_cosmos_verify_json(
     context: *mut AlmiContext,
     path: *const c_char,
     out_json: *mut *mut c_char,
@@ -84,8 +113,15 @@ pub extern "C" fn almi_cosmos_verify_json(
     json_call(context, path, out_json, almi_cosmos::verify_bundle)
 }
 
+/// Inspects a `.cosmos` bundle and returns owned JSON metadata through `out_json`.
+///
+/// # Safety
+///
+/// `context` must be a valid live context pointer, `path` must point to a valid NUL-terminated
+/// UTF-8 string, and `out_json` must be a valid writable pointer. On success, the returned string
+/// must be released exactly once with [`almi_string_free`].
 #[no_mangle]
-pub extern "C" fn almi_cosmos_inspect_json(
+pub unsafe extern "C" fn almi_cosmos_inspect_json(
     context: *mut AlmiContext,
     path: *const c_char,
     out_json: *mut *mut c_char,
@@ -93,8 +129,14 @@ pub extern "C" fn almi_cosmos_inspect_json(
     json_call(context, path, out_json, almi_cosmos::inspect_bundle)
 }
 
+/// Releases an owned string returned by an A-LMI ABI function.
+///
+/// # Safety
+///
+/// `value` must be null or a pointer returned by this library via an owned-string output. It must
+/// not be freed more than once and must not refer to the borrowed result of [`almi_last_error`].
 #[no_mangle]
-pub extern "C" fn almi_string_free(value: *mut c_char) {
+pub unsafe extern "C" fn almi_string_free(value: *mut c_char) {
     if value.is_null() {
         return;
     }
