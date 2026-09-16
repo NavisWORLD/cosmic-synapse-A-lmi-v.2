@@ -4,8 +4,10 @@ use almi_cosmos::{export_bundle, import_bundle, verify_bundle};
 use almi_memory::verify_ledger;
 use almi_provider::{ModelProvider, OllamaProvider, DEFAULT_OLLAMA_ENDPOINT};
 use almi_runtime::PersistentRuntime;
+use almi_state::{CstEvent, NativeCstState};
 use clap::{Parser, Subcommand};
 use serde_json::{json, Value};
+use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -28,12 +30,18 @@ enum Command {
     Verify { bundle: PathBuf },
     Import { bundle: PathBuf, workspace: PathBuf },
     Memory { #[command(subcommand)] command: MemoryCommand },
+    State { #[command(subcommand)] command: StateCommand },
     Provider { #[command(subcommand)] command: ProviderCommand },
     Runtime { #[command(subcommand)] command: RuntimeCommand },
 }
 
 #[derive(Debug, Subcommand)]
 enum MemoryCommand { Verify { workspace: PathBuf } }
+
+#[derive(Debug, Subcommand)]
+enum StateCommand {
+    Replay { state: PathBuf, events: PathBuf },
+}
 
 #[derive(Debug, Subcommand)]
 enum ProviderCommand {
@@ -72,8 +80,25 @@ fn execute(cli: &Cli) -> Result<Value> {
             let report = verify_ledger(workspace.join("memory/ledger.jsonl"))?;
             Ok(json!({"valid":true,"records":report.records,"digests":report.digests}))
         }
+        Command::State { command } => state_command(command),
         Command::Provider { command } => provider_command(command),
         Command::Runtime { command } => runtime_command(command),
+    }
+}
+
+fn state_command(command: &StateCommand) -> Result<Value> {
+    match command {
+        StateCommand::Replay { state, events } => {
+            let raw = fs::read(events)?;
+            let events: Vec<CstEvent> = serde_json::from_slice(&raw)?;
+            let mut state = NativeCstState::load(state)?;
+            let snapshots = state.replay(&events)?;
+            Ok(json!({
+                "valid": true,
+                "snapshots": snapshots,
+                "final_state": state.envelope(),
+            }))
+        }
     }
 }
 
