@@ -31,17 +31,11 @@ jobs:
       - name: Rust format
         run: cargo fmt --all -- --check
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --all-features
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
       - name: Dependency security audit
         run: cargo audit
-      - name: Preserve resolved Cargo lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-cargo-lock-${{ github.sha }}
-          path: native/almi-core-rs/Cargo.lock
-          if-no-files-found: error
 
   rust-contracts:
     runs-on: ubuntu-latest
@@ -52,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Run native contract tests
-        run: cargo test --workspace
+        run: cargo test --workspace --locked
 
   python-interop:
     runs-on: ubuntu-latest
@@ -65,9 +59,9 @@ jobs:
       - name: Install Python reference and binding tools
         run: python -m pip install -e . pytest 'maturin>=1.7,<2.0'
       - name: Build native CLI
-        run: cargo build --manifest-path native/almi-core-rs/Cargo.toml -p almi-cli
+        run: cargo build --locked --manifest-path native/almi-core-rs/Cargo.toml -p almi-cli
       - name: Build Python wheel
-        run: maturin build --release --manifest-path native/almi-core-rs/crates/almi-python/Cargo.toml --out native/almi-core-rs/dist/python
+        run: maturin build --locked --release --manifest-path native/almi-core-rs/crates/almi-python/Cargo.toml --out native/almi-core-rs/dist/python
       - name: Install Python wheel
         run: python -m pip install native/almi-core-rs/dist/python/*.whl
       - name: Run Python-Rust interoperability tests
@@ -88,11 +82,66 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Build C ABI library
-        run: cargo build -p almi-ffi
+        run: cargo build --locked -p almi-ffi
       - name: Compile external C caller
         run: cc tests/c_abi_smoke.c -I include -L target/debug -Wl,-rpath,$PWD/target/debug -lalmi_ffi -o target/c-abi-smoke
       - name: Run external C caller
         run: ./target/c-abi-smoke
+
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: native/almi-core-rs/fuzz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+      - name: Fuzz hostile cosmos bundle bytes
+        run: cargo fuzz run cosmos_bundle -- -runs=256 -max_len=65536
+
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e .
+      - name: Build release benchmark harness
+        run: cargo build --locked --release --manifest-path native/almi-core-rs/Cargo.toml -p almi-cli --bin almi_bench
+      - name: Run descriptive Python versus Rust benchmark
+        run: >-
+          python scripts/benchmark_native.py
+          --rust-bench native/almi-core-rs/target/release/almi_bench
+          --iterations 15
+          --output native/almi-core-rs/dist/benchmarks/ci.json
+      - name: Upload benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: almi-native-benchmarks-${{ github.sha }}
+          path: native/almi-core-rs/dist/benchmarks/ci.json
+          if-no-files-found: error
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate SPDX JSON SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: native/almi-core-rs
+          format: spdx-json
+          output-file: native/almi-core-rs/dist/sbom.spdx.json
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: almi-native-sbom-${{ github.sha }}
+          path: native/almi-core-rs/dist/sbom.spdx.json
+          if-no-files-found: error
 
   portable-build:
     strategy:
@@ -107,9 +156,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Build portable release surfaces
-        run: cargo build --release -p almi-cli -p almi-ffi
+        run: cargo build --locked --release -p almi-cli -p almi-ffi
       - name: Test portable Rust crates
-        run: cargo test --workspace --exclude almi-python
+        run: cargo test --locked --workspace --exclude almi-python
 
   windows-smoke:
     runs-on: windows-latest
