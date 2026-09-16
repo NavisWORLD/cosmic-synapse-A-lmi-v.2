@@ -2,6 +2,12 @@
 resolver = "2"
 members = [
   "crates/almi-core",
+  "crates/almi-state",
+  "crates/almi-memory",
+  "crates/almi-continuity",
+  "crates/almi-cosmos",
+  "crates/almi-provider",
+  "crates/almi-runtime",
 ]
 
 [workspace.package]
@@ -11,3 +17,22 @@ rust-version = "1.82"
 license = "MIT"
 authors = ["Cory Shane Davis"]
 repository = "https://github.com/NavisWORLD/cosmic-synapse-A-lmi-v.2"
+
+[workspace.dependencies]
+almi-core = { path = "crates/almi-core" }
+almi-state = { path = "crates/almi-state" }
+almi-memory = { path = "crates/almi-memory" }
+almi-continuity = { path = "crates/almi-continuity" }
+almi-cosmos = { path = "crates/almi-cosmos" }
+almi-provider = { path = "crates/almi-provider" }
+almi-runtime = { path = "crates/almi-runtime" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+sha2 = "0.10"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+tempfile = "3"
+proptest = "1"
+url = "2"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+zip = { version = "4", default-features = false, features = ["deflate"] }
