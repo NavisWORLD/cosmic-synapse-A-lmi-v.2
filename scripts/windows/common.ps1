@@ -12,7 +12,7 @@ function Write-Step([string]$Message) {
 }
 
 function Assert-Windows {
-    if (-not $IsWindows -and $env:OS -ne 'Windows_NT') {
+    if ($env:OS -ne 'Windows_NT') {
         throw 'This script is intended for Windows.'
     }
     $version = [Environment]::OSVersion.Version
