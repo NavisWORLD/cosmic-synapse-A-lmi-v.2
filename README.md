@@ -20,6 +20,8 @@ Core invariants:
 - **MODEL != SYSTEM**
 - **MODEL != MEMORY**
 - **MODEL != AUTHORITY**
+- **UI != SYSTEM**
+- **LANGUAGE != ARCHITECTURE**
 
 The repository also preserves the wider COSMIC SYNAPSE research lineage: HRCS communications work, God Music, Unity IPC, CST experiments, historical papers/demos/ZIPs, and optional local data infrastructure. Preservation of an artifact records provenance; it does not automatically validate every historical claim inside it.
 
@@ -42,11 +44,13 @@ Current deterministic CI verifies:
 - God Music deterministic Node tests plus Vite build;
 - local Compose configuration/safety contracts.
 
+The additive A-LMI Native Core / Rust work lives under `native/almi-core-rs/`. Its dedicated CI is configured to gate Rust formatting/Clippy/tests/audit, Python↔Rust interoperability, CST replay parity, an external C ABI caller, hostile-bundle fuzz smoke, descriptive benchmarks, SBOM generation, Linux/macOS builds, and the real Windows BAT installer/test/verify/uninstall path. Exact native gates are only considered passed when the corresponding Actions run succeeds on the stated commit.
+
 Live databases, model-weight execution, Ollama model execution, microphones/browser devices, SDR hardware, Unity editor/player execution, GPU/CUDA, and production deployment remain separate external gates. See [docs/FINAL_CLOSURE_EVIDENCE.md](docs/FINAL_CLOSURE_EVIDENCE.md).
 
 ## Install
 
-Requires Python 3.11+.
+Requires Python 3.11+ for the existing Python product path.
 
 ```bash
 git clone https://github.com/NavisWORLD/cosmic-synapse-A-lmi-v.2.git
@@ -67,6 +71,41 @@ python -m pip install '.[viz]'
 python -m pip install '.[ipc]'
 python -m pip install '.[dev]'
 ```
+
+### A-LMI Native Core / Windows
+
+The Rust core is additive; it does not remove the Python reference implementation. Windows users building from source get user-facing wrappers at the repository root:
+
+```text
+INSTALL_WINDOWS.bat
+BUILD_WINDOWS.bat
+RUN_WINDOWS.bat
+TEST_WINDOWS.bat
+VERIFY_WINDOWS.bat
+UPDATE_WINDOWS.bat
+UNINSTALL_WINDOWS.bat
+```
+
+Typical flow:
+
+```text
+INSTALL_WINDOWS.bat -WithPython
+RUN_WINDOWS.bat doctor
+VERIFY_WINDOWS.bat
+```
+
+The native installer is user-local, defaults to `%LOCALAPPDATA%\A-LMI`, and does not require administrator rights. The BAT wrappers use a process-scoped PowerShell execution-policy override; they do not change the machine or user execution policy. The uninstaller does not search for or delete user workspaces, `.cosmos` bundles, memory ledgers, or backups.
+
+Native documentation:
+
+- [docs/native/ARCHITECTURE.md](docs/native/ARCHITECTURE.md)
+- [docs/native/WINDOWS_INSTALL.md](docs/native/WINDOWS_INSTALL.md)
+- [docs/native/INTEROPERABILITY.md](docs/native/INTEROPERABILITY.md)
+- [docs/native/PYTHON_BINDINGS.md](docs/native/PYTHON_BINDINGS.md)
+- [docs/native/C_ABI.md](docs/native/C_ABI.md)
+- [docs/native/SECURITY.md](docs/native/SECURITY.md)
+- [docs/native/BENCHMARKS.md](docs/native/BENCHMARKS.md)
+- [docs/native/VERIFICATION.md](docs/native/VERIFICATION.md)
 
 ## Own the continuity bundle
 
@@ -91,7 +130,7 @@ my-cosmos/
 └── policy/authority.json
 ```
 
-A new workspace starts with no tool, network, or filesystem authority.
+A new Python-reference workspace starts with no tool, network, or filesystem authority. A new native workspace additionally represents cloud, deployment, and actuator authority explicitly and initializes all six authority domains empty.
 
 Export, verify, and restore it:
 
@@ -139,6 +178,15 @@ A-LMI product core
   ├─ reasoning + hypothesis utilities
   └─ security helpers
 
+A-LMI Native Core / Rust
+  ├─ versioned continuity/domain contracts
+  ├─ deterministic .cosmos verify/export/import
+  ├─ memory ledger + active CST state/replay
+  ├─ provider/runtime boundary
+  ├─ native CLI
+  ├─ PyO3 bindings
+  └─ stable minimal C ABI
+
 COSMIC SYNAPSE
   ├─ deterministic CST software state/replay
   ├─ simulation code
@@ -160,7 +208,7 @@ Optional local infrastructure
   └─ Kafka / MinIO / Milvus / Neo4j
 ```
 
-Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Native-language detail: [docs/native/ARCHITECTURE.md](docs/native/ARCHITECTURE.md).
 
 ## Portable-bundle security
 
@@ -170,11 +218,13 @@ Import/export fail closed on relevant conditions including secret-bearing filena
 
 The separate CI security-static job also checks selected active product paths for direct dynamic-execution shortcuts, root `.env` tracking, secret placeholders/fallbacks, and loopback Compose port bindings. It is a regression gate, not a complete security audit.
 
-See [docs/SECURITY.md](docs/SECURITY.md).
+See [docs/SECURITY.md](docs/SECURITY.md) and [docs/native/SECURITY.md](docs/native/SECURITY.md).
 
 ## CST and `12D` terminology
 
 Historical CST/`12D` terminology remains preserved. In the canonical active adapter, the state is a bounded computational/software representation with deterministic seed, replay, phase, diagnostic energy/entropy, and serialization. It is not evidence of experimentally established extra physical dimensions.
+
+The native parity path starts from the persisted canonical CST envelope. Existing state is not regenerated from a different language's PRNG during a language/provider swap.
 
 ## LightToken and multimodal boundary
 
@@ -203,6 +253,8 @@ Published Compose ports bind to `127.0.0.1`, and secret-bearing MinIO/Milvus/Neo
 
 `a_lmi.benchmarking.benchmark_core()` measures bounded CST replay plus portable bundle export/verify/import on the machine where it is executed. The result includes environment metadata, elapsed time, operation counts, integrity outcome, and error count.
 
+The native closure also includes `scripts/benchmark_native.py` plus the release `almi_bench` harness for descriptive Python-reference versus Rust-native measurements of workspace init, bundle export/verify/import, memory append/scan, and state serialization. Results include median and p95 and carry no performance threshold or general language-superiority claim.
+
 There is intentionally no CI performance threshold and no cross-machine/production-capacity claim.
 
 ## HRCS
@@ -222,6 +274,7 @@ They do not establish synchronized receive hopping, anti-jamming superiority, RF
 - [docs/FINAL_CLOSURE_EVIDENCE.md](docs/FINAL_CLOSURE_EVIDENCE.md)
 - [docs/CLAIMS_AND_LIMITATIONS.md](docs/CLAIMS_AND_LIMITATIONS.md)
 - [docs/PROVENANCE.md](docs/PROVENANCE.md)
+- [docs/native/VERIFICATION.md](docs/native/VERIFICATION.md)
 
 Pre-restoration state remains preserved at `preservation/pre-restoration-2026-09-14`. The completed restoration lineage remains visible through merged history. Product-closure work is developed through review/CI rather than history rewrite.
 
@@ -229,11 +282,15 @@ Pre-restoration state remains preserved at `preservation/pre-restoration-2026-09
 
 Current evidence does not establish consciousness, sentience, AGI, biological life, a soul, identity resurrection/persistence, new physics, extra physical dimensions, quantum advantage/consciousness, golden-ratio superiority, formal differential privacy, cryptographic secure aggregation, RF anti-jamming superiority, or unmeasured hardware performance.
 
+The Rust native core, Python↔Rust bundle/state interoperability, provider swap tests, and Windows packaging are software-engineering evidence only. They do not establish production security certification or hardware behavior that was not executed on hardware.
+
 ## Project structure
 
 ```text
 .
 ├── a_lmi/                  # installable persistent-runtime Python core
+├── native/almi-core-rs/    # additive Rust continuity/runtime/CLI/bindings/ABI core
+├── scripts/windows/        # user-facing Windows bootstrap implementation
 ├── cosmic_synapse/         # CST state/simulation/IPC + Unity source
 ├── coms/hrcs/              # nested communications research project
 ├── god music/              # Vite/Web Audio experiment
@@ -247,7 +304,7 @@ Current evidence does not establish consciousness, sentience, AGI, biological li
 
 ## License
 
-The repository root is GPL-3.0; see [LICENSE](LICENSE). Some preserved/nested historical components contain separate license metadata/files, including HRCS. This project does not silently rewrite those terms.
+The repository root is GPL-3.0; see [LICENSE](LICENSE). The new Rust workspace declares `GPL-3.0-only` to remain aligned with the repository root. Some preserved/nested historical components contain separate license metadata/files, including HRCS. This project does not silently rewrite those terms.
 
 ## Author
 

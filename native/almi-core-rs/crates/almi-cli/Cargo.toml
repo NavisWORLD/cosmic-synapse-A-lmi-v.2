@@ -1,0 +1,24 @@
+[package]
+name = "almi-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "almi"
+path = "src/main.rs"
+
+[dependencies]
+almi-core.workspace = true
+almi-continuity.workspace = true
+almi-cosmos.workspace = true
+almi-memory.workspace = true
+almi-provider.workspace = true
+almi-runtime.workspace = true
+almi-state.workspace = true
+clap.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -1,0 +1,82 @@
+{
+  "fixture_version": 1,
+  "workspace_name": "A-LMI Golden Synthetic",
+  "json_files": {
+    "system.json": {
+      "format_version": 1,
+      "name": "A-LMI Golden Synthetic",
+      "created_at": "2000-01-01T00:00:00+00:00",
+      "seed": 424242
+    },
+    "state/cst.json": {
+      "version": 1,
+      "seed": 424242,
+      "params": {
+        "k": 0.5,
+        "gamma": 0.2,
+        "alpha": 0.3,
+        "sync_strength": 0.1,
+        "audio_gain": 0.25,
+        "natural_frequency": 1.0
+      },
+      "state": {
+        "x12": 0.0,
+        "m12": 0.0,
+        "omega": 0.0,
+        "phase": 0.5,
+        "energy": 0.0,
+        "entropy": 1.0,
+        "step": 0
+      }
+    },
+    "knowledge/graph.json": {
+      "version": 1,
+      "nodes": [],
+      "edges": []
+    },
+    "artifacts/manifest.json": {
+      "version": 1,
+      "artifacts": []
+    },
+    "provenance/provider.json": {
+      "version": 1,
+      "provider_id": null,
+      "model_id": null,
+      "revision": null,
+      "endpoint": null,
+      "capabilities": [],
+      "updated_at": null
+    },
+    "routing/state.json": {
+      "version": 1,
+      "routes": {}
+    },
+    "policy/authority.json": {
+      "version": 1,
+      "tool_authority": [],
+      "network_authority": [],
+      "filesystem_authority": [],
+      "cloud_authority": [],
+      "deployment_authority": [],
+      "actuator_authority": []
+    }
+  },
+  "memory_records": [
+    {
+      "version": 1,
+      "role": "user",
+      "content": "synthetic golden vector"
+    }
+  ],
+  "expected_payload_sha256": {
+    "artifacts/manifest.json": "b571dbecd090b4ea3c9e790e8d81ade86f71b58565cb3ad7208aa5f271bd4d5c",
+    "knowledge/graph.json": "1412537fdaadcc335a927141faf99be219ce39d25fc6a4e9a500e424e9204bb2",
+    "memory/ledger.jsonl": "f6a12f8144ce6a52f366176b8b4d695d039ee076cae0a367594fb05d6a7e1167",
+    "policy/authority.json": "5b37ce887860dcfb251396946d990ed5ff413d6cfb409afeb611b2cd42a031cc",
+    "provenance/provider.json": "8648f2895e642899fda0a71e26cfd938066d12014617a659c86fd185360cdc12",
+    "routing/state.json": "268d3aa84cc852f1d90bdad075ed4de23cc2bfed588f0a0892865611fa8cc55a",
+    "state/cst.json": "ddb1bec05ed7b39fcc9f4abeba62d4e7b069ff629dfb5ede706966bb72897e49",
+    "system.json": "40a89b94717b3a3d1bec5ccf0c5126edd823be54b35703c1d48bb89595dec1a8"
+  },
+  "expected_manifest_sha256": "8cec9f101e1014aa4529fc9a78135dc179ea984d5dcaeda5fbfcf312ec95829f"
+}

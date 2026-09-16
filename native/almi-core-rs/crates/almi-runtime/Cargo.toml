@@ -1,0 +1,17 @@
+[package]
+name = "almi-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+almi-core.workspace = true
+almi-continuity.workspace = true
+almi-memory.workspace = true
+almi-provider.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

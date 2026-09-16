@@ -1,0 +1,224 @@
+name: Native Core CI
+
+on:
+  push:
+    branches:
+      - native/almi-core-rust-001
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-core-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: native/almi-core-rs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Rust format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Dependency security audit
+        run: cargo audit
+
+  rust-contracts:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: native/almi-core-rs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run native contract tests
+        run: cargo test --workspace --locked
+
+  python-interop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference and binding tools
+        run: python -m pip install -e . pytest 'maturin>=1.7,<2.0'
+      - name: Build native CLI
+        run: cargo build --locked --manifest-path native/almi-core-rs/Cargo.toml -p almi-cli
+      - name: Build Python wheel
+        run: maturin build --locked --release --manifest-path native/almi-core-rs/crates/almi-python/Cargo.toml --out native/almi-core-rs/dist/python
+      - name: Install Python wheel
+        run: python -m pip install native/almi-core-rs/dist/python/*.whl
+      - name: Run Python-Rust interoperability tests
+        env:
+          ALMI_NATIVE_CLI: ${{ github.workspace }}/native/almi-core-rs/target/debug/almi
+        run: >-
+          python -m pytest -q
+          tests/test_native_interop.py
+          tests/test_native_cst_interop.py
+          native/almi-core-rs/crates/almi-python/python-tests/test_bindings.py
+
+  c-abi-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: native/almi-core-rs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build C ABI library
+        run: cargo build --locked -p almi-ffi
+      - name: Compile external C caller
+        run: cc tests/c_abi_smoke.c -I include -L target/debug -Wl,-rpath,$PWD/target/debug -lalmi_ffi -o target/c-abi-smoke
+      - name: Run external C caller
+        run: ./target/c-abi-smoke
+
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: native/almi-core-rs/fuzz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+      - name: Fuzz hostile cosmos bundle bytes
+        run: cargo fuzz run cosmos_bundle -- -runs=256 -max_len=65536
+
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e .
+      - name: Build release benchmark harness
+        run: cargo build --locked --release --manifest-path native/almi-core-rs/Cargo.toml -p almi-cli --bin almi_bench
+      - name: Run descriptive Python versus Rust benchmark
+        run: >-
+          python scripts/benchmark_native.py
+          --rust-bench native/almi-core-rs/target/release/almi_bench
+          --iterations 15
+          --output native/almi-core-rs/dist/benchmarks/ci.json
+      - name: Upload benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: almi-native-benchmarks-${{ github.sha }}
+          path: native/almi-core-rs/dist/benchmarks/ci.json
+          if-no-files-found: error
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SBOM output directory
+        run: mkdir -p native/almi-core-rs/dist
+      - name: Generate SPDX JSON SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: native/almi-core-rs
+          format: spdx-json
+          output-file: native/almi-core-rs/dist/sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: almi-native-sbom-${{ github.sha }}
+          path: native/almi-core-rs/dist/sbom.spdx.json
+          if-no-files-found: error
+
+  portable-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: native/almi-core-rs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build portable release surfaces
+        run: cargo build --locked --release -p almi-cli -p almi-ffi
+      - name: Test portable Rust crates
+        run: cargo test --locked --workspace --exclude almi-python
+
+  windows-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build through user-facing BAT
+        shell: cmd
+        run: BUILD_WINDOWS.bat -WithPython
+      - name: Test through user-facing BAT
+        shell: cmd
+        run: TEST_WINDOWS.bat
+      - name: Install through user-facing BAT
+        shell: cmd
+        run: INSTALL_WINDOWS.bat -WithPython
+      - name: Verify installed continuity path
+        shell: cmd
+        run: VERIFY_WINDOWS.bat
+      - name: Run installed executable
+        shell: cmd
+        run: RUN_WINDOWS.bat version
+      - name: Package portable Windows distribution
+        shell: powershell
+        run: |
+          $distRoot = Join-Path $env:GITHUB_WORKSPACE 'dist\windows'
+          $portable = Join-Path $distRoot 'A-LMI'
+          $portableScripts = Join-Path $portable 'scripts\windows'
+          New-Item -ItemType Directory -Force -Path $portableScripts | Out-Null
+          Copy-Item 'native\almi-core-rs\target\release\almi.exe' $portable -Force
+          Copy-Item 'RUN_WINDOWS.bat','VERIFY_WINDOWS.bat' $portable -Force
+          Copy-Item 'scripts\windows\common.ps1','scripts\windows\run.ps1','scripts\windows\verify.ps1' $portableScripts -Force
+          Copy-Item 'README.md' (Join-Path $portable 'README.txt') -Force
+          if (Test-Path 'LICENSE') { Copy-Item 'LICENSE' $portable -Force }
+          Copy-Item 'native\almi-core-rs\include\almi.h' $portable -Force
+          $zip = Join-Path $distRoot 'A-LMI-native-0.1.0-windows-x86_64.zip'
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path (Join-Path $portable '*') -DestinationPath $zip
+          $checksumTargets = @($zip, (Join-Path $portable 'almi.exe'))
+          $checksumTargets += @(Get-ChildItem 'native\almi-core-rs\dist\python\*.whl' -ErrorAction SilentlyContinue | ForEach-Object FullName)
+          $lines = foreach ($file in $checksumTargets) {
+            $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $([IO.Path]::GetFileName($file))"
+          }
+          $lines | Set-Content -LiteralPath (Join-Path $distRoot 'checksums.txt') -Encoding ASCII
+      - name: Upload Windows release candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: almi-native-windows-${{ github.sha }}
+          path: |
+            dist/windows/**
+            native/almi-core-rs/dist/python/*.whl
+            native/almi-core-rs/include/almi.h
+          if-no-files-found: error
+      - name: Uninstall through user-facing BAT
+        shell: cmd
+        run: UNINSTALL_WINDOWS.bat
