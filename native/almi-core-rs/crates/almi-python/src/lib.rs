@@ -37,6 +37,11 @@ fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
+// PyO3 0.22.6's #[pyfunction] wrapper emits a same-type PyErr conversion which
+// Rust 1.98 Clippy reports as `useless_conversion`. Keep the compatibility
+// allowance local to the generated wrappers rather than suppressing the lint
+// for the crate or workspace.
+#[allow(clippy::useless_conversion)]
 #[pyfunction]
 fn init_workspace(py: Python<'_>, path: String, name: String, seed: i64) -> PyResult<PyObject> {
     let result = almi_continuity::initialize_workspace(PathBuf::from(path), &name, seed)
@@ -49,6 +54,7 @@ fn init_workspace(py: Python<'_>, path: String, name: String, seed: i64) -> PyRe
     )
 }
 
+#[allow(clippy::useless_conversion)]
 #[pyfunction]
 fn inspect_workspace(py: Python<'_>, path: String) -> PyResult<PyObject> {
     let result = almi_continuity::inspect_workspace(PathBuf::from(path)).map_err(py_error)?;
@@ -60,6 +66,7 @@ fn inspect_workspace(py: Python<'_>, path: String) -> PyResult<PyObject> {
     )
 }
 
+#[allow(clippy::useless_conversion)]
 #[pyfunction]
 fn export_cosmos(py: Python<'_>, workspace: String, bundle: String) -> PyResult<PyObject> {
     let result = almi_cosmos::export_bundle(PathBuf::from(workspace), PathBuf::from(bundle))
@@ -72,6 +79,7 @@ fn export_cosmos(py: Python<'_>, workspace: String, bundle: String) -> PyResult<
     )
 }
 
+#[allow(clippy::useless_conversion)]
 #[pyfunction]
 fn verify_cosmos(py: Python<'_>, bundle: String) -> PyResult<PyObject> {
     let result = almi_cosmos::verify_bundle(PathBuf::from(bundle)).map_err(py_error)?;
@@ -83,6 +91,7 @@ fn verify_cosmos(py: Python<'_>, bundle: String) -> PyResult<PyObject> {
     )
 }
 
+#[allow(clippy::useless_conversion)]
 #[pyfunction]
 fn inspect_cosmos(py: Python<'_>, bundle: String) -> PyResult<PyObject> {
     let result = almi_cosmos::inspect_bundle(PathBuf::from(bundle)).map_err(py_error)?;
@@ -94,6 +103,7 @@ fn inspect_cosmos(py: Python<'_>, bundle: String) -> PyResult<PyObject> {
     )
 }
 
+#[allow(clippy::useless_conversion)]
 #[pyfunction]
 fn import_cosmos(py: Python<'_>, bundle: String, workspace: String) -> PyResult<PyObject> {
     let result = almi_cosmos::import_bundle(PathBuf::from(bundle), PathBuf::from(workspace))
