@@ -1,0 +1,20 @@
+[package]
+name = "almi-native-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+tempfile = "3.27"
+almi-cosmos = { path = "../crates/almi-cosmos" }
+
+[[bin]]
+name = "cosmos_bundle"
+path = "fuzz_targets/cosmos_bundle.rs"
+test = false
+doc = false
+bench = false
