@@ -130,12 +130,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare SBOM output directory
+        run: mkdir -p native/almi-core-rs/dist
       - name: Generate SPDX JSON SBOM
         uses: anchore/sbom-action@v0
         with:
           path: native/almi-core-rs
           format: spdx-json
           output-file: native/almi-core-rs/dist/sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
         with:
