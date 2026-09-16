@@ -3,15 +3,18 @@
 //! software state variables and this crate makes no new-physics claim.
 
 use almi_core::{AlmiError, CSTStateEnvelope, CstParameters, CstSnapshot, Result, CST_STATE_VERSION};
+use serde::Deserialize;
 use std::f64::consts::TAU;
 use std::fs;
 use std::path::Path;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct CstEvent {
     pub dt: f64,
     pub omega: f64,
+    #[serde(default)]
     pub audio_energy: f64,
+    #[serde(default)]
     pub neighbor_phases: Vec<f64>,
 }
 
