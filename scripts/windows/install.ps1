@@ -40,9 +40,16 @@ if ($installPython) {
     Write-Step 'Building and installing Python bindings into the current user Python environment.'
     Invoke-External $python @('--version')
     Invoke-External $python @('-m', 'pip', 'install', '--user', 'maturin>=1.7,<2.0')
+    $scriptsDir = (& $python -c "import sysconfig; print(sysconfig.get_path('scripts', scheme='nt_user'))" | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or -not $scriptsDir) { throw 'Unable to resolve the Python user Scripts directory.' }
+    $maturin = Join-Path $scriptsDir 'maturin.exe'
+    if (-not (Test-Path -LiteralPath $maturin)) {
+        $maturin = Get-CommandPath 'maturin'
+    }
+    if (-not $maturin) { throw 'maturin was installed but its executable could not be resolved.' }
     $wheelDir = Join-Path $script:NativeRoot 'dist\python'
     Ensure-Directory $wheelDir
-    Invoke-External $python @('-m', 'maturin', 'build', '--release', '--manifest-path', (Join-Path $script:NativeRoot 'crates\almi-python\Cargo.toml'), '--out', $wheelDir)
+    Invoke-External $maturin @('build', '--release', '--manifest-path', (Join-Path $script:NativeRoot 'crates\almi-python\Cargo.toml'), '--out', $wheelDir)
     $wheel = Get-ChildItem -LiteralPath $wheelDir -Filter '*.whl' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if ($null -eq $wheel) { throw 'Python binding build completed without producing a wheel.' }
     Invoke-External $python @('-m', 'pip', 'install', '--user', '--force-reinstall', $wheel.FullName)
