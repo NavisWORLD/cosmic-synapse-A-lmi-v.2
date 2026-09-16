@@ -29,7 +29,7 @@ def test_python_export_rust_verify_and_import(tmp_path: Path):
     assert verified["valid"] is True
     restored = tmp_path / "rust-restored"
     _native("import", str(first), str(restored))
-    assert inspect_workspace(restored)["system"]["name"] == "Python Oracle"
+    assert inspect_workspace(restored)["name"] == "Python Oracle"
 
 
 def test_rust_export_python_verify_and_import(tmp_path: Path):
@@ -46,7 +46,7 @@ def test_rust_export_python_verify_and_import(tmp_path: Path):
     restored = tmp_path / "python-restored"
     import_bundle(first, restored)
     summary = inspect_workspace(restored)
-    assert summary["system"]["name"] == "Rust Native"
+    assert summary["name"] == "Rust Native"
     authority = summary["authority"]
     assert authority["tool_authority"] == []
     assert authority["network_authority"] == []
