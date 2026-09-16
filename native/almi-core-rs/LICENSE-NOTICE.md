@@ -1,7 +1,7 @@
 # A-LMI Native Core License Notice
 
-The Rust workspace currently declares `MIT` in its Cargo workspace package metadata.
+The native Rust workspace follows the repository root license and declares `GPL-3.0-only` in its Cargo package metadata. See the repository root [LICENSE](../../LICENSE) for the governing text.
 
-This notice does not replace repository-level copyright, attribution, commercial-rights, IP, or historical notices. Consumers should review the repository root licensing and rights documents together with this native workspace before redistribution.
+This notice does not replace repository-level copyright, attribution, commercial-rights, IP, or historical notices. Preserved or nested components may carry their own license metadata and remain governed by those terms where applicable.
 
-Third-party Rust and Python dependencies retain their own licenses. Release tooling should preserve dependency license information where available.
+Third-party Rust and Python dependencies retain their own licenses. Release SBOM/dependency evidence is intended to make those dependencies inspectable; it does not relicense them.
