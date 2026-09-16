@@ -16,11 +16,13 @@ if ($python) {
         Ensure-Directory $tempRoot
         Invoke-External $python @('-m', 'venv', $venv)
         $venvPython = Join-Path $venv 'Scripts\python.exe'
+        $maturin = Join-Path $venv 'Scripts\maturin.exe'
         if (-not (Test-Path -LiteralPath $venvPython)) { throw 'Temporary Python virtual environment was not created.' }
         Invoke-External $venvPython @('-m', 'pip', 'install', '--upgrade', 'pip')
         Invoke-External $venvPython @('-m', 'pip', 'install', '-e', $script:RepoRoot, 'pytest', 'maturin>=1.7,<2.0')
+        if (-not (Test-Path -LiteralPath $maturin)) { throw 'maturin executable was not installed into the temporary test environment.' }
         Ensure-Directory $wheelDir
-        Invoke-External $venvPython @('-m', 'maturin', 'build', '--release', '--manifest-path', (Join-Path $script:NativeRoot 'crates\almi-python\Cargo.toml'), '--out', $wheelDir)
+        Invoke-External $maturin @('build', '--release', '--manifest-path', (Join-Path $script:NativeRoot 'crates\almi-python\Cargo.toml'), '--out', $wheelDir)
         $wheel = Get-ChildItem -LiteralPath $wheelDir -Filter '*.whl' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if ($null -eq $wheel) { throw 'Native Python wheel was not produced.' }
         Invoke-External $venvPython @('-m', 'pip', 'install', $wheel.FullName)
