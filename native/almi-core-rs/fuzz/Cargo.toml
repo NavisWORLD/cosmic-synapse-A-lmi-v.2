@@ -18,3 +18,5 @@ path = "fuzz_targets/cosmos_bundle.rs"
 test = false
 doc = false
 bench = false
+
+[workspace]
