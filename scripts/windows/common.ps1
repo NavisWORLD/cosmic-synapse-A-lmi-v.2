@@ -47,7 +47,7 @@ function Invoke-External([string]$FilePath, [string[]]$Arguments) {
     Write-Step ("Running: {0} {1}" -f $FilePath, ($Arguments -join ' '))
     & $FilePath @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "Command failed with exit code $LASTEXITCODE: $FilePath"
+        throw "Command failed with exit code ${LASTEXITCODE}: $FilePath"
     }
 }
 
@@ -72,7 +72,7 @@ function Get-DebugBinary {
 function Read-AlmiJson([string]$Binary, [string[]]$Arguments) {
     $output = & $Binary '--json' @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "A-LMI command failed with exit code $LASTEXITCODE: $($Arguments -join ' ')"
+        throw "A-LMI command failed with exit code ${LASTEXITCODE}: $($Arguments -join ' ')"
     }
     return ($output | Out-String | ConvertFrom-Json)
 }
