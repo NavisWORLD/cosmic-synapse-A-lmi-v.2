@@ -21,3 +21,24 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Run native contract tests
         run: cargo test --workspace
+
+  python-interop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference and binding tools
+        run: python -m pip install -e . pytest 'maturin>=1.7,<2.0'
+      - name: Build native CLI
+        run: cargo build --manifest-path native/almi-core-rs/Cargo.toml -p almi-cli
+      - name: Build Python wheel
+        run: maturin build --release --manifest-path native/almi-core-rs/crates/almi-python/Cargo.toml --out native/almi-core-rs/dist/python
+      - name: Install Python wheel
+        run: python -m pip install native/almi-core-rs/dist/python/*.whl
+      - name: Run Python-Rust interoperability tests
+        env:
+          ALMI_NATIVE_CLI: ${{ github.workspace }}/native/almi-core-rs/target/debug/almi
+        run: python -m pytest -q tests/test_native_interop.py native/almi-core-rs/crates/almi-python/python-tests/test_bindings.py
