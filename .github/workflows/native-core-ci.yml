@@ -1,0 +1,23 @@
+name: Native Core CI
+
+on:
+  push:
+    branches:
+      - native/almi-core-rust-001
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-contracts:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: native/almi-core-rs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run native contract tests
+        run: cargo test --workspace
