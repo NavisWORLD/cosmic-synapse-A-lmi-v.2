@@ -13,8 +13,10 @@ fn abi_exposes_version_and_workspace_validation_without_unwinding() {
     let ctx = almi_ffi::almi_context_new();
     assert!(!ctx.is_null());
     let path = CString::new(dir.path().join("story").to_string_lossy().as_bytes()).unwrap();
-    assert_eq!(almi_ffi::almi_workspace_validate(ctx, path.as_ptr()), 0);
-    almi_ffi::almi_context_free(ctx);
+    unsafe {
+        assert_eq!(almi_ffi::almi_workspace_validate(ctx, path.as_ptr()), 0);
+        almi_ffi::almi_context_free(ctx);
+    }
 }
 
 #[test]
@@ -27,13 +29,15 @@ fn cosmos_metadata_uses_owned_string_with_explicit_free() {
     let ctx = almi_ffi::almi_context_new();
     let path = CString::new(bundle.to_string_lossy().as_bytes()).unwrap();
     let mut out = std::ptr::null_mut();
-    assert_eq!(
-        almi_ffi::almi_cosmos_verify_json(ctx, path.as_ptr(), &mut out),
-        0
-    );
-    assert!(!out.is_null());
-    let json = unsafe { CStr::from_ptr(out) }.to_str().unwrap();
-    assert!(json.contains("\"valid\":true"));
-    almi_ffi::almi_string_free(out);
-    almi_ffi::almi_context_free(ctx);
+    unsafe {
+        assert_eq!(
+            almi_ffi::almi_cosmos_verify_json(ctx, path.as_ptr(), &mut out),
+            0
+        );
+        assert!(!out.is_null());
+        let json = CStr::from_ptr(out).to_str().unwrap();
+        assert!(json.contains("\"valid\":true"));
+        almi_ffi::almi_string_free(out);
+        almi_ffi::almi_context_free(ctx);
+    }
 }
