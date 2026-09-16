@@ -1,0 +1,18 @@
+[package]
+name = "almi-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["rlib", "cdylib", "staticlib"]
+
+[dependencies]
+almi-core.workspace = true
+almi-continuity.workspace = true
+almi-cosmos.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
