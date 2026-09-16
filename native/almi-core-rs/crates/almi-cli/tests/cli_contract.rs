@@ -2,19 +2,30 @@ use serde_json::Value;
 use std::process::Command;
 
 fn run(args: &[&str]) -> std::process::Output {
-    Command::new(env!("CARGO_BIN_EXE_almi")).args(args).output().unwrap()
+    Command::new(env!("CARGO_BIN_EXE_almi"))
+        .args(args)
+        .output()
+        .unwrap()
 }
 
 #[test]
 fn version_and_doctor_are_machine_readable() {
     let version = run(&["--json", "version"]);
-    assert!(version.status.success(), "{}", String::from_utf8_lossy(&version.stderr));
+    assert!(
+        version.status.success(),
+        "{}",
+        String::from_utf8_lossy(&version.stderr)
+    );
     let parsed: Value = serde_json::from_slice(&version.stdout).unwrap();
     assert_eq!(parsed["abi_version"], 1);
     assert!(parsed["version"].as_str().is_some());
 
     let doctor = run(&["--json", "doctor"]);
-    assert!(doctor.status.success(), "{}", String::from_utf8_lossy(&doctor.stderr));
+    assert!(
+        doctor.status.success(),
+        "{}",
+        String::from_utf8_lossy(&doctor.stderr)
+    );
     let parsed: Value = serde_json::from_slice(&doctor.stdout).unwrap();
     assert_eq!(parsed["authority_default"], "deny");
 }
@@ -38,7 +49,11 @@ fn continuity_cli_round_trip_and_memory_verify_work() {
         vec!["--json", "import", b, restored_s],
     ] {
         let output = run(&args);
-        assert!(output.status.success(), "args={args:?}\n{}", String::from_utf8_lossy(&output.stderr));
+        assert!(
+            output.status.success(),
+            "args={args:?}\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         assert!(serde_json::from_slice::<Value>(&output.stdout).is_ok());
     }
 }

@@ -94,9 +94,15 @@ pub struct SystemIdentity {
 
 impl SystemIdentity {
     pub fn validate(&self) -> Result<()> {
-        validate_version("workspace format", self.format_version, WORKSPACE_FORMAT_VERSION)?;
+        validate_version(
+            "workspace format",
+            self.format_version,
+            WORKSPACE_FORMAT_VERSION,
+        )?;
         if self.name.trim().is_empty() {
-            return Err(AlmiError::InvalidInput("system name must not be empty".into()));
+            return Err(AlmiError::InvalidInput(
+                "system name must not be empty".into(),
+            ));
         }
         if self.created_at.trim().is_empty() {
             return Err(AlmiError::Integrity("created_at must not be empty".into()));
@@ -274,7 +280,10 @@ pub struct RoutingState {
 
 impl Default for RoutingState {
     fn default() -> Self {
-        Self { version: COMPONENT_SCHEMA_VERSION, routes: BTreeMap::new() }
+        Self {
+            version: COMPONENT_SCHEMA_VERSION,
+            routes: BTreeMap::new(),
+        }
     }
 }
 
@@ -365,7 +374,11 @@ pub struct ContinuityManifest {
 
 impl ContinuityManifest {
     pub fn validate_versions(&self) -> Result<()> {
-        validate_version("bundle format", self.bundle_format_version, BUNDLE_FORMAT_VERSION)?;
+        validate_version(
+            "bundle format",
+            self.bundle_format_version,
+            BUNDLE_FORMAT_VERSION,
+        )?;
         validate_version(
             "workspace format in bundle",
             self.workspace_format_version,

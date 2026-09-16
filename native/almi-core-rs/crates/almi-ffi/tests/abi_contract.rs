@@ -27,7 +27,10 @@ fn cosmos_metadata_uses_owned_string_with_explicit_free() {
     let ctx = almi_ffi::almi_context_new();
     let path = CString::new(bundle.to_string_lossy().as_bytes()).unwrap();
     let mut out = std::ptr::null_mut();
-    assert_eq!(almi_ffi::almi_cosmos_verify_json(ctx, path.as_ptr(), &mut out), 0);
+    assert_eq!(
+        almi_ffi::almi_cosmos_verify_json(ctx, path.as_ptr(), &mut out),
+        0
+    );
     assert!(!out.is_null());
     let json = unsafe { CStr::from_ptr(out) }.to_str().unwrap();
     assert!(json.contains("\"valid\":true"));

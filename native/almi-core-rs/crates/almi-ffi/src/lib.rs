@@ -19,10 +19,14 @@ pub const ALMI_ERROR_PANIC: i32 = 8;
 pub const ALMI_ERROR_INTERNAL: i32 = 9;
 
 #[repr(C)]
-pub struct AlmiContext { last_error: Mutex<Option<CString>> }
+pub struct AlmiContext {
+    last_error: Mutex<Option<CString>>,
+}
 
 #[no_mangle]
-pub extern "C" fn almi_abi_version() -> u32 { ABI_VERSION }
+pub extern "C" fn almi_abi_version() -> u32 {
+    ABI_VERSION
+}
 
 #[no_mangle]
 pub extern "C" fn almi_version() -> *const c_char {
@@ -31,22 +35,36 @@ pub extern "C" fn almi_version() -> *const c_char {
 
 #[no_mangle]
 pub extern "C" fn almi_context_new() -> *mut AlmiContext {
-    catch_unwind(|| Box::into_raw(Box::new(AlmiContext { last_error: Mutex::new(None) }))).unwrap_or(ptr::null_mut())
+    catch_unwind(|| {
+        Box::into_raw(Box::new(AlmiContext {
+            last_error: Mutex::new(None),
+        }))
+    })
+    .unwrap_or(ptr::null_mut())
 }
 
 #[no_mangle]
 pub extern "C" fn almi_context_free(context: *mut AlmiContext) {
-    if context.is_null() { return; }
-    let _ = catch_unwind(AssertUnwindSafe(|| unsafe { drop(Box::from_raw(context)); }));
+    if context.is_null() {
+        return;
+    }
+    let _ = catch_unwind(AssertUnwindSafe(|| unsafe {
+        drop(Box::from_raw(context));
+    }));
 }
 
 #[no_mangle]
 pub extern "C" fn almi_last_error(context: *const AlmiContext) -> *const c_char {
-    if context.is_null() { return ptr::null(); }
+    if context.is_null() {
+        return ptr::null();
+    }
     catch_unwind(AssertUnwindSafe(|| unsafe {
         let guard = (*context).last_error.lock().ok()?;
         guard.as_ref().map(|value| value.as_ptr())
-    })).ok().flatten().unwrap_or(ptr::null())
+    }))
+    .ok()
+    .flatten()
+    .unwrap_or(ptr::null())
 }
 
 #[no_mangle]
@@ -58,48 +76,86 @@ pub extern "C" fn almi_workspace_validate(context: *mut AlmiContext, path: *cons
 }
 
 #[no_mangle]
-pub extern "C" fn almi_cosmos_verify_json(context: *mut AlmiContext, path: *const c_char, out_json: *mut *mut c_char) -> i32 {
+pub extern "C" fn almi_cosmos_verify_json(
+    context: *mut AlmiContext,
+    path: *const c_char,
+    out_json: *mut *mut c_char,
+) -> i32 {
     json_call(context, path, out_json, almi_cosmos::verify_bundle)
 }
 
 #[no_mangle]
-pub extern "C" fn almi_cosmos_inspect_json(context: *mut AlmiContext, path: *const c_char, out_json: *mut *mut c_char) -> i32 {
+pub extern "C" fn almi_cosmos_inspect_json(
+    context: *mut AlmiContext,
+    path: *const c_char,
+    out_json: *mut *mut c_char,
+) -> i32 {
     json_call(context, path, out_json, almi_cosmos::inspect_bundle)
 }
 
 #[no_mangle]
 pub extern "C" fn almi_string_free(value: *mut c_char) {
-    if value.is_null() { return; }
-    let _ = catch_unwind(AssertUnwindSafe(|| unsafe { drop(CString::from_raw(value)); }));
+    if value.is_null() {
+        return;
+    }
+    let _ = catch_unwind(AssertUnwindSafe(|| unsafe {
+        drop(CString::from_raw(value));
+    }));
 }
 
-fn json_call<F>(context: *mut AlmiContext, path: *const c_char, out_json: *mut *mut c_char, operation: F) -> i32
-where F: FnOnce(PathBuf) -> Result<almi_core::CosmosBundleMetadata, AlmiError> {
-    if out_json.is_null() { return set_error(context, ALMI_ERROR_NULL, "out_json must not be null"); }
-    unsafe { *out_json = ptr::null_mut(); }
+fn json_call<F>(
+    context: *mut AlmiContext,
+    path: *const c_char,
+    out_json: *mut *mut c_char,
+    operation: F,
+) -> i32
+where
+    F: FnOnce(PathBuf) -> Result<almi_core::CosmosBundleMetadata, AlmiError>,
+{
+    if out_json.is_null() {
+        return set_error(context, ALMI_ERROR_NULL, "out_json must not be null");
+    }
+    unsafe {
+        *out_json = ptr::null_mut();
+    }
     ffi_call(context, || {
         let metadata = operation(c_path(path)?)?;
         let json = serde_json::to_string(&metadata)?;
-        let string = CString::new(json).map_err(|_| AlmiError::Integrity("metadata contained an interior NUL".into()))?;
-        unsafe { *out_json = string.into_raw(); }
+        let string = CString::new(json)
+            .map_err(|_| AlmiError::Integrity("metadata contained an interior NUL".into()))?;
+        unsafe {
+            *out_json = string.into_raw();
+        }
         Ok(())
     })
 }
 
 fn ffi_call(context: *mut AlmiContext, operation: impl FnOnce() -> Result<(), AlmiError>) -> i32 {
-    if context.is_null() { return ALMI_ERROR_NULL; }
+    if context.is_null() {
+        return ALMI_ERROR_NULL;
+    }
     clear_error(context);
     match catch_unwind(AssertUnwindSafe(operation)) {
         Ok(Ok(())) => ALMI_OK,
         Ok(Err(error)) => map_error(context, &error),
-        Err(_) => set_error(context, ALMI_ERROR_PANIC, "panic contained at C ABI boundary"),
+        Err(_) => set_error(
+            context,
+            ALMI_ERROR_PANIC,
+            "panic contained at C ABI boundary",
+        ),
     }
 }
 
 fn c_path(path: *const c_char) -> Result<PathBuf, AlmiError> {
-    if path.is_null() { return Err(AlmiError::InvalidInput("path must not be null".into())); }
-    let text = unsafe { CStr::from_ptr(path) }.to_str().map_err(|_| AlmiError::InvalidInput("path must be valid UTF-8".into()))?;
-    if text.is_empty() { return Err(AlmiError::InvalidInput("path must not be empty".into())); }
+    if path.is_null() {
+        return Err(AlmiError::InvalidInput("path must not be null".into()));
+    }
+    let text = unsafe { CStr::from_ptr(path) }
+        .to_str()
+        .map_err(|_| AlmiError::InvalidInput("path must be valid UTF-8".into()))?;
+    if text.is_empty() {
+        return Err(AlmiError::InvalidInput("path must not be empty".into()));
+    }
     Ok(PathBuf::from(text))
 }
 
@@ -119,7 +175,9 @@ fn set_error(context: *mut AlmiContext, code: i32, message: &str) -> i32 {
     if !context.is_null() {
         let safe = message.replace('\0', "�");
         if let Ok(value) = CString::new(safe) {
-            if let Ok(mut slot) = unsafe { (*context).last_error.lock() } { *slot = Some(value); }
+            if let Ok(mut slot) = unsafe { (*context).last_error.lock() } {
+                *slot = Some(value);
+            }
         }
     }
     code
@@ -127,6 +185,8 @@ fn set_error(context: *mut AlmiContext, code: i32, message: &str) -> i32 {
 
 fn clear_error(context: *mut AlmiContext) {
     if !context.is_null() {
-        if let Ok(mut slot) = unsafe { (*context).last_error.lock() } { *slot = None; }
+        if let Ok(mut slot) = unsafe { (*context).last_error.lock() } {
+            *slot = None;
+        }
     }
 }

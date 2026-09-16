@@ -20,8 +20,9 @@ fn py_error(error: almi_core::AlmiError) -> PyErr {
 }
 
 fn json_value_to_python(py: Python<'_>, value: Value) -> PyResult<PyObject> {
-    let text = serde_json::to_string(&value)
-        .map_err(|error| PyRuntimeError::new_err(format!("failed to serialize native result: {error}")))?;
+    let text = serde_json::to_string(&value).map_err(|error| {
+        PyRuntimeError::new_err(format!("failed to serialize native result: {error}"))
+    })?;
     let json = PyModule::import_bound(py, "json")?;
     Ok(json.call_method1("loads", (text,))?.unbind())
 }
@@ -42,8 +43,9 @@ fn init_workspace(py: Python<'_>, path: String, name: String, seed: i64) -> PyRe
         .map_err(py_error)?;
     json_value_to_python(
         py,
-        serde_json::to_value(result)
-            .map_err(|error| PyRuntimeError::new_err(format!("failed to serialize workspace identity: {error}")))?,
+        serde_json::to_value(result).map_err(|error| {
+            PyRuntimeError::new_err(format!("failed to serialize workspace identity: {error}"))
+        })?,
     )
 }
 
@@ -52,8 +54,9 @@ fn inspect_workspace(py: Python<'_>, path: String) -> PyResult<PyObject> {
     let result = almi_continuity::inspect_workspace(PathBuf::from(path)).map_err(py_error)?;
     json_value_to_python(
         py,
-        serde_json::to_value(result)
-            .map_err(|error| PyRuntimeError::new_err(format!("failed to serialize workspace inspection: {error}")))?,
+        serde_json::to_value(result).map_err(|error| {
+            PyRuntimeError::new_err(format!("failed to serialize workspace inspection: {error}"))
+        })?,
     )
 }
 
@@ -63,8 +66,9 @@ fn export_cosmos(py: Python<'_>, workspace: String, bundle: String) -> PyResult<
         .map_err(py_error)?;
     json_value_to_python(
         py,
-        serde_json::to_value(result)
-            .map_err(|error| PyRuntimeError::new_err(format!("failed to serialize bundle metadata: {error}")))?,
+        serde_json::to_value(result).map_err(|error| {
+            PyRuntimeError::new_err(format!("failed to serialize bundle metadata: {error}"))
+        })?,
     )
 }
 
@@ -73,8 +77,9 @@ fn verify_cosmos(py: Python<'_>, bundle: String) -> PyResult<PyObject> {
     let result = almi_cosmos::verify_bundle(PathBuf::from(bundle)).map_err(py_error)?;
     json_value_to_python(
         py,
-        serde_json::to_value(result)
-            .map_err(|error| PyRuntimeError::new_err(format!("failed to serialize bundle verification: {error}")))?,
+        serde_json::to_value(result).map_err(|error| {
+            PyRuntimeError::new_err(format!("failed to serialize bundle verification: {error}"))
+        })?,
     )
 }
 
@@ -83,8 +88,9 @@ fn inspect_cosmos(py: Python<'_>, bundle: String) -> PyResult<PyObject> {
     let result = almi_cosmos::inspect_bundle(PathBuf::from(bundle)).map_err(py_error)?;
     json_value_to_python(
         py,
-        serde_json::to_value(result)
-            .map_err(|error| PyRuntimeError::new_err(format!("failed to serialize bundle inspection: {error}")))?,
+        serde_json::to_value(result).map_err(|error| {
+            PyRuntimeError::new_err(format!("failed to serialize bundle inspection: {error}"))
+        })?,
     )
 }
 
@@ -94,8 +100,9 @@ fn import_cosmos(py: Python<'_>, bundle: String, workspace: String) -> PyResult<
         .map_err(py_error)?;
     json_value_to_python(
         py,
-        serde_json::to_value(result)
-            .map_err(|error| PyRuntimeError::new_err(format!("failed to serialize bundle import result: {error}")))?,
+        serde_json::to_value(result).map_err(|error| {
+            PyRuntimeError::new_err(format!("failed to serialize bundle import result: {error}"))
+        })?,
     )
 }
 

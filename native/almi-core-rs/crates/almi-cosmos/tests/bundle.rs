@@ -15,7 +15,10 @@ fn rust_export_is_deterministic_and_round_trips() {
     assert!(verified.valid);
     let restored = dir.path().join("restored");
     import_bundle(&a, &restored).unwrap();
-    assert_eq!(inspect_workspace(&restored).unwrap().system.name, "Portable");
+    assert_eq!(
+        inspect_workspace(&restored).unwrap().system.name,
+        "Portable"
+    );
 }
 
 #[test]

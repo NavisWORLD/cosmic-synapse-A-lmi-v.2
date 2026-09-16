@@ -2,7 +2,9 @@
 //! `12D` is retained only as historical/project terminology; these are bounded
 //! software state variables and this crate makes no new-physics claim.
 
-use almi_core::{AlmiError, CSTStateEnvelope, CstParameters, CstSnapshot, Result, CST_STATE_VERSION};
+use almi_core::{
+    AlmiError, CSTStateEnvelope, CstParameters, CstSnapshot, Result, CST_STATE_VERSION,
+};
 use serde::Deserialize;
 use std::f64::consts::TAU;
 use std::fs;
@@ -21,16 +23,22 @@ pub struct CstEvent {
 impl CstEvent {
     pub fn validate(&self) -> Result<()> {
         if !self.dt.is_finite() || self.dt <= 0.0 {
-            return Err(AlmiError::InvalidInput("dt must be a positive finite value".into()));
+            return Err(AlmiError::InvalidInput(
+                "dt must be a positive finite value".into(),
+            ));
         }
         if !self.omega.is_finite() {
             return Err(AlmiError::InvalidInput("omega must be finite".into()));
         }
         if !self.audio_energy.is_finite() || self.audio_energy < 0.0 {
-            return Err(AlmiError::InvalidInput("audio_energy must be finite and non-negative".into()));
+            return Err(AlmiError::InvalidInput(
+                "audio_energy must be finite and non-negative".into(),
+            ));
         }
         if self.neighbor_phases.iter().any(|v| !v.is_finite()) {
-            return Err(AlmiError::InvalidInput("neighbor phases must be finite".into()));
+            return Err(AlmiError::InvalidInput(
+                "neighbor phases must be finite".into(),
+            ));
         }
         Ok(())
     }
@@ -113,16 +121,24 @@ impl NativeCstState {
         let coupling = if event.neighbor_phases.is_empty() {
             0.0
         } else {
-            event.neighbor_phases.iter().map(|phase| (phase - state.phase).sin()).sum::<f64>()
+            event
+                .neighbor_phases
+                .iter()
+                .map(|phase| (phase - state.phase).sin())
+                .sum::<f64>()
                 / event.neighbor_phases.len() as f64
         };
         let phase_velocity = params.natural_frequency + params.sync_strength * coupling;
         state.phase = (state.phase + event.dt * phase_velocity).rem_euclid(TAU);
         state.omega = effective_omega;
-        state.energy = 0.5 * (state.x12 * state.x12 + state.m12 * state.m12 + state.omega * state.omega)
+        state.energy = 0.5
+            * (state.x12 * state.x12 + state.m12 * state.m12 + state.omega * state.omega)
             + event.audio_energy;
         state.entropy = binary_state_entropy(state.x12);
-        state.step = state.step.checked_add(1).ok_or_else(|| AlmiError::Integrity("CST step counter overflow".into()))?;
+        state.step = state
+            .step
+            .checked_add(1)
+            .ok_or_else(|| AlmiError::Integrity("CST step counter overflow".into()))?;
         Ok(state.clone())
     }
 
@@ -135,34 +151,70 @@ impl NativeCstState {
     }
 
     pub fn equivalent(&self, other: &Self, tolerance: f64) -> bool {
-        if self.envelope.version != other.envelope.version || self.envelope.seed != other.envelope.seed {
+        if self.envelope.version != other.envelope.version
+            || self.envelope.seed != other.envelope.seed
+        {
             return false;
         }
         let a = &self.envelope.state;
         let b = &other.envelope.state;
         a.step == b.step
-            && [a.x12-b.x12,a.m12-b.m12,a.omega-b.omega,a.phase-b.phase,a.energy-b.energy,a.entropy-b.entropy]
-                .into_iter().all(|v| v.abs() <= tolerance)
+            && [
+                a.x12 - b.x12,
+                a.m12 - b.m12,
+                a.omega - b.omega,
+                a.phase - b.phase,
+                a.energy - b.energy,
+                a.entropy - b.entropy,
+            ]
+            .into_iter()
+            .all(|v| v.abs() <= tolerance)
     }
 }
 
 fn validate_parameters(params: &CstParameters) -> Result<()> {
-    let values = [params.k, params.gamma, params.alpha, params.sync_strength, params.audio_gain, params.natural_frequency];
+    let values = [
+        params.k,
+        params.gamma,
+        params.alpha,
+        params.sync_strength,
+        params.audio_gain,
+        params.natural_frequency,
+    ];
     if values.into_iter().any(|v| !v.is_finite()) {
         return Err(AlmiError::Integrity("CST parameters must be finite".into()));
     }
     if params.gamma < 0.0 || params.alpha < 0.0 {
-        return Err(AlmiError::Integrity("CST gamma and alpha must be non-negative".into()));
+        return Err(AlmiError::Integrity(
+            "CST gamma and alpha must be non-negative".into(),
+        ));
     }
     Ok(())
 }
 
 fn validate_snapshot(state: &CstSnapshot) -> Result<()> {
-    if [state.x12,state.m12,state.omega,state.phase,state.energy,state.entropy].into_iter().any(|v| !v.is_finite()) {
-        return Err(AlmiError::Integrity("CST state values must be finite".into()));
+    if [
+        state.x12,
+        state.m12,
+        state.omega,
+        state.phase,
+        state.energy,
+        state.entropy,
+    ]
+    .into_iter()
+    .any(|v| !v.is_finite())
+    {
+        return Err(AlmiError::Integrity(
+            "CST state values must be finite".into(),
+        ));
     }
-    if !(-1.0..=1.0).contains(&state.x12) || !(0.0..=1.0).contains(&state.entropy) || state.energy < 0.0 {
-        return Err(AlmiError::Integrity("CST state is outside canonical bounds".into()));
+    if !(-1.0..=1.0).contains(&state.x12)
+        || !(0.0..=1.0).contains(&state.entropy)
+        || state.energy < 0.0
+    {
+        return Err(AlmiError::Integrity(
+            "CST state is outside canonical bounds".into(),
+        ));
     }
     Ok(())
 }
