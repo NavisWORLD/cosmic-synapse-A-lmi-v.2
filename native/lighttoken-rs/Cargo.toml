@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/lighttoken-core",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "GPL-3.0-only"
+authors = ["Cory Shane Davis"]
+repository = "https://github.com/NavisWORLD/cosmic-synapse-A-lmi-v.2"
+
+[workspace.dependencies]
+almi-core = { path = "../almi-core-rs/crates/almi-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+sha2 = "0.10"
+proptest = "1"
