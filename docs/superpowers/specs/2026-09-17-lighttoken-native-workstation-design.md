@@ -69,7 +69,7 @@ This project includes:
 4. An optional C++ numerical acceleration library.
 5. Rust fallback implementations for every C++-accelerated operation.
 6. C++ ↔ Rust numerical parity tests.
-7. A Java 21+ desktop workstation using JNI to the Rust library.
+7. A Java desktop workstation using JNI to the Rust library.
 8. A functional token library/index that can ingest, inspect, compare, search, and persist LightToken records.
 9. A real A-LMI workspace and `.cosmos` read path for discovering LightToken-compatible records/artifact references where present.
 10. Explicit export/import of LightToken JSON collections independent of `.cosmos`.
@@ -114,7 +114,7 @@ Those are independent projects/gates.
                     C ABI/FFI  │           │ Rust fallback
                                v           v
                     ┌────────────────┐  ┌────────────────┐
-                    │ C++ SIMD/batch │  │ Rust numerical │
+                    │ C++ batch      │  │ Rust numerical │
                     │ similarity     │  │ implementation │
                     └────────────────┘  └────────────────┘
                                ^
@@ -134,7 +134,7 @@ Create a new native workspace area under:
 
 `native/lighttoken-rs/`
 
-Recommended crates:
+Crates:
 
 - `lighttoken-core`
   - types;
@@ -158,13 +158,13 @@ Recommended crates:
   - top-K search;
   - threshold search;
   - modality/source filters;
-  - persistence of derived index metadata where appropriate;
+  - persistence of derived index metadata;
   - no hidden network access.
 
 - `lighttoken-io`
   - JSON and JSONL token collections;
   - A-LMI workspace discovery adapters;
-  - `.cosmos` read integration by using existing verified A-LMI surfaces rather than reimplementing unsafe extraction;
+  - direct reuse of the existing verified Rust A-LMI continuity/`.cosmos` crates through path dependencies rather than a second archive parser;
   - raw artifact-reference resolution without silently claiming the referenced bytes exist.
 
 - `lighttoken-ffi`
@@ -173,7 +173,7 @@ Recommended crates:
   - explicit allocation/free APIs;
   - panic containment;
   - deterministic error codes/messages;
-  - JNI-facing entry points through a separate adapter layer or generated JNI symbols.
+  - JNI-facing entry points through a separate adapter layer.
 
 - `lighttoken-cli`
   - dependency-light command-line diagnostics and automation paths;
@@ -224,6 +224,8 @@ C++ lives under:
 
 `native/lighttoken-cpp/`
 
+Build system: **CMake** with portable scalar code required and platform-specific SIMD used only behind compile/runtime capability checks.
+
 Its API is deliberately small. Initial accelerated operations:
 
 - batch L2 norm;
@@ -253,9 +255,9 @@ Create:
 
 `apps/lighttoken-workstation-java/`
 
-Target Java: **JDK 21 LTS or newer compatible LTS**.
+Target Java: **JDK 21 LTS bytecode/runtime baseline**.
 
-Use a desktop UI toolkit that can be packaged reliably for Windows. Prefer JavaFX if its packaging/runtime distribution is proven in CI; otherwise use Swing for lower packaging complexity. The final choice is an implementation-plan decision constrained by reliable Windows packaging, not aesthetics.
+Desktop toolkit: **JavaFX**. The project uses a pinned OpenJFX version compatible with JDK 21, Gradle dependency locking, and standard `jlink`/`jpackage` packaging. Windows release artifacts include an application-specific Java runtime image, so an end user does not need to install/configure a system JDK.
 
 ### 8.1 Functional capabilities
 
@@ -278,13 +280,19 @@ The workstation must perform real operations:
 
 ### 8.2 Workstation library model
 
-The application maintains an explicit library database/index separate from source artifacts.
+The application uses **SQLite** for its application-owned, rebuildable local library/index.
 
-The first implementation should prefer a simple embedded local representation such as SQLite or a deterministic application-owned index file, selected during implementation planning. Source token JSON remains the source record; derived index data is rebuildable.
+Default Windows database location:
+
+`%LOCALAPPDATA%\A-LMI\LightToken\data\library.db`
+
+SQLite stores derived/searchable metadata such as token ID, source location, modality, selected metadata fields, index revision, and cache status. The original LightToken JSON/JSONL or A-LMI source remains authoritative. Embedding/spectrum payload caching must be rebuildable and version-tagged; the application must be able to discard/rebuild incompatible derived cache state without modifying source tokens.
+
+The Java application accesses SQLite through a pinned JDBC driver. Database migrations are explicit, versioned, transactional, and tested.
 
 The application must display when a raw artifact reference cannot be resolved instead of fabricating availability.
 
-### 8.3 “Resonance Explorer” capability
+### 8.3 Resonance Explorer capability
 
 The visually distinctive part of the workstation is a real comparison surface, not a scripted animation:
 
@@ -300,7 +308,7 @@ The UI must label these as embedding-spectrum similarity results, not physical r
 
 ## 9. JNI/native integration
 
-Java calls Rust through JNI.
+Java calls Rust through JNI. Rust is compiled as the native JNI library; C++ remains behind Rust and is never loaded directly by arbitrary Java application paths.
 
 JNI functions expose high-level operations, not raw Rust structs:
 
@@ -311,7 +319,7 @@ JNI functions expose high-level operations, not raw Rust structs:
 - compute spectrum;
 - compare token pair;
 - execute top-K query;
-- return compact result payloads;
+- return compact typed result payloads/primitive arrays;
 - obtain backend diagnostics;
 - release native buffers.
 
@@ -332,7 +340,7 @@ The workstation is a consumer of the A-LMI continuity model, not a replacement f
 
 Rules:
 
-1. `.cosmos` verification/import continues to use the already-verified A-LMI implementation/surfaces.
+1. `.cosmos` verification/import uses the already-verified A-LMI Rust crates/surfaces; this project does not create a second archive verifier.
 2. Opening a workspace is read-only by default.
 3. Search/index caches live under the workstation's own data directory.
 4. Explicit exports may write to user-selected locations.
@@ -344,9 +352,9 @@ A later multimodal project may create LightTokens from CLIP/WavLM output. This p
 
 ## 11. CLI
 
-The new native CLI should support automation independent of the desktop application.
+The new native CLI supports automation independent of the desktop application.
 
-Proposed commands:
+Commands:
 
 ```text
 lighttoken doctor
@@ -356,7 +364,7 @@ lighttoken validate <token.json>
 lighttoken spectrum <token.json>
 lighttoken compare <a.json> <b.json> --method <correlation|cosine|euclidean>
 lighttoken index build <input> <index-dir>
-lighttoken search <index-dir> <query.json> --top-k N --method ...
+lighttoken search <index-dir> <query.json> --top-k N --method <correlation|cosine|euclidean>
 lighttoken backend
 ```
 
@@ -376,7 +384,7 @@ Root wrappers:
 - `UPDATE_LIGHTTOKEN_WINDOWS.bat`
 - `UNINSTALL_LIGHTTOKEN_WINDOWS.bat`
 
-PowerShell implementation should live under:
+PowerShell implementation lives under:
 
 `scripts/windows/lighttoken/`
 
@@ -387,10 +395,10 @@ Default user-local installation root:
 Requirements:
 
 - no administrator requirement for normal install;
-- package the Java runtime/app so a normal Windows user is not required to configure a separate system-wide JDK when feasible;
-- package Rust native DLLs and optional C++ DLLs beside the application using a deterministic lookup strategy;
+- package the JavaFX application with a `jlink` runtime image and `jpackage` application image/installer artifact;
+- package Rust native DLLs and optional C++ DLLs beside the application using a deterministic application-owned lookup strategy;
 - fail with actionable diagnostics if architecture mismatch occurs;
-- support x86_64 first;
+- support Windows x86_64 first;
 - preserve user workstation libraries, indexes, exports, A-LMI workspaces, `.cosmos` bundles, and backups during update/uninstall;
 - uninstall removes only application-owned binaries/manifests by default;
 - explicit destructive data removal requires a separate confirmation path;
@@ -411,7 +419,9 @@ Required controls:
 - native error messages sanitized of secrets;
 - fuzz token JSON/deserialization and collection parsing;
 - property tests for serialization round trips and similarity invariants;
-- malformed historical payloads fail closed where compatibility is not explicitly supported.
+- malformed historical payloads fail closed where compatibility is not explicitly supported;
+- SQLite queries use prepared statements for user/source-derived values;
+- database migrations run transactionally and back up application-owned metadata before destructive schema transitions.
 
 This is software security engineering evidence, not a production security certification.
 
@@ -472,8 +482,9 @@ Tests include:
 - top-K known collection;
 - repeated context lifecycle;
 - invalid input → deterministic Java error;
-- application library/index persistence;
-- headless application-service tests independent of UI rendering.
+- SQLite schema/migration and library/index persistence;
+- headless application-service tests independent of JavaFX rendering;
+- JavaFX controller/view-model tests for selection, method switching, search-result display, and export actions without fake computed data.
 
 ### 14.5 End-to-end Windows
 
@@ -499,11 +510,11 @@ A successful native-core Windows run is not reused as proof for this new subsyst
 
 ## 15. CI and release evidence
 
-Add a dedicated workflow such as:
+Add a dedicated workflow:
 
 `.github/workflows/lighttoken-native-ci.yml`
 
-Expected jobs:
+Jobs:
 
 - Rust format/Clippy/audit;
 - Rust contract/property tests;
@@ -511,20 +522,20 @@ Expected jobs:
 - C++ build/parity on Linux/Windows/macOS where supported;
 - C ABI/JNI native smoke;
 - Java unit/application-service tests;
-- packaged Java desktop build;
+- JavaFX packaged desktop build;
 - Windows lifecycle smoke;
 - fuzz smoke;
 - descriptive benchmarks;
 - SBOM generation;
 - artifact checksums.
 
-Artifacts should include as applicable:
+Artifacts include as applicable:
 
 - Windows workstation package;
 - native CLI;
 - Rust native/JNI library;
 - C++ acceleration DLL/library;
-- Java application package;
+- packaged JavaFX application/runtime image;
 - SBOM;
 - checksums;
 - benchmark JSON;
@@ -541,6 +552,7 @@ Measure:
 - Rust scalar batch search;
 - Rust + C++ batch search;
 - JNI overhead for pair compare and batch query;
+- SQLite index load/query overhead separately from numerical scoring;
 - index load/search at multiple synthetic collection sizes.
 
 No threshold or language-superiority statement is required for acceptance. If C++ is not measurably useful on tested workloads, it remains optional and the result is reported honestly.
@@ -549,7 +561,7 @@ No threshold or language-superiority statement is required for acceptance. If C+
 
 Define a LightToken native schema/API version separate from the global A-LMI workspace version.
 
-Initial native version should read the existing active Python format and the explicitly supported historical magnitude/phase spectral form.
+Initial native version reads the existing active Python format and the explicitly supported historical magnitude/phase spectral form.
 
 Writers emit only the active canonical form:
 
@@ -557,7 +569,7 @@ Writers emit only the active canonical form:
 - 769 real/imag spectral bins when spectrum is present;
 - active spectral metadata labels.
 
-Future breaking changes require a version bump plus migration/compatibility tests. The workstation must show unsupported-version errors rather than silently coercing unknown data.
+Future breaking changes require a version bump plus migration/compatibility tests. The workstation shows unsupported-version errors rather than silently coercing unknown data.
 
 ## 18. Repository layout
 
@@ -570,7 +582,7 @@ native/
 └── lighttoken-cpp/                # optional acceleration kernels
 
 apps/
-└── lighttoken-workstation-java/   # functional Java desktop application
+└── lighttoken-workstation-java/   # functional JavaFX desktop application
 
 scripts/windows/lighttoken/        # Windows lifecycle implementation
 
@@ -591,8 +603,8 @@ Implementation is decomposed into independently reviewable phases:
 4. Rust index/search implementation.
 5. Stable C ABI/JNI contract.
 6. C++ optional acceleration plus fallback/self-test.
-7. Java headless application services.
-8. Functional desktop workstation UI.
+7. Java headless application services and SQLite library.
+8. Functional JavaFX workstation UI.
 9. A-LMI workspace/verified `.cosmos` read integration.
 10. Windows lifecycle/package.
 11. Fuzz/property/security hardening.
@@ -613,14 +625,16 @@ The subsystem is complete only when all of the following are evidenced on the fi
 4. C++ acceleration matches Rust within committed tolerances and can be disabled/fail over without correctness loss.
 5. Java loads real fixture/token files through JNI, performs real comparison/search, and presents actual results.
 6. The workstation can load a collection, select a token, run top-K/threshold search, visualize embedding/spectral data, switch similarity methods, and export results.
-7. A-LMI workspace/`.cosmos` integration uses safe existing verification surfaces and is read-only by default.
-8. Windows user-facing BAT flows build/test/install/verify/run/update/package/uninstall successfully in CI.
-9. Uninstall/update do not delete user data by default.
-10. Rust/C++/Java artifacts are retained with checksums.
-11. Fuzz/property/ABI/JNI lifecycle tests pass.
-12. SBOM and descriptive benchmark evidence are retained.
-13. No unsupported physical/consciousness/security/performance claims are introduced.
-14. A final evidence report records exact commits, CI runs, artifact IDs/hashes, toolchains, failures encountered, limitations, and unexecuted external gates.
+7. SQLite library/index state is rebuildable and does not replace authoritative source tokens.
+8. A-LMI workspace/`.cosmos` integration uses safe existing verification surfaces and is read-only by default.
+9. Windows user-facing BAT flows build/test/install/verify/run/update/package/uninstall successfully in CI.
+10. The packaged Windows application runs with its application-specific Java runtime and does not require a preconfigured system JDK.
+11. Uninstall/update do not delete user data by default.
+12. Rust/C++/Java artifacts are retained with checksums.
+13. Fuzz/property/ABI/JNI lifecycle tests pass.
+14. SBOM and descriptive benchmark evidence are retained.
+15. No unsupported physical/consciousness/security/performance claims are introduced.
+16. A final evidence report records exact commits, CI runs, artifact IDs/hashes, toolchains, failures encountered, limitations, and unexecuted external gates.
 
 ## 21. Follow-on repository sequence
 
@@ -639,8 +653,8 @@ Each receives its own design, implementation plan, branch, CI evidence, and fina
 
 The chosen design is a real multi-language product surface:
 
-`Java desktop → JNI → Rust canonical LightToken native engine → optional C++ acceleration`
+`JavaFX desktop → JNI → Rust canonical LightToken native engine → optional C++ acceleration`
 
-with Python retained as the active compatibility oracle and Windows treated as a first-class user platform.
+with Python retained as the active compatibility oracle, SQLite used only for rebuildable workstation index/cache state, and Windows treated as a first-class user platform.
 
 The distinctive visual “Resonance Explorer” is therefore not a mock demo. It is the human-facing surface of the actual LightToken query engine and must display only results computed from loaded token data through the same native APIs used by the CLI/tests.
