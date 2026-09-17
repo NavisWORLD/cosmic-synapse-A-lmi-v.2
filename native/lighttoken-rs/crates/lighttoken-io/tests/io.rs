@@ -23,7 +23,7 @@ fn fixture(name: &str) -> PathBuf {
 
 #[test]
 fn loads_single_python_token_file() {
-    let token = load_token_file(&fixture("active_random.json")).unwrap();
+    let token = load_token_file(fixture("active_random.json")).unwrap();
     assert_eq!(token.token_id, "00000000-0000-0000-0000-000000000005");
 }
 
