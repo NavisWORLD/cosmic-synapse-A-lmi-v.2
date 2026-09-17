@@ -14,12 +14,8 @@ fn repo_root() -> PathBuf {
 }
 
 fn fixture(name: &str) -> Vec<u8> {
-    fs::read(
-        repo_root()
-            .join("tests/fixtures/lighttoken")
-            .join(name),
-    )
-    .expect("generated LightToken fixture")
+    fs::read(repo_root().join("tests/fixtures/lighttoken").join(name))
+        .expect("generated LightToken fixture")
 }
 
 #[test]
@@ -48,7 +44,10 @@ fn parses_supported_historical_magnitude_phase_fixture() {
 fn rejects_incomplete_active_spectral_payload() {
     let mut value: serde_json::Value =
         serde_json::from_slice(&fixture("active_random.json")).unwrap();
-    value.as_object_mut().unwrap().remove("spectral_signature_imag");
+    value
+        .as_object_mut()
+        .unwrap()
+        .remove("spectral_signature_imag");
     let encoded = serde_json::to_vec(&value).unwrap();
     let error = from_json_bytes(&encoded).unwrap_err().to_string();
     assert!(error.contains("spectral"));
