@@ -164,9 +164,7 @@ pub fn similarity(left: &[f32], right: &[f32], method: SimilarityMethod) -> Resu
             let numerator = left
                 .iter()
                 .zip(right.iter())
-                .map(|(&left_value, &right_value)| {
-                    f64::from(left_value) * f64::from(right_value)
-                })
+                .map(|(&left_value, &right_value)| f64::from(left_value) * f64::from(right_value))
                 .sum::<f64>();
             let denominator = vector_norm(left) * vector_norm(right);
             if denominator == 0.0 {
