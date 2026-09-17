@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 
 use almi_continuity::initialize_workspace;
 use almi_cosmos::export_bundle;
-use lighttoken_io::{discover_almi_workspace, import_verified_cosmos, load_collection, load_token_file};
+use lighttoken_io::{
+    discover_almi_workspace, import_verified_cosmos, load_collection, load_token_file,
+};
 use tempfile::tempdir;
 
 fn repo_root() -> PathBuf {
