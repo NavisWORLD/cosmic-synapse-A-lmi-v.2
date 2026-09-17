@@ -6,6 +6,7 @@ members = [
   "crates/lighttoken-index",
   "crates/lighttoken-io",
   "crates/lighttoken-cli",
+  "crates/lighttoken-ffi",
 ]
 
 [workspace.package]
@@ -32,3 +33,4 @@ sha2 = "0.10"
 proptest = "1"
 rustfft = "6"
 tempfile = "3"
+jni = "0.21"
