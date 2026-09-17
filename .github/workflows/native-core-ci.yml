@@ -193,6 +193,15 @@ jobs:
       - name: Run installed executable
         shell: cmd
         run: RUN_WINDOWS.bat version
+      - name: Verify build leaves source tree clean
+        shell: powershell
+        run: |
+          $status = @(git status --porcelain --untracked-files=all)
+          if ($LASTEXITCODE -ne 0) { throw 'git status failed while checking update preconditions.' }
+          if ($status.Count -gt 0) {
+            $status | ForEach-Object { Write-Host $_ }
+            throw 'Build/test/install left source-tree changes that would block safe update.'
+          }
       - name: Update through user-facing BAT
         if: github.event_name == 'push'
         shell: cmd
