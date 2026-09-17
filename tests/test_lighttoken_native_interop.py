@@ -46,6 +46,18 @@ def run_cli(native_cli: Path, *args: str) -> dict:
     return json.loads(result.stdout)
 
 
+def run_cli_failure(native_cli: Path, *args: str) -> dict:
+    result = subprocess.run(
+        [str(native_cli), *args, "--json"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
+    assert result.returncode != 0
+    assert result.stdout == ""
+    return json.loads(result.stderr)
+
+
 def test_generator_is_deterministic_and_synthetic(fixture_dir: Path, tmp_path: Path):
     second = tmp_path / "second"
     subprocess.run(
@@ -81,6 +93,7 @@ def test_rust_cli_inspects_and_computes_python_spectrum(native_cli: Path, fixtur
     assert spectrum["power_length"] == 769
     assert 0 <= spectrum["dominant_bin"] < 769
     assert spectrum["dominant_magnitude"] >= 0.0
+    assert spectrum["backend"] == "rust"
 
 
 def test_rust_cli_matches_python_similarity_scores(native_cli: Path, fixture_dir: Path):
@@ -102,6 +115,7 @@ def test_rust_cli_matches_python_similarity_scores(native_cli: Path, fixture_dir
         )
         assert payload["method"] == pair["method"]
         assert payload["score"] == pytest.approx(pair["score"], rel=2e-5, abs=2e-4)
+        assert payload["backend"] == "rust"
 
 
 def test_rust_cli_reads_historical_magnitude_phase_fixture(native_cli: Path, fixture_dir: Path):
@@ -117,3 +131,53 @@ def test_rust_canonical_round_trip_matches_python_bytes(native_cli: Path, fixtur
     payload = run_cli(native_cli, "inspect", str(source), "--write-canonical", str(output))
     assert payload["canonical_written"] is True
     assert output.read_bytes() == source.read_bytes()
+
+
+def test_rust_cli_builds_and_searches_local_index(native_cli: Path, fixture_dir: Path, tmp_path: Path):
+    collection = tmp_path / "tokens.jsonl"
+    collection.write_bytes(
+        (fixture_dir / "active_zero.json").read_bytes()
+        + (fixture_dir / "active_random.json").read_bytes()
+    )
+    index_dir = tmp_path / "index"
+    built = run_cli(native_cli, "index", "build", str(collection), str(index_dir))
+    assert built["built"] is True
+    assert built["token_count"] == 2
+
+    result = run_cli(
+        native_cli,
+        "search",
+        str(index_dir),
+        str(fixture_dir / "active_zero.json"),
+        "--top-k",
+        "2",
+        "--method",
+        "cosine",
+    )
+    assert result["backend"] == "rust"
+    assert result["hits"][0]["token_id"] == "00000000-0000-0000-0000-000000000001"
+    assert result["hits"][0]["rank"] == 1
+
+
+def test_rust_cli_failure_categories_are_structured(native_cli: Path, fixture_dir: Path, tmp_path: Path):
+    bad_dimension = json.loads((fixture_dir / "active_random.json").read_text())
+    bad_dimension["joint_embedding"] = [0.0]
+    bad_dimension_path = tmp_path / "bad-dimension.json"
+    bad_dimension_path.write_text(json.dumps(bad_dimension))
+    payload = run_cli_failure(native_cli, "validate", str(bad_dimension_path))
+    assert payload["error"] is True
+    assert payload["category"] == "invalid_token"
+
+    partial_spectrum = json.loads((fixture_dir / "active_random.json").read_text())
+    partial_spectrum.pop("spectral_signature_imag")
+    partial_path = tmp_path / "partial-spectrum.json"
+    partial_path.write_text(json.dumps(partial_spectrum))
+    payload = run_cli_failure(native_cli, "validate", str(partial_path))
+    assert payload["category"] == "invalid_token"
+
+    nonfinite = json.loads((fixture_dir / "active_random.json").read_text())
+    nonfinite["joint_embedding"][0] = float("nan")
+    nonfinite_path = tmp_path / "nonfinite.json"
+    nonfinite_path.write_text(json.dumps(nonfinite, allow_nan=True))
+    payload = run_cli_failure(native_cli, "validate", str(nonfinite_path))
+    assert payload["category"] == "invalid_token"
