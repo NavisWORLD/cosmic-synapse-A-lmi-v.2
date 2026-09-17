@@ -3,6 +3,8 @@ resolver = "2"
 members = [
   "crates/lighttoken-core",
   "crates/lighttoken-spectrum",
+  "crates/lighttoken-index",
+  "crates/lighttoken-io",
 ]
 
 [workspace.package]
@@ -15,10 +17,14 @@ repository = "https://github.com/NavisWORLD/cosmic-synapse-A-lmi-v.2"
 
 [workspace.dependencies]
 almi-core = { path = "../almi-core-rs/crates/almi-core" }
+almi-continuity = { path = "../almi-core-rs/crates/almi-continuity" }
+almi-cosmos = { path = "../almi-core-rs/crates/almi-cosmos" }
 lighttoken-core = { path = "crates/lighttoken-core" }
+lighttoken-spectrum = { path = "crates/lighttoken-spectrum" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
 sha2 = "0.10"
 proptest = "1"
 rustfft = "6"
+tempfile = "3"
