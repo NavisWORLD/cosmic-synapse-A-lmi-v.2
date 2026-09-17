@@ -16,7 +16,10 @@ const BACKEND: &str = "rust";
 const INDEX_FILENAME: &str = "tokens.jsonl";
 
 #[derive(Debug, Parser)]
-#[command(name = "lighttoken", about = "Native LightToken diagnostics and search")]
+#[command(
+    name = "lighttoken",
+    about = "Native LightToken diagnostics and search"
+)]
 struct Cli {
     #[arg(long, global = true)]
     json: bool,
@@ -169,7 +172,10 @@ fn ensure_empty_or_new_directory(path: &Path) -> Result<(), AppError> {
         if metadata.file_type().is_symlink() || !metadata.is_dir() {
             return Err(AppError::new(
                 "security",
-                format!("index destination is not a regular directory: {}", path.display()),
+                format!(
+                    "index destination is not a regular directory: {}",
+                    path.display()
+                ),
             ));
         }
         if fs::read_dir(path)?.next().transpose()?.is_some() {
