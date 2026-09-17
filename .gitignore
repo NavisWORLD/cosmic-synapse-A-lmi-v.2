@@ -22,6 +22,9 @@ build/
 dist/
 *.egg-info/
 
+# Rust / Cargo
+target/
+
 # Node / Vite
 node_modules/
 **/node_modules/
