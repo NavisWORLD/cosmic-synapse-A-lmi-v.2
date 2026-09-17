@@ -234,7 +234,10 @@ fn safe_relative_path(value: &str) -> Result<PathBuf> {
         || path.components().any(|component| {
             matches!(
                 component,
-                Component::ParentDir | Component::CurDir | Component::RootDir | Component::Prefix(_)
+                Component::ParentDir
+                    | Component::CurDir
+                    | Component::RootDir
+                    | Component::Prefix(_)
             )
         })
     {
@@ -246,8 +249,12 @@ fn safe_relative_path(value: &str) -> Result<PathBuf> {
 }
 
 fn resolve_raw_reference(root: &Path, raw_data_ref: &str) -> Option<PathBuf> {
-    let relative = raw_data_ref.strip_prefix("workspace://").unwrap_or(raw_data_ref);
-    safe_relative_path(relative).ok().map(|path| root.join(path))
+    let relative = raw_data_ref
+        .strip_prefix("workspace://")
+        .unwrap_or(raw_data_ref);
+    safe_relative_path(relative)
+        .ok()
+        .map(|path| root.join(path))
 }
 
 fn hex_digest(bytes: &[u8]) -> String {

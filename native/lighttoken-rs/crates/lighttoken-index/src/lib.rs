@@ -63,9 +63,9 @@ impl TokenCollection {
 
         let mut ids = BTreeSet::new();
         for token in &tokens {
-            token
-                .validate()
-                .map_err(|error| IndexError::InvalidToken(token.token_id.clone(), error.to_string()))?;
+            token.validate().map_err(|error| {
+                IndexError::InvalidToken(token.token_id.clone(), error.to_string())
+            })?;
             if !ids.insert(token.token_id.clone()) {
                 return Err(IndexError::DuplicateTokenId(token.token_id.clone()));
             }
@@ -85,12 +85,18 @@ impl TokenCollection {
         &self.tokens
     }
 
-    pub fn search(&self, query: &LightTokenRecord, request: &SearchRequest) -> Result<Vec<SearchHit>> {
+    pub fn search(
+        &self,
+        query: &LightTokenRecord,
+        request: &SearchRequest,
+    ) -> Result<Vec<SearchHit>> {
         query
             .validate()
             .map_err(|error| IndexError::InvalidToken(query.token_id.clone(), error.to_string()))?;
         if request.top_k == Some(0) {
-            return Err(IndexError::InvalidRequest("top_k must be at least 1".into()));
+            return Err(IndexError::InvalidRequest(
+                "top_k must be at least 1".into(),
+            ));
         }
         if request.top_k.is_some_and(|value| value > HARD_MAX_TOKENS) {
             return Err(IndexError::InvalidRequest(format!(
