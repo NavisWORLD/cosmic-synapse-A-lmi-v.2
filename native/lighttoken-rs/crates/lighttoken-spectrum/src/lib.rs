@@ -43,7 +43,7 @@ pub fn rfft_embedding(input: &[f32]) -> Result<Vec<ComplexBin>> {
     let mut buffer: Vec<Complex<f32>> = input
         .iter()
         .copied()
-        .map(|real| Complex { real, im: 0.0 })
+        .map(|real| Complex { re: real, im: 0.0 })
         .collect();
     fft.process(&mut buffer);
 
