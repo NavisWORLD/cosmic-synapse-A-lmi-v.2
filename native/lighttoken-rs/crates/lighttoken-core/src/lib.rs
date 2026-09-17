@@ -119,9 +119,14 @@ fn label_spectral_shape(metadata: &mut BTreeMap<String, Value>, size: usize) {
         .or_insert_with(|| Value::Number(Number::from(dimension as u64)));
 }
 
-fn parse_spectrum(wire: &WireToken, metadata: &mut BTreeMap<String, Value>) -> Result<Option<Vec<ComplexBin>>> {
-    let has_active = wire.spectral_signature_real.is_some() || wire.spectral_signature_imag.is_some();
-    let has_legacy = wire.spectral_signature_magnitude.is_some() || wire.spectral_signature_phase.is_some();
+fn parse_spectrum(
+    wire: &WireToken,
+    metadata: &mut BTreeMap<String, Value>,
+) -> Result<Option<Vec<ComplexBin>>> {
+    let has_active =
+        wire.spectral_signature_real.is_some() || wire.spectral_signature_imag.is_some();
+    let has_legacy =
+        wire.spectral_signature_magnitude.is_some() || wire.spectral_signature_phase.is_some();
 
     if has_active && has_legacy {
         return Err(LightTokenError::Invalid(
@@ -160,10 +165,14 @@ fn parse_spectrum(wire: &WireToken, metadata: &mut BTreeMap<String, Value>) -> R
 
     if has_legacy {
         let magnitude = wire.spectral_signature_magnitude.as_ref().ok_or_else(|| {
-            LightTokenError::Invalid("historical spectral magnitude/phase components are incomplete".into())
+            LightTokenError::Invalid(
+                "historical spectral magnitude/phase components are incomplete".into(),
+            )
         })?;
         let phase = wire.spectral_signature_phase.as_ref().ok_or_else(|| {
-            LightTokenError::Invalid("historical spectral magnitude/phase components are incomplete".into())
+            LightTokenError::Invalid(
+                "historical spectral magnitude/phase components are incomplete".into(),
+            )
         })?;
         if magnitude.len() != phase.len() {
             return Err(LightTokenError::Invalid(
@@ -183,8 +192,14 @@ fn parse_spectrum(wire: &WireToken, metadata: &mut BTreeMap<String, Value>) -> R
                     "historical spectral component {index} contains a non-finite value"
                 )));
             }
-            let real = finite_f32(magnitude * phase.cos(), "historical spectral real component")?;
-            let imag = finite_f32(magnitude * phase.sin(), "historical spectral imag component")?;
+            let real = finite_f32(
+                magnitude * phase.cos(),
+                "historical spectral real component",
+            )?;
+            let imag = finite_f32(
+                magnitude * phase.sin(),
+                "historical spectral imag component",
+            )?;
             bins.push(ComplexBin { real, imag });
         }
         label_spectral_shape(metadata, bins.len());
@@ -310,7 +325,10 @@ impl LightTokenRecord {
         object.insert("timestamp".into(), Value::String(self.timestamp.clone()));
         object.insert("source_uri".into(), Value::String(self.source_uri.clone()));
         object.insert("modality".into(), Value::String(self.modality.clone()));
-        object.insert("raw_data_ref".into(), Value::String(self.raw_data_ref.clone()));
+        object.insert(
+            "raw_data_ref".into(),
+            Value::String(self.raw_data_ref.clone()),
+        );
         object.insert(
             "content_text".into(),
             self.content_text
@@ -373,8 +391,7 @@ fn float_value(value: f32) -> Result<Value> {
             "cannot serialize non-finite float".into(),
         ));
     }
-    let number = Number::from_f64(value as f64).ok_or_else(|| {
-        LightTokenError::Invalid("cannot encode float as JSON number".into())
-    })?;
+    let number = Number::from_f64(value as f64)
+        .ok_or_else(|| LightTokenError::Invalid("cannot encode float as JSON number".into()))?;
     Ok(Value::Number(number))
 }
