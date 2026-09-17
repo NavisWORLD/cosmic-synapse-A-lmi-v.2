@@ -72,6 +72,12 @@ jobs:
           tests/test_native_interop.py
           tests/test_native_cst_interop.py
           native/almi-core-rs/crates/almi-python/python-tests/test_bindings.py
+      - name: Upload Linux Python wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: almi-native-python-linux-${{ github.sha }}
+          path: native/almi-core-rs/dist/python/*.whl
+          if-no-files-found: error
 
   c-abi-smoke:
     runs-on: ubuntu-latest
@@ -187,6 +193,10 @@ jobs:
       - name: Run installed executable
         shell: cmd
         run: RUN_WINDOWS.bat version
+      - name: Update through user-facing BAT
+        if: github.event_name == 'push'
+        shell: cmd
+        run: UPDATE_WINDOWS.bat -WithPython
       - name: Package portable Windows distribution
         shell: powershell
         run: |
