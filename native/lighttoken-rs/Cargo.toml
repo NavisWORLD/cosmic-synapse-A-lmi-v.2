@@ -5,6 +5,7 @@ members = [
   "crates/lighttoken-spectrum",
   "crates/lighttoken-index",
   "crates/lighttoken-io",
+  "crates/lighttoken-cli",
 ]
 
 [workspace.package]
@@ -21,6 +22,9 @@ almi-continuity = { path = "../almi-core-rs/crates/almi-continuity" }
 almi-cosmos = { path = "../almi-core-rs/crates/almi-cosmos" }
 lighttoken-core = { path = "crates/lighttoken-core" }
 lighttoken-spectrum = { path = "crates/lighttoken-spectrum" }
+lighttoken-index = { path = "crates/lighttoken-index" }
+lighttoken-io = { path = "crates/lighttoken-io" }
+clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

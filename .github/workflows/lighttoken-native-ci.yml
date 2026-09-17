@@ -72,11 +72,13 @@ jobs:
       - name: Verify Python-Rust spectral parity
         run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum
 
-  rust-data-red:
+  rust-data:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -84,8 +86,18 @@ jobs:
         run: python -m pip install -e .
       - name: Generate synthetic oracle fixtures
         run: python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
-      - name: Search and IO contracts remain RED until implementations exist
+      - name: Data Clippy
+        run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-index -p lighttoken-io --all-targets -- -D warnings
+      - name: Verify deterministic search and safe IO
         run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-index -p lighttoken-io
+
+  rust-cli-red:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: CLI parser contract remains RED until command types exist
+        run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-cli
 
   native-interop-red:
     runs-on: ubuntu-latest
