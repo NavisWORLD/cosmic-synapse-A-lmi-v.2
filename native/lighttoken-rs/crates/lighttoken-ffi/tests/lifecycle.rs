@@ -96,10 +96,7 @@ fn context_lifecycle_and_json_calls_are_owned_and_deterministic() {
         assert_eq!(search["hits"].as_array().unwrap().len(), 2);
 
         output = ptr::null_mut();
-        assert_eq!(
-            lighttoken_backend_json(context, &mut output),
-            LIGHTTOKEN_OK
-        );
+        assert_eq!(lighttoken_backend_json(context, &mut output), LIGHTTOKEN_OK);
         let backend = take_json(output);
         assert_eq!(backend["active"], "rust");
 
