@@ -135,8 +135,9 @@ pub(crate) fn vectors_json_text(text: &str) -> Result<String, EngineError> {
     let token = parse_token(text)?;
     let embedding = token.joint_embedding.clone().unwrap_or_default();
     let spectrum = match token.spectral_signature.as_deref() {
-        Some(bins) => spectral_power(bins)
-            .map_err(|error| EngineError::InvalidToken(error.to_string()))?,
+        Some(bins) => {
+            spectral_power(bins).map_err(|error| EngineError::InvalidToken(error.to_string()))?
+        }
         None => Vec::new(),
     };
     let payload = json!({
