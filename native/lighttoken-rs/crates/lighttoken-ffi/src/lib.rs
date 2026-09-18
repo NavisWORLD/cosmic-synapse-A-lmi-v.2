@@ -8,7 +8,7 @@ pub mod jni_api;
 
 use lighttoken_core::{from_json_bytes, LightTokenError, LightTokenRecord, SimilarityMethod};
 use lighttoken_index::{SearchRequest, TokenCollection};
-use lighttoken_spectrum::{backend_diagnostics, token_similarity, BackendKind};
+use lighttoken_spectrum::{backend_diagnostics, spectral_power, token_similarity, BackendKind};
 use serde_json::{json, Value};
 use thiserror::Error;
 
@@ -127,6 +127,22 @@ pub(crate) fn search_json_text(
         "method": method_name(request.method),
         "backend": "rust",
         "hits": hits,
+    });
+    serde_json::to_string(&payload).map_err(|error| EngineError::Json(error.to_string()))
+}
+
+pub(crate) fn vectors_json_text(text: &str) -> Result<String, EngineError> {
+    let token = parse_token(text)?;
+    let embedding = token.joint_embedding.clone().unwrap_or_default();
+    let spectrum = match token.spectral_signature.as_deref() {
+        Some(bins) => spectral_power(bins)
+            .map_err(|error| EngineError::InvalidToken(error.to_string()))?,
+        None => Vec::new(),
+    };
+    let payload = json!({
+        "token_id": token.token_id,
+        "embedding": embedding,
+        "spectral_power": spectrum,
     });
     serde_json::to_string(&payload).map_err(|error| EngineError::Json(error.to_string()))
 }

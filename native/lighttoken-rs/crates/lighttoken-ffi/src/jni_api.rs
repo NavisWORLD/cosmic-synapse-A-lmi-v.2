@@ -1,5 +1,6 @@
 use crate::{
-    backend_json_text, compare_json_text, search_json_text, validate_json_text, LightTokenContext,
+    backend_json_text, compare_json_text, search_json_text, validate_json_text, vectors_json_text,
+    LightTokenContext,
     LIGHTTOKEN_ABI_VERSION,
 };
 use jni::objects::{JClass, JString};
@@ -134,6 +135,29 @@ pub extern "system" fn Java_world_navis_lighttoken_nativebridge_JniNativeEngine_
         search_json_text(&query, &collection, &request).map_err(|error| error.to_string())
     })();
     return_json(&mut env, result)
+}
+
+#[no_mangle]
+pub extern "system" fn Java_world_navis_lighttoken_nativebridge_JniNativeEngine_nativeVectorsJson(
+    mut env: JNIEnv<'_>,
+    _class: JClass<'_>,
+    handle: jlong,
+    json: JString<'_>,
+) -> jstring {
+    if !valid_context(handle) {
+        let _ = env.throw_new(
+            "java/lang/IllegalStateException",
+            "native context is closed",
+        );
+        return ptr::null_mut();
+    }
+    match java_string(&mut env, json) {
+        Ok(json) => return_json(&mut env, vectors_json_text(&json)),
+        Err(error) => {
+            let _ = env.throw_new("java/lang/IllegalArgumentException", error);
+            ptr::null_mut()
+        }
+    }
 }
 
 #[no_mangle]

@@ -168,7 +168,7 @@ jobs:
         run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum --all-targets -- -D warnings
 
 
-  java-red:
+  java-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -180,14 +180,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.5'
-      - name: Build JNI library for Java RED contract
+      - name: Build JNI library for Java contract
         run: cargo build --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-ffi
       - name: Resolve and lock Java dependencies
         run: gradle -p apps/lighttoken-workstation-java dependencies --write-locks
-      - name: Java bootstrap contract remains RED until JniNativeEngine exists
+      - name: Generate pinned Gradle wrapper
+        run: gradle -p apps/lighttoken-workstation-java wrapper --gradle-version 8.14.5 --distribution-type bin
+      - name: Verify Java JNI and SQLite contracts
         run: gradle -p apps/lighttoken-workstation-java test -Dlighttoken.native.dir=${{ github.workspace }}/native/lighttoken-rs/target/debug --no-daemon
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: lighttoken-gradle-lock-red
-          path: apps/lighttoken-workstation-java/gradle.lockfile
+          name: lighttoken-gradle-bootstrap
+          path: |
+            apps/lighttoken-workstation-java/gradle.lockfile
+            apps/lighttoken-workstation-java/gradlew
+            apps/lighttoken-workstation-java/gradlew.bat
+            apps/lighttoken-workstation-java/gradle/wrapper/gradle-wrapper.jar
+            apps/lighttoken-workstation-java/gradle/wrapper/gradle-wrapper.properties
