@@ -39,4 +39,5 @@ application {
 tasks.named('test') {
     useJUnitPlatform()
     systemProperty 'lighttoken.native.dir', System.getProperty('lighttoken.native.dir', '')
+    systemProperty 'lighttoken.fixture.dir', System.getProperty('lighttoken.fixture.dir', '')
 }
