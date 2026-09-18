@@ -121,6 +121,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e .
+      - name: Generate synthetic oracle fixtures
+        run: python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
       - name: FFI Clippy
         run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-ffi --all-targets -- -D warnings
       - name: FFI lifecycle tests
@@ -129,5 +136,10 @@ jobs:
         run: cargo build --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-ffi
       - name: External C ABI smoke
         run: |
-          cc native/lighttoken-rs/tests/c_abi_smoke.c             -I native/lighttoken-rs/include             -L native/lighttoken-rs/target/debug             -Wl,-rpath,${{ github.workspace }}/native/lighttoken-rs/target/debug             -llighttoken_ffi             -o "$RUNNER_TEMP/lighttoken-c-smoke"
+          cc native/lighttoken-rs/tests/c_abi_smoke.c \
+            -I native/lighttoken-rs/include \
+            -L native/lighttoken-rs/target/debug \
+            -Wl,-rpath,${{ github.workspace }}/native/lighttoken-rs/target/debug \
+            -llighttoken_ffi \
+            -o "$RUNNER_TEMP/lighttoken-c-smoke"
           "$RUNNER_TEMP/lighttoken-c-smoke" tests/fixtures/lighttoken/active_random.json

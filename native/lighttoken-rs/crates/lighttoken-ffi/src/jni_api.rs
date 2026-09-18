@@ -71,7 +71,10 @@ pub extern "system" fn Java_world_navis_lighttoken_nativebridge_JniNativeEngine_
     json: JString<'_>,
 ) -> jstring {
     if !valid_context(handle) {
-        let _ = env.throw_new("java/lang/IllegalStateException", "native context is closed");
+        let _ = env.throw_new(
+            "java/lang/IllegalStateException",
+            "native context is closed",
+        );
         return ptr::null_mut();
     }
     match java_string(&mut env, json) {
@@ -93,7 +96,10 @@ pub extern "system" fn Java_world_navis_lighttoken_nativebridge_JniNativeEngine_
     method: JString<'_>,
 ) -> jstring {
     if !valid_context(handle) {
-        let _ = env.throw_new("java/lang/IllegalStateException", "native context is closed");
+        let _ = env.throw_new(
+            "java/lang/IllegalStateException",
+            "native context is closed",
+        );
         return ptr::null_mut();
     }
     let result = (|| {
@@ -115,7 +121,10 @@ pub extern "system" fn Java_world_navis_lighttoken_nativebridge_JniNativeEngine_
     request: JString<'_>,
 ) -> jstring {
     if !valid_context(handle) {
-        let _ = env.throw_new("java/lang/IllegalStateException", "native context is closed");
+        let _ = env.throw_new(
+            "java/lang/IllegalStateException",
+            "native context is closed",
+        );
         return ptr::null_mut();
     }
     let result = (|| {
