@@ -7,7 +7,12 @@ fn trusted_cpp_library_matches_rust_known_vectors() {
         .expect("LIGHTTOKEN_CPP_LIB must point to the CI-built application-owned accelerator");
 
     let diagnostics = backend_diagnostics();
-    assert_eq!(diagnostics.active, BackendKind::Cpp, "library={library} detail={}", diagnostics.detail);
+    assert_eq!(
+        diagnostics.active,
+        BackendKind::Cpp,
+        "library={library} detail={}",
+        diagnostics.detail
+    );
     assert!(diagnostics.cpp_available);
 
     let query = vec![1.0f32, 2.0, 3.0, 4.0];
@@ -25,7 +30,10 @@ fn trusted_cpp_library_matches_rust_known_vectors() {
         let accelerated = similarity_many(&query, &candidates, method).unwrap();
         for (candidate, actual) in candidates.iter().zip(accelerated.iter()) {
             let expected = similarity(&query, candidate, method).unwrap();
-            assert!((actual - expected).abs() <= 2.0e-5, "{method:?}: {actual} != {expected}");
+            assert!(
+                (actual - expected).abs() <= 2.0e-5,
+                "{method:?}: {actual} != {expected}"
+            );
         }
     }
 }

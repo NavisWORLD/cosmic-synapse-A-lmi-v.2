@@ -8,7 +8,7 @@ pub mod jni_api;
 
 use lighttoken_core::{from_json_bytes, LightTokenError, LightTokenRecord, SimilarityMethod};
 use lighttoken_index::{SearchRequest, TokenCollection};
-use lighttoken_spectrum::token_similarity;
+use lighttoken_spectrum::{backend_diagnostics, token_similarity, BackendKind};
 use serde_json::{json, Value};
 use thiserror::Error;
 
@@ -132,10 +132,15 @@ pub(crate) fn search_json_text(
 }
 
 pub(crate) fn backend_json_text() -> Result<String, EngineError> {
+    let diagnostics = backend_diagnostics();
+    let active = match diagnostics.active {
+        BackendKind::Rust => "rust",
+        BackendKind::Cpp => "cpp",
+    };
     serde_json::to_string(&json!({
-        "active": "rust",
+        "active": active,
         "rust": {"available": true},
-        "cpp": {"available": false, "reason": "not built"},
+        "cpp": {"available": diagnostics.cpp_available, "detail": diagnostics.detail},
     }))
     .map_err(|error| EngineError::Json(error.to_string()))
 }

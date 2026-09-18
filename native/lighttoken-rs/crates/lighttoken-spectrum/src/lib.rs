@@ -9,12 +9,17 @@ use lighttoken_core::{
 use rustfft::{num_complex::Complex, FftPlanner};
 use thiserror::Error;
 
+mod cpp_backend;
+pub use cpp_backend::{backend_diagnostics, similarity_many, BackendDiagnostics, BackendKind};
+
 #[derive(Debug, Error, PartialEq)]
 pub enum SpectrumError {
     #[error("invalid spectral input: {0}")]
     InvalidInput(String),
     #[error("LightToken {0} has no spectral signature")]
     MissingSpectrum(String),
+    #[error("backend error: {0}")]
+    Backend(String),
 }
 
 pub type Result<T> = std::result::Result<T, SpectrumError>;

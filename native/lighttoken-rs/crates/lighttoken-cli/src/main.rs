@@ -7,13 +7,22 @@ use lighttoken_core::{
 };
 use lighttoken_index::{IndexError, SearchRequest, TokenCollection};
 use lighttoken_io::{load_collection, load_token_file, IoError};
-use lighttoken_spectrum::{dominant_bin, spectral_power, token_similarity, SpectrumError};
+use lighttoken_spectrum::{
+    backend_diagnostics, dominant_bin, spectral_power, token_similarity, BackendKind, SpectrumError,
+};
 use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 const BACKEND: &str = "rust";
 const INDEX_FILENAME: &str = "tokens.jsonl";
+
+fn backend_name(kind: BackendKind) -> &'static str {
+    match kind {
+        BackendKind::Rust => "rust",
+        BackendKind::Cpp => "cpp",
+    }
+}
 
 #[derive(Debug, Parser)]
 #[command(
@@ -215,14 +224,16 @@ fn write_index(input: &Path, index_dir: &Path) -> Result<Value, AppError> {
 fn run(cli: &Cli) -> Result<(Value, String), AppError> {
     match &cli.command {
         Commands::Doctor => {
+            let diagnostics = backend_diagnostics();
             let payload = json!({
                 "ok": true,
                 "schema_version": LIGHTTOKEN_SCHEMA_VERSION,
                 "embedding_dimension": EMBEDDING_DIMENSION,
                 "spectral_dimension": SPECTRAL_DIMENSION,
                 "rust_backend_available": true,
-                "cpp_backend_available": false,
-                "active_backend": BACKEND,
+                "cpp_backend_available": diagnostics.cpp_available,
+                "active_backend": backend_name(diagnostics.active),
+                "cpp_backend_detail": diagnostics.detail,
                 "almi_integration_available": true,
             });
             Ok((payload, "LightToken native diagnostics: OK".into()))
@@ -331,12 +342,14 @@ fn run(cli: &Cli) -> Result<(Value, String), AppError> {
             Ok((payload, format!("{} hits", hits.len())))
         }
         Commands::Backend => {
+            let diagnostics = backend_diagnostics();
+            let active = backend_name(diagnostics.active);
             let payload = json!({
-                "active": BACKEND,
+                "active": active,
                 "rust": {"available": true},
-                "cpp": {"available": false, "reason": "not built"},
+                "cpp": {"available": diagnostics.cpp_available, "detail": diagnostics.detail},
             });
-            Ok((payload, BACKEND.into()))
+            Ok((payload, active.into()))
         }
     }
 }

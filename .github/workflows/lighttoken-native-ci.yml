@@ -145,14 +145,24 @@ jobs:
           "$RUNNER_TEMP/lighttoken-c-smoke" tests/fixtures/lighttoken/active_random.json
 
 
-  cpp-red:
+  cpp-parity:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: Configure C++ RED contract
+        with:
+          components: clippy
+      - name: Configure scalar C++ accelerator
         run: cmake -S native/lighttoken-cpp -B native/lighttoken-cpp/build -DCMAKE_BUILD_TYPE=Release
-      - name: C++ known-vector contract remains RED until kernels exist
+      - name: Build scalar C++ accelerator
         run: cmake --build native/lighttoken-cpp/build --config Release
-      - name: Rust fallback contract remains RED until backend dispatch exists
+      - name: Run C++ known-vector self-tests
+        run: ctest --test-dir native/lighttoken-cpp/build --output-on-failure
+      - name: Verify explicit Rust fallback
         run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum --test cpp_fallback
+      - name: Verify C++ and Rust score parity
+        env:
+          LIGHTTOKEN_CPP_LIB: ${{ github.workspace }}/native/lighttoken-cpp/build/liblighttoken_accel.so
+        run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum --test cpp_parity -- --nocapture
+      - name: C++ backend Rust Clippy
+        run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum --all-targets -- -D warnings

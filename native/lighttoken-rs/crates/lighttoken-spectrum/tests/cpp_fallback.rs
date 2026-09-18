@@ -10,10 +10,7 @@ fn explicit_cpp_disable_forces_rust_with_identical_scores() {
     assert!(!diagnostics.cpp_available);
 
     let query = vec![1.0f32, 2.0, 3.0, 4.0];
-    let candidates = vec![
-        vec![1.0f32, 2.0, 3.0, 4.0],
-        vec![4.0f32, 3.0, 2.0, 1.0],
-    ];
+    let candidates = vec![vec![1.0f32, 2.0, 3.0, 4.0], vec![4.0f32, 3.0, 2.0, 1.0]];
 
     for method in [
         SimilarityMethod::PowerCorrelation,
