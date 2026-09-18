@@ -134,7 +134,10 @@ pub extern "system" fn Java_world_navis_lighttoken_nativebridge_JniNativeEngine_
     handle: jlong,
 ) -> jstring {
     if !valid_context(handle) {
-        let _ = env.throw_new("java/lang/IllegalStateException", "native context is closed");
+        let _ = env.throw_new(
+            "java/lang/IllegalStateException",
+            "native context is closed",
+        );
         return ptr::null_mut();
     }
     return_json(&mut env, backend_json_text())
