@@ -100,10 +100,12 @@ pub(crate) fn search_json_text(
     let query = parse_token(query_json)?;
     let request: SearchRequest =
         serde_json::from_str(request_json).map_err(|error| EngineError::Json(error.to_string()))?;
-    let value: Value =
-        serde_json::from_str(collection_json).map_err(|error| EngineError::Json(error.to_string()))?;
+    let value: Value = serde_json::from_str(collection_json)
+        .map_err(|error| EngineError::Json(error.to_string()))?;
     let array = value.as_array().ok_or_else(|| {
-        EngineError::InvalidArgument("collection JSON must be an array of LightToken objects".into())
+        EngineError::InvalidArgument(
+            "collection JSON must be an array of LightToken objects".into(),
+        )
     })?;
     let mut tokens = Vec::with_capacity(array.len());
     for item in array {

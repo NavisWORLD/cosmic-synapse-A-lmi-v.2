@@ -49,6 +49,9 @@ pub extern "system" fn Java_world_navis_lighttoken_nativebridge_JniNativeEngine_
     Box::into_raw(Box::new(LightTokenContext::default())) as jlong
 }
 
+/// # Safety
+/// `handle` must be zero or a context handle returned by
+/// `nativeCreateContext` that has not already been freed.
 #[no_mangle]
 pub unsafe extern "system" fn Java_world_navis_lighttoken_nativebridge_JniNativeEngine_nativeFreeContext(
     _env: JNIEnv<'_>,
