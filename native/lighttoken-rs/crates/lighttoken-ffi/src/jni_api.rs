@@ -1,7 +1,6 @@
 use crate::{
     backend_json_text, compare_json_text, search_json_text, validate_json_text, vectors_json_text,
-    LightTokenContext,
-    LIGHTTOKEN_ABI_VERSION,
+    LightTokenContext, LIGHTTOKEN_ABI_VERSION,
 };
 use jni::objects::{JClass, JString};
 use jni::sys::{jint, jlong, jstring};
