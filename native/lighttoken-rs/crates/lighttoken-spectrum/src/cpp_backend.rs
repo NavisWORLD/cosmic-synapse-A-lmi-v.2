@@ -56,7 +56,8 @@ fn configured_path() -> std::result::Result<PathBuf, String> {
         }
         return Ok(PathBuf::from(path));
     }
-    let executable = env::current_exe().map_err(|error| format!("cannot locate executable: {error}"))?;
+    let executable =
+        env::current_exe().map_err(|error| format!("cannot locate executable: {error}"))?;
     let directory = executable
         .parent()
         .ok_or_else(|| "native executable has no parent directory".to_string())?;
@@ -93,8 +94,7 @@ impl CppBackend {
             let cosine: ManyFn = symbol(&library, b"lt_accel_cosine_many\0")?;
             let correlation: ManyFn = symbol(&library, b"lt_accel_correlation_many\0")?;
             let euclidean: ManyFn = symbol(&library, b"lt_accel_euclidean_many\0")?;
-            let _spectral_power: SpectralPowerFn =
-                symbol(&library, b"lt_accel_spectral_power\0")?;
+            let _spectral_power: SpectralPowerFn = symbol(&library, b"lt_accel_spectral_power\0")?;
             let _top_k: TopKFn = symbol(&library, b"lt_accel_top_k\0")?;
 
             let reported = abi();
