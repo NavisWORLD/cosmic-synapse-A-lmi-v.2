@@ -143,3 +143,16 @@ jobs:
             -llighttoken_ffi \
             -o "$RUNNER_TEMP/lighttoken-c-smoke"
           "$RUNNER_TEMP/lighttoken-c-smoke" tests/fixtures/lighttoken/active_random.json
+
+
+  cpp-red:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Configure C++ RED contract
+        run: cmake -S native/lighttoken-cpp -B native/lighttoken-cpp/build -DCMAKE_BUILD_TYPE=Release
+      - name: C++ known-vector contract remains RED until kernels exist
+        run: cmake --build native/lighttoken-cpp/build --config Release
+      - name: Rust fallback contract remains RED until backend dispatch exists
+        run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum --test cpp_fallback
