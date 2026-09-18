@@ -109,13 +109,11 @@ pub(crate) fn search_json_text(
     for item in array {
         let encoded =
             serde_json::to_vec(item).map_err(|error| EngineError::Json(error.to_string()))?;
-        tokens.push(
-            from_json_bytes(&encoded).map_err(|error| match error {
-                LightTokenError::Unsupported(message) => EngineError::UnsupportedVersion(message),
-                LightTokenError::Invalid(message) => EngineError::InvalidToken(message),
-                LightTokenError::Json(error) => EngineError::Json(error.to_string()),
-            })?,
-        );
+        tokens.push(from_json_bytes(&encoded).map_err(|error| match error {
+            LightTokenError::Unsupported(message) => EngineError::UnsupportedVersion(message),
+            LightTokenError::Invalid(message) => EngineError::InvalidToken(message),
+            LightTokenError::Json(error) => EngineError::Json(error.to_string()),
+        })?);
     }
     let collection = TokenCollection::from_tokens(tokens)
         .map_err(|error| EngineError::InvalidArgument(error.to_string()))?;
