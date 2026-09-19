@@ -61,6 +61,8 @@ jobs:
           $workspace = Join-Path $env:RUNNER_TEMP 'almi-workspace'
           $bundle = Join-Path $env:RUNNER_TEMP 'lighttoken.cosmos'
           $corrupt = Join-Path $env:RUNNER_TEMP 'lighttoken-corrupt.cosmos'
+          python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+          if ($LASTEXITCODE -ne 0) { throw 'Rust fixture generation failed' }
           python scripts/generate_lighttoken_fixtures.py --output $fixtures
           if ($LASTEXITCODE -ne 0) { throw 'Oracle fixture generation failed' }
           python scripts/generate_lighttoken_almi_fixture.py --lighttoken-dir $fixtures --workspace $workspace --bundle $bundle --corrupt-bundle $corrupt
