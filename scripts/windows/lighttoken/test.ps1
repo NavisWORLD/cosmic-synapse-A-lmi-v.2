@@ -1,3 +1,4 @@
+$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')
 Assert-Windows
 $cargo = Require-Command 'cargo' 'Install Rust using rustup.'
@@ -7,6 +8,7 @@ if (-not (Test-Path -LiteralPath $gradle)) { throw "Committed Gradle wrapper mis
 
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("lighttoken-windows-test-" + [Guid]::NewGuid().ToString('N'))
 $fixtures = Join-Path $tempRoot 'fixtures'
+$repoFixtures = Join-Path $script:RepoRoot 'tests\fixtures\lighttoken'
 $workspace = Join-Path $tempRoot 'workspace'
 $bundle = Join-Path $tempRoot 'verified.cosmos'
 $corrupt = Join-Path $tempRoot 'corrupt.cosmos'
@@ -15,6 +17,8 @@ try {
     Ensure-Directory $tempRoot
     Invoke-External $python @('-m', 'pip', 'install', '-e', $script:RepoRoot, 'pytest')
     Invoke-External $python @((Join-Path $script:RepoRoot 'scripts\generate_lighttoken_fixtures.py'), '--output', $fixtures)
+    if (Test-Path -LiteralPath $repoFixtures) { Remove-Item -LiteralPath $repoFixtures -Recurse -Force }
+    Copy-Item -LiteralPath $fixtures -Destination $repoFixtures -Recurse -Force
     Invoke-External $python @((Join-Path $script:RepoRoot 'scripts\generate_lighttoken_almi_fixture.py'), '--lighttoken-dir', $fixtures, '--workspace', $workspace, '--bundle', $bundle, '--corrupt-bundle', $corrupt)
 
     $env:LIGHTTOKEN_ALMI_WORKSPACE = $workspace
@@ -44,5 +48,6 @@ finally {
     Remove-Item Env:LIGHTTOKEN_ALMI_WORKSPACE -ErrorAction SilentlyContinue
     Remove-Item Env:LIGHTTOKEN_ALMI_BUNDLE -ErrorAction SilentlyContinue
     Remove-Item Env:LIGHTTOKEN_ALMI_CORRUPT_BUNDLE -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $repoFixtures) { Remove-Item -LiteralPath $repoFixtures -Recurse -Force }
     if (Test-Path -LiteralPath $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
 }
