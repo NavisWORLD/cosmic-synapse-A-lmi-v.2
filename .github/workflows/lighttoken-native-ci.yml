@@ -54,6 +54,16 @@ jobs:
         run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-core --all-targets -- -D warnings
       - name: Rust core tests
         run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-core
+      - name: Emit generated Rust lockfile evidence for reproducible packaging
+        run: |
+          python - <<'PY'
+          import base64
+          from pathlib import Path
+          lock = Path('native/lighttoken-rs/Cargo.lock').read_bytes()
+          encoded = base64.b64encode(lock).decode('ascii')
+          for index in range(0, len(encoded), 96):
+              print('LIGHTTOKEN_CARGO_LOCK_CHUNK:' + encoded[index:index + 96])
+          PY
 
   rust-spectrum:
     runs-on: ubuntu-latest
@@ -277,3 +287,50 @@ jobs:
       - name: Uninstall program files while preserving data
         shell: cmd
         run: UNINSTALL_LIGHTTOKEN_WINDOWS.bat
+
+  security-fuzz-bounded:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+      - name: Run bounded parser fuzz smoke
+        working-directory: native/lighttoken-rs
+        run: cargo +nightly fuzz run token_json -- -runs=1024 -max_len=4096 -timeout=5
+
+  lighttoken-benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e .
+      - name: Generate synthetic fixture set
+        run: python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+      - name: Compile and self-test C++ accelerator
+        run: |
+          cmake -S native/lighttoken-cpp -B native/lighttoken-cpp/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build native/lighttoken-cpp/build --config Release
+          ctest --test-dir native/lighttoken-cpp/build --output-on-failure
+      - name: Build release native benchmark
+        run: cargo build --release --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-cli --bin lighttoken_bench
+      - name: Measure Python Rust scalar and C++ dispatch
+        env:
+          LIGHTTOKEN_CPP_LIB: ${{ github.workspace }}/native/lighttoken-cpp/build/liblighttoken_accel.so
+        run: |
+          python scripts/benchmark_lighttoken_native.py \
+            --rust-bench native/lighttoken-rs/target/release/lighttoken_bench \
+            --fixtures tests/fixtures/lighttoken \
+            --iterations 25 \
+            --output "$RUNNER_TEMP/lighttoken-benchmark.json"
+      - name: Preserve raw benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighttoken-benchmark-linux
+          path: ${{ runner.temp }}/lighttoken-benchmark.json
+          if-no-files-found: error
