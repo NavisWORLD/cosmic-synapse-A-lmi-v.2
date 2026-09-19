@@ -2,6 +2,7 @@ param(
     [switch]$SkipBuild
 )
 
+$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')
 Assert-Windows
 $arch = Get-HostArchitecture
@@ -30,7 +31,7 @@ Write-InstallManifest $arch
 
 $launcher = Get-InstalledLauncher
 if (-not (Test-Path -LiteralPath $launcher)) { throw "Installed launcher missing: $launcher" }
-if (-not (Test-Path -LiteralPath (Join-Path (Get-InstalledNativeDir) 'lighttoken_ffi.dll')) {
+if (-not (Test-Path -LiteralPath (Join-Path (Get-InstalledNativeDir) 'lighttoken_ffi.dll'))) {
     throw 'Installed JNI DLL is missing.'
 }
 
