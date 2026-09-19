@@ -44,9 +44,17 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
     let dir = Path::new(&args[1]);
     let left = from_json_bytes(&fs::read(dir.join("active_random.json"))?)?;
     let right = from_json_bytes(&fs::read(dir.join("active_sinusoid.json"))?)?;
-    let query = spectral_power(left.spectral_signature.as_deref().ok_or("missing spectrum")?)?;
-    let candidate =
-        spectral_power(right.spectral_signature.as_deref().ok_or("missing spectrum")?)?;
+    let query = spectral_power(
+        left.spectral_signature
+            .as_deref()
+            .ok_or("missing spectrum")?,
+    )?;
+    let candidate = spectral_power(
+        right
+            .spectral_signature
+            .as_deref()
+            .ok_or("missing spectrum")?,
+    )?;
     let candidates = vec![candidate.clone()];
     let diagnostics = backend_diagnostics();
     let mut methods = Map::new();
@@ -111,7 +119,10 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
 
 fn main() {
     match run() {
-        Ok(value) => println!("{}", serde_json::to_string_pretty(&value).expect("serialize benchmark")),
+        Ok(value) => println!(
+            "{}",
+            serde_json::to_string_pretty(&value).expect("serialize benchmark")
+        ),
         Err(error) => {
             eprintln!("lighttoken benchmark failed: {error}");
             std::process::exit(1);
