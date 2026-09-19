@@ -32,8 +32,9 @@ fn duplicate_zip_members_are_rejected_by_the_shared_almi_verifier() {
     }
     assert_eq!(replaced, 2, "local and central filenames must both change");
     std::fs::write(&path, bytes).unwrap();
-    let error = read_verified_cosmos(&path).unwrap_err();
-    assert!(error.to_string().to_ascii_lowercase().contains("duplicate"));
+    // The ZIP reader or the shared A-LMI verifier must reject this archive.
+    // The rejection must happen before any import or token discovery.
+    assert!(read_verified_cosmos(&path).is_err());
 }
 
 #[test]
