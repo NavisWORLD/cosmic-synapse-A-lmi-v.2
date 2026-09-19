@@ -26,6 +26,8 @@ pub enum IoError {
     Json(#[from] serde_json::Error),
     #[error("A-LMI error: {0}")]
     Almi(#[from] AlmiError),
+    #[error("integrity error: {0}")]
+    Integrity(String),
     #[error("security error: {0}")]
     Security(String),
     #[error("size/count limit: {0}")]
@@ -48,6 +50,26 @@ pub enum LightTokenSource {
         raw_path: String,
         sha256: String,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VerifiedLightTokenSource {
+    pub token_id: String,
+    pub source_path: String,
+    pub raw_data_ref: String,
+    pub canonical_json: Option<String>,
+    pub resolvable: bool,
+    pub verified: bool,
+    pub raw_resolvable: bool,
+    pub token_sha256: Option<String>,
+    pub raw_sha256: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VerifiedSourceCollection {
+    pub source_kind: String,
+    pub bundle_verified: bool,
+    pub tokens: Vec<VerifiedLightTokenSource>,
 }
 
 fn require_regular_file(path: &Path, max_bytes: u64) -> Result<u64> {
@@ -200,6 +222,114 @@ pub fn import_verified_cosmos(
     verify_bundle(source)?;
     import_bundle(source, destination)?;
     discover_almi_workspace(destination)
+}
+
+pub fn read_verified_workspace(path: impl AsRef<Path>) -> Result<VerifiedSourceCollection> {
+    let root = path.as_ref();
+    require_workspace(root)?;
+    let manifest: ArtifactManifest = read_typed_json(root.join("artifacts/manifest.json"))?;
+    let mut tokens = Vec::new();
+
+    for artifact in &manifest.artifacts {
+        let Some(relative) = lighttoken_artifact_path(artifact) else {
+            continue;
+        };
+        let relative_path = safe_relative_path(relative)?;
+        let token_path = root.join(&relative_path);
+        let declared_token_id = artifact_field(artifact, "token_id").unwrap_or(relative);
+
+        if !token_path.exists() {
+            tokens.push(VerifiedLightTokenSource {
+                token_id: declared_token_id.to_owned(),
+                source_path: relative.to_owned(),
+                raw_data_ref: relative.to_owned(),
+                canonical_json: None,
+                resolvable: false,
+                verified: false,
+                raw_resolvable: false,
+                token_sha256: None,
+                raw_sha256: None,
+            });
+            continue;
+        }
+
+        require_regular_file(&token_path, MAX_TOKEN_JSON_BYTES)?;
+        let token_bytes = fs::read(&token_path)?;
+        let actual_token_sha = hex_digest(&token_bytes);
+        let expected_token_sha = artifact_field(artifact, "sha256");
+        if let Some(expected) = expected_token_sha {
+            if expected != actual_token_sha {
+                return Err(IoError::Integrity(format!(
+                    "LightToken artifact hash mismatch for {relative}"
+                )));
+            }
+        }
+
+        let token = from_json_bytes(&token_bytes)?;
+        if let Some(expected_id) = artifact_field(artifact, "token_id") {
+            if expected_id != token.token_id {
+                return Err(IoError::Integrity(format!(
+                    "LightToken artifact token_id mismatch for {relative}"
+                )));
+            }
+        }
+
+        let mut raw_resolvable = false;
+        let mut raw_sha256 = None;
+        if let Some(raw_path) = resolve_raw_reference(root, &token.raw_data_ref) {
+            if raw_path.exists() {
+                require_regular_file(&raw_path, MAX_COLLECTION_BYTES)?;
+                let raw_bytes = fs::read(&raw_path)?;
+                let actual_raw_sha = hex_digest(&raw_bytes);
+                if let Some(expected_raw_sha) = artifact_field(artifact, "raw_sha256") {
+                    if expected_raw_sha != actual_raw_sha {
+                        return Err(IoError::Integrity(format!(
+                            "LightToken raw artifact hash mismatch for {relative}"
+                        )));
+                    }
+                }
+                raw_resolvable = true;
+                raw_sha256 = Some(actual_raw_sha);
+            }
+        }
+
+        let raw_verified = artifact_field(artifact, "raw_sha256")
+            .map(|_| raw_resolvable)
+            .unwrap_or(true);
+        let canonical = String::from_utf8_lossy(&token.canonical_json_bytes()?).into_owned();
+        tokens.push(VerifiedLightTokenSource {
+            token_id: token.token_id,
+            source_path: relative.to_owned(),
+            raw_data_ref: token.raw_data_ref,
+            canonical_json: Some(canonical),
+            resolvable: true,
+            verified: expected_token_sha.is_some() && raw_verified,
+            raw_resolvable,
+            token_sha256: Some(actual_token_sha),
+            raw_sha256,
+        });
+    }
+
+    Ok(VerifiedSourceCollection {
+        source_kind: "workspace".into(),
+        bundle_verified: false,
+        tokens,
+    })
+}
+
+pub fn read_verified_cosmos(path: impl AsRef<Path>) -> Result<VerifiedSourceCollection> {
+    let source = path.as_ref();
+    verify_bundle(source)?;
+    let temporary = tempfile::tempdir()?;
+    import_bundle(source, temporary.path())?;
+    let mut collection = read_verified_workspace(temporary.path())?;
+    collection.source_kind = "cosmos".into();
+    collection.bundle_verified = true;
+    Ok(collection)
+}
+
+fn artifact_field<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
+    value.as_object()?.get(key)?.as_str()
 }
 
 fn lighttoken_artifact_path(value: &Value) -> Option<&str> {

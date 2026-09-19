@@ -8,6 +8,7 @@ pub mod jni_api;
 
 use lighttoken_core::{from_json_bytes, LightTokenError, LightTokenRecord, SimilarityMethod};
 use lighttoken_index::{SearchRequest, TokenCollection};
+use lighttoken_io::{read_verified_cosmos, read_verified_workspace};
 use lighttoken_spectrum::{backend_diagnostics, spectral_power, token_similarity, BackendKind};
 use serde_json::{json, Value};
 use thiserror::Error;
@@ -30,6 +31,8 @@ pub(crate) enum EngineError {
     UnsupportedVersion(String),
     #[error("backend error: {0}")]
     Backend(String),
+    #[error("source error: {0}")]
+    Source(String),
     #[error("JSON error: {0}")]
     Json(String),
 }
@@ -146,6 +149,18 @@ pub(crate) fn vectors_json_text(text: &str) -> Result<String, EngineError> {
         "spectral_power": spectrum,
     });
     serde_json::to_string(&payload).map_err(|error| EngineError::Json(error.to_string()))
+}
+
+pub(crate) fn read_workspace_json_text(path: &str) -> Result<String, EngineError> {
+    let collection =
+        read_verified_workspace(path).map_err(|error| EngineError::Source(error.to_string()))?;
+    serde_json::to_string(&collection).map_err(|error| EngineError::Json(error.to_string()))
+}
+
+pub(crate) fn read_cosmos_json_text(path: &str) -> Result<String, EngineError> {
+    let collection =
+        read_verified_cosmos(path).map_err(|error| EngineError::Source(error.to_string()))?;
+    serde_json::to_string(&collection).map_err(|error| EngineError::Json(error.to_string()))
 }
 
 pub(crate) fn backend_json_text() -> Result<String, EngineError> {

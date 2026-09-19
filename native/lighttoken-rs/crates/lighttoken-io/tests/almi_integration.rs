@@ -17,7 +17,10 @@ fn verified_workspace_and_cosmos_discover_the_synthetic_lighttoken() {
     assert!(token.verified);
     assert!(token.raw_resolvable);
     assert_eq!(token.token_id, "00000000-0000-0000-0000-000000000004");
-    assert!(token.canonical_json.as_deref().is_some_and(|json| json.contains("joint_embedding")));
+    assert!(token
+        .canonical_json
+        .as_deref()
+        .is_some_and(|json| json.contains("joint_embedding")));
 
     let bundle = read_verified_cosmos(required("LIGHTTOKEN_ALMI_BUNDLE")).unwrap();
     assert_eq!(bundle.source_kind, "cosmos");

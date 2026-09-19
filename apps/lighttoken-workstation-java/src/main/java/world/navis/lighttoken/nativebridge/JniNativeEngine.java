@@ -18,6 +18,8 @@ import world.navis.lighttoken.model.SearchResult;
 import world.navis.lighttoken.model.SimilarityMethod;
 import world.navis.lighttoken.model.TokenVectors;
 import world.navis.lighttoken.model.ValidationResult;
+import world.navis.lighttoken.model.WorkspaceReadResult;
+import world.navis.lighttoken.model.WorkspaceTokenPayload;
 
 public final class JniNativeEngine implements NativeEngine {
     public static final int EXPECTED_ABI_VERSION = 1;
@@ -208,6 +210,58 @@ public final class JniNativeEngine implements NativeEngine {
     }
 
     @Override
+    public WorkspaceReadResult readWorkspace(Path workspace) {
+        requireOpen();
+        Path source = requireSource(workspace, true);
+        return parseWorkspace(nativeReadWorkspace(context, source.toString()));
+    }
+
+    @Override
+    public WorkspaceReadResult readCosmos(Path bundle) {
+        requireOpen();
+        Path source = requireSource(bundle, false);
+        return parseWorkspace(nativeReadCosmos(context, source.toString()));
+    }
+
+    private static Path requireSource(Path source, boolean directory) {
+        Objects.requireNonNull(source, "source");
+        Path normalized = source.toAbsolutePath().normalize();
+        if (Files.isSymbolicLink(normalized)
+                || (directory ? !Files.isDirectory(normalized) : !Files.isRegularFile(normalized))) {
+            throw new IllegalArgumentException(
+                    "invalid LightToken source: " + normalized);
+        }
+        return normalized;
+    }
+
+    private static WorkspaceReadResult parseWorkspace(String text) {
+        JsonNode node = parse(text);
+        List<WorkspaceTokenPayload> tokens = new ArrayList<>();
+        for (JsonNode token : node.path("tokens")) {
+            tokens.add(
+                    new WorkspaceTokenPayload(
+                            token.path("token_id").asText(),
+                            token.path("source_path").asText(),
+                            token.path("raw_data_ref").asText(),
+                            nullableText(token, "canonical_json"),
+                            token.path("resolvable").asBoolean(false),
+                            token.path("verified").asBoolean(false),
+                            token.path("raw_resolvable").asBoolean(false),
+                            nullableText(token, "token_sha256"),
+                            nullableText(token, "raw_sha256")));
+        }
+        return new WorkspaceReadResult(
+                node.path("source_kind").asText(),
+                node.path("bundle_verified").asBoolean(false),
+                tokens);
+    }
+
+    private static String nullableText(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        return value == null || value.isNull() ? null : value.asText();
+    }
+
+    @Override
     public BackendInfo backendInfo() {
         requireOpen();
         JsonNode node = parse(nativeBackendJson(context));
@@ -258,6 +312,10 @@ public final class JniNativeEngine implements NativeEngine {
             long context, String queryJson, String collectionJson, String requestJson);
 
     private static native String nativeVectorsJson(long context, String json);
+
+    private static native String nativeReadWorkspace(long context, String path);
+
+    private static native String nativeReadCosmos(long context, String path);
 
     private static native String nativeBackendJson(long context);
 }
