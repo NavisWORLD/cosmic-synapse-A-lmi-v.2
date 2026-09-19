@@ -27,7 +27,7 @@ if (-not $SkipTests) {
 
 Invoke-External $java @('-version')
 Invoke-External $python @('--version')
-Invoke-External $gradle @('clean', 'jpackageImage', '--no-daemon')
+Invoke-External $gradle @('-p', $script:JavaRoot, 'clean', 'jpackageImage', '--no-daemon')
 
 $rustRelease = Get-RustReleaseDir
 $cli = Join-Path $rustRelease 'lighttoken.exe'
