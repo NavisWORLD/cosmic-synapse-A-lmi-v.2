@@ -20,6 +20,7 @@ fn status(error: &EngineError) -> i32 {
         EngineError::InvalidToken(_) => LIGHTTOKEN_INVALID_TOKEN,
         EngineError::UnsupportedVersion(_) => LIGHTTOKEN_UNSUPPORTED_VERSION,
         EngineError::Backend(_) => LIGHTTOKEN_BACKEND,
+        EngineError::Source(_) => LIGHTTOKEN_IO,
     }
 }
 
