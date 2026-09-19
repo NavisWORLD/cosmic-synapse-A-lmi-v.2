@@ -10,14 +10,30 @@ fn duplicate_zip_members_are_rejected_by_the_shared_almi_verifier() {
     let temp = tempdir().unwrap();
     let path = temp.path().join("duplicate.cosmos");
     let mut writer = zip::ZipWriter::new(File::create(&path).unwrap());
+    // zip::ZipWriter itself rejects duplicate names. Create a structurally
+    // valid two-member ZIP, then rename the second equal-length filename
+    // in both local and central headers to exercise the *reader* boundary.
     let options = SimpleFileOptions::default();
-    writer.start_file("duplicate.json", options).unwrap();
+    writer.start_file("dupA.json", options).unwrap();
     writer.write_all(b"first").unwrap();
-    writer.start_file("duplicate.json", options).unwrap();
+    writer.start_file("dupB.json", options).unwrap();
     writer.write_all(b"second").unwrap();
     writer.finish().unwrap();
 
-    assert!(read_verified_cosmos(&path).is_err());
+    let mut bytes = std::fs::read(&path).unwrap();
+    let from = b"dupB.json";
+    let to = b"dupA.json";
+    let mut replaced = 0;
+    for index in 0..=bytes.len() - from.len() {
+        if &bytes[index..index + from.len()] == from {
+            bytes[index..index + from.len()].copy_from_slice(to);
+            replaced += 1;
+        }
+    }
+    assert_eq!(replaced, 2, "local and central filenames must both change");
+    std::fs::write(&path, bytes).unwrap();
+    let error = read_verified_cosmos(&path).unwrap_err();
+    assert!(error.to_string().to_ascii_lowercase().contains("duplicate"));
 }
 
 #[test]

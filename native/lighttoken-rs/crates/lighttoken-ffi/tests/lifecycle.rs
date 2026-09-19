@@ -138,7 +138,10 @@ fn repeated_context_allocation_validation_and_release_stays_bounded() {
                 lighttoken_validate_json(context, malformed.as_ptr(), &mut output),
                 LIGHTTOKEN_OK
             );
-            assert!(output.is_null(), "failed C ABI call must not leak an output string");
+            assert!(
+                output.is_null(),
+                "failed C ABI call must not leak an output string"
+            );
             lighttoken_context_free(context);
         }
     }
