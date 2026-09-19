@@ -55,3 +55,43 @@ tasks.register('javafxSmoke', JavaExec) {
     systemProperty 'lighttoken.fixture.dir', System.getProperty('lighttoken.fixture.dir', '')
     jvmArgs '-Dprism.order=sw'
 }
+
+def jlinkRuntimeDir = layout.buildDirectory.dir('jlink-runtime')
+def jpackageOutputDir = layout.buildDirectory.dir('jpackage')
+
+tasks.register('jlinkRuntime', Exec) {
+    group = 'distribution'
+    description = 'Builds the user-local LightToken Java runtime image with jlink.'
+    outputs.dir(jlinkRuntimeDir)
+    doFirst {
+        delete(jlinkRuntimeDir)
+        def jlink = new File(System.getProperty('java.home'), 'bin/jlink' + (org.gradle.internal.os.OperatingSystem.current().isWindows() ? '.exe' : ''))
+        commandLine jlink,
+                '--add-modules', 'ALL-MODULE-PATH',
+                '--strip-debug',
+                '--no-header-files',
+                '--no-man-pages',
+                '--output', jlinkRuntimeDir.get().asFile.absolutePath
+    }
+}
+
+tasks.register('jpackageImage', Exec) {
+    group = 'distribution'
+    description = 'Builds the LightToken workstation app-image with the jlink runtime.'
+    dependsOn tasks.named('installDist'), tasks.named('jlinkRuntime')
+    outputs.dir(jpackageOutputDir)
+    doFirst {
+        delete(jpackageOutputDir)
+        def jpackage = new File(System.getProperty('java.home'), 'bin/jpackage' + (org.gradle.internal.os.OperatingSystem.current().isWindows() ? '.exe' : ''))
+        def inputDir = layout.buildDirectory.dir("install/${project.name}/lib").get().asFile
+        def mainJar = tasks.named('jar').get().archiveFileName.get()
+        commandLine jpackage,
+                '--type', 'app-image',
+                '--name', 'LightTokenWorkstation',
+                '--dest', jpackageOutputDir.get().asFile.absolutePath,
+                '--input', inputDir.absolutePath,
+                '--main-jar', mainJar,
+                '--main-class', application.mainClass.get(),
+                '--runtime-image', jlinkRuntimeDir.get().asFile.absolutePath
+    }
+}

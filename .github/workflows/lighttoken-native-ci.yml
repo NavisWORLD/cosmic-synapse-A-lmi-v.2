@@ -226,3 +226,47 @@ jobs:
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
         run: xvfb-run -a ./gradlew javafxSmoke -Dlighttoken.native.dir=${{ github.workspace }}/native/lighttoken-rs/target/debug -Dlighttoken.fixture.dir=${{ github.workspace }}/tests/fixtures/lighttoken --no-daemon
+
+  windows-lifecycle:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install deterministic fixture dependencies
+        shell: pwsh
+        run: python -m pip install -e . pytest
+      - name: Verify Windows lifecycle source contract
+        shell: pwsh
+        run: python -m pytest -q tests/test_lighttoken_windows_contract.py
+      - name: Build packaged Windows workstation
+        shell: cmd
+        run: BUILD_LIGHTTOKEN_WINDOWS.bat
+      - name: Execute native and Java Windows tests
+        shell: cmd
+        run: TEST_LIGHTTOKEN_WINDOWS.bat
+      - name: Install user-local packaged workstation
+        shell: cmd
+        run: INSTALL_LIGHTTOKEN_WINDOWS.bat -SkipBuild
+      - name: Verify synthetic collection workspace bundle and packaged JNI launcher
+        shell: cmd
+        run: VERIFY_LIGHTTOKEN_WINDOWS.bat
+      - name: Validate installed RUN entrypoint
+        shell: cmd
+        run: RUN_LIGHTTOKEN_WINDOWS.bat -Check
+      - name: Exercise ff-only updater on named branch pushes
+        if: github.event_name == 'push'
+        shell: cmd
+        run: UPDATE_LIGHTTOKEN_WINDOWS.bat -SkipBuild
+      - name: Uninstall program files while preserving data
+        shell: cmd
+        run: UNINSTALL_LIGHTTOKEN_WINDOWS.bat
