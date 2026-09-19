@@ -86,9 +86,20 @@ jobs:
         run: python -m pip install -e .
       - name: Generate synthetic oracle fixtures
         run: python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+      - name: Generate synthetic A-LMI fixture
+        run: |
+          python scripts/generate_lighttoken_almi_fixture.py \
+            --lighttoken-dir tests/fixtures/lighttoken \
+            --workspace "$RUNNER_TEMP/almi-workspace" \
+            --bundle "$RUNNER_TEMP/lighttoken.cosmos" \
+            --corrupt-bundle "$RUNNER_TEMP/lighttoken-corrupt.cosmos"
       - name: Data Clippy
         run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-index -p lighttoken-io --all-targets -- -D warnings
-      - name: Verify deterministic search and safe IO
+      - name: Verify deterministic search safe IO and A-LMI reads
+        env:
+          LIGHTTOKEN_ALMI_WORKSPACE: ${{ runner.temp }}/almi-workspace
+          LIGHTTOKEN_ALMI_BUNDLE: ${{ runner.temp }}/lighttoken.cosmos
+          LIGHTTOKEN_ALMI_CORRUPT_BUNDLE: ${{ runner.temp }}/lighttoken-corrupt.cosmos
         run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-index -p lighttoken-io
 
   rust-cli:
@@ -183,7 +194,13 @@ jobs:
       - name: Install Python fixture oracle
         run: python -m pip install -e .
       - name: Generate synthetic Java service fixtures
-        run: python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+        run: |
+          python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+          python scripts/generate_lighttoken_almi_fixture.py \
+            --lighttoken-dir tests/fixtures/lighttoken \
+            --workspace "$RUNNER_TEMP/almi-workspace" \
+            --bundle "$RUNNER_TEMP/lighttoken.cosmos" \
+            --corrupt-bundle "$RUNNER_TEMP/lighttoken-corrupt.cosmos"
       - uses: gradle/actions/setup-gradle@v4
       - name: Verify committed Gradle 8.14.5 wrapper
         working-directory: apps/lighttoken-workstation-java
@@ -201,7 +218,7 @@ jobs:
         run: cargo build --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-ffi
       - name: Verify Java JNI SQLite and application service contracts
         working-directory: apps/lighttoken-workstation-java
-        run: ./gradlew test -Dlighttoken.native.dir=${{ github.workspace }}/native/lighttoken-rs/target/debug -Dlighttoken.fixture.dir=${{ github.workspace }}/tests/fixtures/lighttoken --no-daemon
+        run: ./gradlew test -Dlighttoken.native.dir=${{ github.workspace }}/native/lighttoken-rs/target/debug -Dlighttoken.fixture.dir=${{ github.workspace }}/tests/fixtures/lighttoken -Dlighttoken.almi.workspace=${{ runner.temp }}/almi-workspace -Dlighttoken.almi.bundle=${{ runner.temp }}/lighttoken.cosmos -Dlighttoken.almi.corrupt_bundle=${{ runner.temp }}/lighttoken-corrupt.cosmos --no-daemon
       - name: Verify functional JavaFX Resonance Explorer smoke
         working-directory: apps/lighttoken-workstation-java
         env:

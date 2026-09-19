@@ -40,6 +40,9 @@ tasks.named('test') {
     useJUnitPlatform()
     systemProperty 'lighttoken.native.dir', System.getProperty('lighttoken.native.dir', '')
     systemProperty 'lighttoken.fixture.dir', System.getProperty('lighttoken.fixture.dir', '')
+    systemProperty 'lighttoken.almi.workspace', System.getProperty('lighttoken.almi.workspace', '')
+    systemProperty 'lighttoken.almi.bundle', System.getProperty('lighttoken.almi.bundle', '')
+    systemProperty 'lighttoken.almi.corrupt_bundle', System.getProperty('lighttoken.almi.corrupt_bundle', '')
 }
 
 tasks.register('javafxSmoke', JavaExec) {
