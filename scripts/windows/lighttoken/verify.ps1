@@ -28,6 +28,7 @@ try {
     Invoke-External $cli @('--json', 'search', $indexDir, $query, '--top-k', '3', '--method', 'cosine')
 
     Invoke-External $gradle @(
+        '-p', $script:JavaRoot,
         'test',
         '--tests', 'world.navis.lighttoken.service.WorkspaceServiceIntegrationTest',
         "-Dlighttoken.native.dir=$nativeDir",
