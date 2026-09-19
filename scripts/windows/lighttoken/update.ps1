@@ -2,6 +2,7 @@ param(
     [switch]$SkipBuild
 )
 
+$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')
 Assert-Windows
 $git = Require-Command 'git' 'Git is required to update the source checkout.'
