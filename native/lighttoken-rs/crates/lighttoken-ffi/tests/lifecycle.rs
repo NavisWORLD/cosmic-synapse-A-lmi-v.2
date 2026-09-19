@@ -118,3 +118,28 @@ fn null_inputs_fail_closed_without_panicking() {
         lighttoken_string_free(ptr::null_mut());
     }
 }
+
+#[test]
+fn repeated_context_allocation_validation_and_release_stays_bounded() {
+    let valid = fixture("active_zero.json");
+    let malformed = CString::new("{malformed").unwrap();
+    unsafe {
+        for _ in 0..256 {
+            let context = lighttoken_context_new();
+            assert!(!context.is_null());
+            let mut output = ptr::null_mut();
+            assert_eq!(
+                lighttoken_validate_json(context, valid.as_ptr(), &mut output),
+                LIGHTTOKEN_OK
+            );
+            assert_eq!(take_json(output)["valid"], true);
+            output = ptr::null_mut();
+            assert_ne!(
+                lighttoken_validate_json(context, malformed.as_ptr(), &mut output),
+                LIGHTTOKEN_OK
+            );
+            assert!(output.is_null(), "failed C ABI call must not leak an output string");
+            lighttoken_context_free(context);
+        }
+    }
+}

@@ -224,10 +224,40 @@ pub fn import_verified_cosmos(
     discover_almi_workspace(destination)
 }
 
+// Reject symlinks at every workspace-relative component, not just the final file.
+// This is an integrity-first read boundary; it is not a concurrency-safe openat handle.
+fn workspace_artifact_path(root: &Path, relative: &Path) -> Result<PathBuf> {
+    let metadata = fs::symlink_metadata(root)?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(IoError::Security(format!(
+            "workspace root is not a real directory: {}",
+            root.display()
+        )));
+    }
+    let mut current = root.to_path_buf();
+    for component in relative.components() {
+        current.push(component.as_os_str());
+        match fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(IoError::Security(format!(
+                    "workspace path crosses a symlink: {}",
+                    current.display()
+                )));
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(IoError::Io(error)),
+        }
+    }
+    Ok(current)
+}
+
 pub fn read_verified_workspace(path: impl AsRef<Path>) -> Result<VerifiedSourceCollection> {
     let root = path.as_ref();
     require_workspace(root)?;
-    let manifest: ArtifactManifest = read_typed_json(root.join("artifacts/manifest.json"))?;
+    let manifest_path = workspace_artifact_path(root, Path::new("artifacts/manifest.json"))?;
+    require_regular_file(&manifest_path, MAX_TOKEN_JSON_BYTES)?;
+    let manifest: ArtifactManifest = read_typed_json(manifest_path)?;
     let mut tokens = Vec::new();
 
     for artifact in &manifest.artifacts {
@@ -235,7 +265,7 @@ pub fn read_verified_workspace(path: impl AsRef<Path>) -> Result<VerifiedSourceC
             continue;
         };
         let relative_path = safe_relative_path(relative)?;
-        let token_path = root.join(&relative_path);
+        let token_path = workspace_artifact_path(root, &relative_path)?;
         let declared_token_id = artifact_field(artifact, "token_id").unwrap_or(relative);
 
         if !token_path.exists() {
@@ -276,7 +306,9 @@ pub fn read_verified_workspace(path: impl AsRef<Path>) -> Result<VerifiedSourceC
 
         let mut raw_resolvable = false;
         let mut raw_sha256 = None;
-        if let Some(raw_path) = resolve_raw_reference(root, &token.raw_data_ref) {
+        if let Some(relative) = token.raw_data_ref.strip_prefix("workspace://") {
+            let raw_relative = safe_relative_path(relative)?;
+            let raw_path = workspace_artifact_path(root, &raw_relative)?;
             if raw_path.exists() {
                 require_regular_file(&raw_path, MAX_COLLECTION_BYTES)?;
                 let raw_bytes = fs::read(&raw_path)?;
@@ -354,7 +386,9 @@ fn lighttoken_artifact_path(value: &Value) -> Option<&str> {
 }
 
 fn safe_relative_path(value: &str) -> Result<PathBuf> {
-    if value.is_empty() || value.contains('\\') {
+    let bytes = value.as_bytes();
+    let windows_drive = bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':';
+    if value.is_empty() || value.contains('\\') || windows_drive {
         return Err(IoError::Security(format!(
             "unsafe workspace-relative path: {value:?}"
         )));

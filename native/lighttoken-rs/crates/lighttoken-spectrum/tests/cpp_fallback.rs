@@ -27,3 +27,26 @@ fn explicit_cpp_disable_forces_rust_with_identical_scores() {
 
     std::env::remove_var("LIGHTTOKEN_DISABLE_CPP");
 }
+
+#[test]
+fn absent_accelerator_library_falls_back_to_rust_without_score_drift() {
+    std::env::remove_var("LIGHTTOKEN_DISABLE_CPP");
+    let temp = tempfile::tempdir().unwrap();
+    std::env::set_var("LIGHTTOKEN_CPP_LIB", temp.path().join("absent-library"));
+    let diagnostics = backend_diagnostics();
+    assert_eq!(diagnostics.active, BackendKind::Rust);
+    assert!(!diagnostics.cpp_available);
+
+    let query = vec![0.25f32, -1.0, 2.0, -3.0];
+    let candidates = vec![vec![0.25f32, -1.0, 2.0, -3.0]];
+    for method in [
+        SimilarityMethod::PowerCorrelation,
+        SimilarityMethod::Cosine,
+        SimilarityMethod::Euclidean,
+    ] {
+        let actual = similarity_many(&query, &candidates, method).unwrap();
+        let expected = similarity(&query, &candidates[0], method).unwrap();
+        assert_eq!(actual, vec![expected]);
+    }
+    std::env::remove_var("LIGHTTOKEN_CPP_LIB");
+}

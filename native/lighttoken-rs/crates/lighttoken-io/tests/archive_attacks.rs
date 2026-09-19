@@ -25,7 +25,9 @@ fn traversal_zip_members_are_rejected_before_import() {
     let temp = tempdir().unwrap();
     let path = temp.path().join("traversal.cosmos");
     let mut writer = zip::ZipWriter::new(File::create(&path).unwrap());
-    writer.start_file("../outside", SimpleFileOptions::default()).unwrap();
+    writer
+        .start_file("../outside", SimpleFileOptions::default())
+        .unwrap();
     writer.write_all(b"should never be extracted").unwrap();
     writer.finish().unwrap();
 

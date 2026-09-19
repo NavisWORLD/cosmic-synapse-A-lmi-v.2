@@ -6,8 +6,27 @@ param(
 . (Join-Path $PSScriptRoot 'common.ps1')
 Assert-Windows
 
+# Only files and directories that the installer owns may be removed. Leave
+# unknown siblings in the installation root undisturbed.
+foreach ($owned in @($script:InstalledAppRoot, $script:InstalledBinRoot)) {
+    if (Test-Path -LiteralPath $owned) {
+        $item = Get-Item -LiteralPath $owned -Force
+        if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            Remove-Item -LiteralPath $owned -Force
+        }
+        else {
+            Remove-Item -LiteralPath $owned -Recurse -Force
+        }
+    }
+}
+if (Test-Path -LiteralPath $script:InstallManifest) {
+    Remove-Item -LiteralPath $script:InstallManifest -Force
+}
 if (Test-Path -LiteralPath $script:InstallRoot) {
-    Remove-Item -LiteralPath $script:InstallRoot -Recurse -Force
+    $remaining = @(Get-ChildItem -LiteralPath $script:InstallRoot -Force)
+    if ($remaining.Count -eq 0) {
+        Remove-Item -LiteralPath $script:InstallRoot -Force
+    }
 }
 
 if ($RemoveData -and (Test-Path -LiteralPath $script:DataRoot)) {

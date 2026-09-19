@@ -49,7 +49,10 @@ fn oversized_single_token_rejected_before_parsing() {
     let oversized = temp.path().join("large.json");
     let file = fs::File::create(&oversized).unwrap();
     file.set_len(MAX_TOKEN_JSON_BYTES + 1).unwrap();
-    assert!(matches!(load_token_file(&oversized), Err(IoError::Limit(_))));
+    assert!(matches!(
+        load_token_file(&oversized),
+        Err(IoError::Limit(_))
+    ));
 }
 
 #[test]
