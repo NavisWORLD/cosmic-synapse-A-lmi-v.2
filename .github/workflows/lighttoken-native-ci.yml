@@ -1,0 +1,325 @@
+name: LightToken Native CI
+
+on:
+  push:
+    branches:
+      - feature/lighttoken-native-workstation-001
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lighttoken-native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-oracle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e . pytest
+      - name: Verify preserved Python LightToken oracle
+        run: python -m pytest -q tests/test_light_token_contract.py
+      - name: Verify Windows lifecycle source contract
+        run: python -m pytest -q tests/test_lighttoken_windows_contract.py
+      - name: Verify deterministic fixture generator
+        run: |
+          python scripts/generate_lighttoken_fixtures.py --output "$RUNNER_TEMP/lighttoken-a"
+          python scripts/generate_lighttoken_fixtures.py --output "$RUNNER_TEMP/lighttoken-b"
+          diff -r "$RUNNER_TEMP/lighttoken-a" "$RUNNER_TEMP/lighttoken-b"
+
+  rust-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e .
+      - name: Generate synthetic oracle fixtures
+        run: python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+      - name: Rust format
+        run: cargo fmt --manifest-path native/lighttoken-rs/Cargo.toml --all -- --check
+      - name: Rust core Clippy
+        run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-core --all-targets -- -D warnings
+      - name: Rust core tests
+        run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-core
+  rust-spectrum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e .
+      - name: Generate synthetic oracle fixtures
+        run: python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+      - name: Spectrum Clippy
+        run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum --all-targets -- -D warnings
+      - name: Verify Python-Rust spectral parity
+        run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum
+
+  rust-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e .
+      - name: Generate synthetic oracle fixtures
+        run: python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+      - name: Generate synthetic A-LMI fixture
+        run: |
+          python scripts/generate_lighttoken_almi_fixture.py \
+            --lighttoken-dir tests/fixtures/lighttoken \
+            --workspace "$RUNNER_TEMP/almi-workspace" \
+            --bundle "$RUNNER_TEMP/lighttoken.cosmos" \
+            --corrupt-bundle "$RUNNER_TEMP/lighttoken-corrupt.cosmos"
+      - name: Data Clippy
+        run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-index -p lighttoken-io --all-targets -- -D warnings
+      - name: Verify deterministic search safe IO and A-LMI reads
+        env:
+          LIGHTTOKEN_ALMI_WORKSPACE: ${{ runner.temp }}/almi-workspace
+          LIGHTTOKEN_ALMI_BUNDLE: ${{ runner.temp }}/lighttoken.cosmos
+          LIGHTTOKEN_ALMI_CORRUPT_BUNDLE: ${{ runner.temp }}/lighttoken-corrupt.cosmos
+        run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-index -p lighttoken-io
+
+  rust-cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e . pytest
+      - name: CLI Clippy
+        run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-cli --all-targets -- -D warnings
+      - name: CLI parser and command tests
+        run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-cli
+      - name: Build native CLI
+        run: cargo build --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-cli
+      - name: Verify Python-Rust CLI interoperability
+        env:
+          LIGHTTOKEN_NATIVE_CLI: ${{ github.workspace }}/native/lighttoken-rs/target/debug/lighttoken
+        run: python -m pytest -q tests/test_lighttoken_native_interop.py
+
+  rust-ffi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e .
+      - name: Generate synthetic oracle fixtures
+        run: python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+      - name: FFI Clippy
+        run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-ffi --all-targets -- -D warnings
+      - name: FFI lifecycle tests
+        run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-ffi
+      - name: Build C/JNI library
+        run: cargo build --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-ffi
+      - name: External C ABI smoke
+        run: |
+          cc native/lighttoken-rs/tests/c_abi_smoke.c \
+            -I native/lighttoken-rs/include \
+            -L native/lighttoken-rs/target/debug \
+            -Wl,-rpath,${{ github.workspace }}/native/lighttoken-rs/target/debug \
+            -llighttoken_ffi \
+            -o "$RUNNER_TEMP/lighttoken-c-smoke"
+          "$RUNNER_TEMP/lighttoken-c-smoke" tests/fixtures/lighttoken/active_random.json
+
+
+  cpp-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Configure scalar C++ accelerator
+        run: cmake -S native/lighttoken-cpp -B native/lighttoken-cpp/build -DCMAKE_BUILD_TYPE=Release
+      - name: Build scalar C++ accelerator
+        run: cmake --build native/lighttoken-cpp/build --config Release
+      - name: Run C++ known-vector self-tests
+        run: ctest --test-dir native/lighttoken-cpp/build --output-on-failure
+      - name: Verify explicit Rust fallback
+        run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum --test cpp_fallback
+      - name: Verify C++ and Rust score parity
+        env:
+          LIGHTTOKEN_CPP_LIB: ${{ github.workspace }}/native/lighttoken-cpp/build/liblighttoken_accel.so
+        run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum --test cpp_parity -- --nocapture
+      - name: C++ backend Rust Clippy
+        run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-spectrum --all-targets -- -D warnings
+
+
+  java-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python fixture oracle
+        run: python -m pip install -e .
+      - name: Generate synthetic Java service fixtures
+        run: |
+          python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+          python scripts/generate_lighttoken_almi_fixture.py \
+            --lighttoken-dir tests/fixtures/lighttoken \
+            --workspace "$RUNNER_TEMP/almi-workspace" \
+            --bundle "$RUNNER_TEMP/lighttoken.cosmos" \
+            --corrupt-bundle "$RUNNER_TEMP/lighttoken-corrupt.cosmos"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Verify committed Gradle 8.14.5 wrapper
+        working-directory: apps/lighttoken-workstation-java
+        run: |
+          chmod +x gradlew
+          ./gradlew --version --no-daemon | tee "$RUNNER_TEMP/gradle-version.txt"
+          grep -F "Gradle 8.14.5" "$RUNNER_TEMP/gradle-version.txt"
+      - name: Verify committed dependency lock is reproducible
+        working-directory: apps/lighttoken-workstation-java
+        run: |
+          cp gradle.lockfile "$RUNNER_TEMP/gradle.lockfile.before"
+          ./gradlew dependencies --write-locks --no-daemon
+          cmp "$RUNNER_TEMP/gradle.lockfile.before" gradle.lockfile
+      - name: Build JNI library for Java contract
+        run: cargo build --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-ffi
+      - name: Verify Java JNI SQLite and application service contracts
+        working-directory: apps/lighttoken-workstation-java
+        run: ./gradlew test -Dlighttoken.native.dir=${{ github.workspace }}/native/lighttoken-rs/target/debug -Dlighttoken.fixture.dir=${{ github.workspace }}/tests/fixtures/lighttoken -Dlighttoken.almi.workspace=${{ runner.temp }}/almi-workspace -Dlighttoken.almi.bundle=${{ runner.temp }}/lighttoken.cosmos -Dlighttoken.almi.corrupt_bundle=${{ runner.temp }}/lighttoken-corrupt.cosmos --no-daemon
+      - name: Verify functional JavaFX Resonance Explorer smoke
+        working-directory: apps/lighttoken-workstation-java
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: xvfb-run -a ./gradlew javafxSmoke -Dlighttoken.native.dir=${{ github.workspace }}/native/lighttoken-rs/target/debug -Dlighttoken.fixture.dir=${{ github.workspace }}/tests/fixtures/lighttoken --no-daemon
+
+  windows-lifecycle:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install deterministic fixture dependencies
+        shell: pwsh
+        run: python -m pip install -e . pytest
+      - name: Verify Windows lifecycle source contract
+        shell: pwsh
+        run: python -m pytest -q tests/test_lighttoken_windows_contract.py
+      - name: Build packaged Windows workstation
+        shell: cmd
+        run: BUILD_LIGHTTOKEN_WINDOWS.bat
+      - name: Execute native and Java Windows tests
+        shell: cmd
+        run: TEST_LIGHTTOKEN_WINDOWS.bat
+      - name: Install user-local packaged workstation
+        shell: cmd
+        run: INSTALL_LIGHTTOKEN_WINDOWS.bat -SkipBuild
+      - name: Verify synthetic collection workspace bundle and packaged JNI launcher
+        shell: cmd
+        run: VERIFY_LIGHTTOKEN_WINDOWS.bat
+      - name: Validate installed RUN entrypoint
+        shell: cmd
+        run: RUN_LIGHTTOKEN_WINDOWS.bat -Check
+      - name: Diagnose dirty source before safe update
+        if: github.event_name == 'push'
+        shell: pwsh
+        run: |
+          git status --porcelain=v1
+          git diff --name-only
+          git ls-files --others --exclude-standard
+      - name: Exercise ff-only updater on named branch pushes
+        if: github.event_name == 'push'
+        shell: cmd
+        run: UPDATE_LIGHTTOKEN_WINDOWS.bat -SkipBuild
+      - name: Uninstall program files while preserving data
+        shell: cmd
+        run: UNINSTALL_LIGHTTOKEN_WINDOWS.bat
+
+  security-fuzz-bounded:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+      - name: Run bounded parser fuzz smoke
+        working-directory: native/lighttoken-rs
+        run: cargo +nightly fuzz run token_json -- -runs=1024 -max_len=4096 -timeout=5
+
+  lighttoken-benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python reference
+        run: python -m pip install -e .
+      - name: Generate synthetic fixture set
+        run: python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+      - name: Compile and self-test C++ accelerator
+        run: |
+          cmake -S native/lighttoken-cpp -B native/lighttoken-cpp/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build native/lighttoken-cpp/build --config Release
+          ctest --test-dir native/lighttoken-cpp/build --output-on-failure
+      - name: Build release native benchmark
+        run: cargo build --release --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-cli --bin lighttoken_bench
+      - name: Measure Python Rust scalar and C++ dispatch
+        env:
+          LIGHTTOKEN_CPP_LIB: ${{ github.workspace }}/native/lighttoken-cpp/build/liblighttoken_accel.so
+        run: |
+          python scripts/benchmark_lighttoken_native.py \
+            --rust-bench native/lighttoken-rs/target/release/lighttoken_bench \
+            --fixtures tests/fixtures/lighttoken \
+            --iterations 25 \
+            --output "$RUNNER_TEMP/lighttoken-benchmark.json"
+      - name: Preserve raw benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighttoken-benchmark-linux
+          path: ${{ runner.temp }}/lighttoken-benchmark.json
+          if-no-files-found: error

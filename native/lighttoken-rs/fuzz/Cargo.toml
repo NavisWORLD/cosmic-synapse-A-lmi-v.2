@@ -1,0 +1,21 @@
+[package]
+name = "lighttoken-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+lighttoken-core = { path = "../crates/lighttoken-core" }
+
+[workspace]
+
+[[bin]]
+name = "token_json"
+path = "fuzz_targets/token_json.rs"
+test = false
+doc = false
+bench = false

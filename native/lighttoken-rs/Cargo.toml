@@ -1,0 +1,37 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/lighttoken-core",
+  "crates/lighttoken-spectrum",
+  "crates/lighttoken-index",
+  "crates/lighttoken-io",
+  "crates/lighttoken-cli",
+  "crates/lighttoken-ffi",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "GPL-3.0-only"
+authors = ["Cory Shane Davis"]
+repository = "https://github.com/NavisWORLD/cosmic-synapse-A-lmi-v.2"
+
+[workspace.dependencies]
+almi-core = { path = "../almi-core-rs/crates/almi-core" }
+almi-continuity = { path = "../almi-core-rs/crates/almi-continuity" }
+almi-cosmos = { path = "../almi-core-rs/crates/almi-cosmos" }
+lighttoken-core = { path = "crates/lighttoken-core" }
+lighttoken-spectrum = { path = "crates/lighttoken-spectrum" }
+lighttoken-index = { path = "crates/lighttoken-index" }
+lighttoken-io = { path = "crates/lighttoken-io" }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+sha2 = "0.10"
+proptest = "1"
+rustfft = "6"
+tempfile = "3"
+jni = "0.21"
+libloading = "0.8"

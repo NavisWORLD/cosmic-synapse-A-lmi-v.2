@@ -1,0 +1,97 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+group = 'world.navis.lighttoken'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+javafx {
+    version = '21.0.9'
+    modules = ['javafx.controls']
+}
+
+dependencies {
+    implementation 'org.xerial:sqlite-jdbc:3.53.4.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.21.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.11.4'
+}
+
+dependencyLocking {
+    lockAllConfigurations()
+}
+
+application {
+    mainClass = 'world.navis.lighttoken.LightTokenWorkstation'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    systemProperty 'lighttoken.native.dir', System.getProperty('lighttoken.native.dir', '')
+    systemProperty 'lighttoken.fixture.dir', System.getProperty('lighttoken.fixture.dir', '')
+    systemProperty 'lighttoken.almi.workspace', System.getProperty('lighttoken.almi.workspace', '')
+    systemProperty 'lighttoken.almi.bundle', System.getProperty('lighttoken.almi.bundle', '')
+    systemProperty 'lighttoken.almi.corrupt_bundle', System.getProperty('lighttoken.almi.corrupt_bundle', '')
+}
+
+tasks.register('javafxSmoke', JavaExec) {
+    group = 'verification'
+    description = 'Loads synthetic LightTokens through JNI and renders the JavaFX explorer charts.'
+    dependsOn tasks.named('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'world.navis.lighttoken.ExplorerSmoke'
+    systemProperty 'lighttoken.native.dir', System.getProperty('lighttoken.native.dir', '')
+    systemProperty 'lighttoken.fixture.dir', System.getProperty('lighttoken.fixture.dir', '')
+    jvmArgs '-Dprism.order=sw'
+}
+
+def jlinkRuntimeDir = layout.buildDirectory.dir('jlink-runtime')
+def jpackageOutputDir = layout.buildDirectory.dir('jpackage')
+
+tasks.register('jlinkRuntime', Exec) {
+    group = 'distribution'
+    description = 'Builds the user-local LightToken Java runtime image with jlink.'
+    outputs.dir(jlinkRuntimeDir)
+    doFirst {
+        delete(jlinkRuntimeDir)
+        def jlink = new File(System.getProperty('java.home'), 'bin/jlink' + (org.gradle.internal.os.OperatingSystem.current().isWindows() ? '.exe' : ''))
+        commandLine jlink,
+                '--add-modules', 'ALL-MODULE-PATH',
+                '--strip-debug',
+                '--no-header-files',
+                '--no-man-pages',
+                '--output', jlinkRuntimeDir.get().asFile.absolutePath
+    }
+}
+
+tasks.register('jpackageImage', Exec) {
+    group = 'distribution'
+    description = 'Builds the LightToken workstation app-image with the jlink runtime.'
+    dependsOn tasks.named('installDist'), tasks.named('jlinkRuntime')
+    outputs.dir(jpackageOutputDir)
+    doFirst {
+        delete(jpackageOutputDir)
+        def jpackage = new File(System.getProperty('java.home'), 'bin/jpackage' + (org.gradle.internal.os.OperatingSystem.current().isWindows() ? '.exe' : ''))
+        def inputDir = layout.buildDirectory.dir("install/${project.name}/lib").get().asFile
+        def mainJar = tasks.named('jar').get().archiveFileName.get()
+        commandLine jpackage,
+                '--type', 'app-image',
+                '--name', 'LightTokenWorkstation',
+                '--dest', jpackageOutputDir.get().asFile.absolutePath,
+                '--input', inputDir.absolutePath,
+                '--main-jar', mainJar,
+                '--main-class', application.mainClass.get(),
+                '--runtime-image', jlinkRuntimeDir.get().asFile.absolutePath
+    }
+}

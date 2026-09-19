@@ -39,3 +39,7 @@ logs/
 Thumbs.db
 .vscode/
 .idea/
+native/lighttoken-cpp/build-windows/
+apps/lighttoken-workstation-java/build/
+dist/lighttoken/
+apps/lighttoken-workstation-java/.gradle/

@@ -1,0 +1,195 @@
+name: LightToken Cross-Platform Release CI
+
+on:
+  push:
+    branches:
+      - feature/lighttoken-native-workstation-001
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lighttoken-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: linux
+          - runner: macos-latest
+            target: macos
+          - runner: windows-latest
+            target: windows
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt,clippy
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install preserved Python oracle
+        shell: pwsh
+        run: |
+          python -m pip install -e . pytest
+          if ($LASTEXITCODE -ne 0) { throw 'Python oracle install failed' }
+      - name: Verify committed dependency lock and Rust format
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'native/lighttoken-rs/Cargo.lock')) { throw 'Cargo.lock missing' }
+          cargo metadata --manifest-path native/lighttoken-rs/Cargo.toml --locked --format-version 1 --no-deps | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Cargo lock is stale' }
+          cargo fmt --manifest-path native/lighttoken-rs/Cargo.toml --all -- --check
+          if ($LASTEXITCODE -ne 0) { throw 'Rust format failed' }
+      - name: Generate synthetic collection and verified A-LMI sources
+        shell: pwsh
+        run: |
+          $fixtures = Join-Path $env:RUNNER_TEMP 'lighttoken-fixtures'
+          $workspace = Join-Path $env:RUNNER_TEMP 'almi-workspace'
+          $bundle = Join-Path $env:RUNNER_TEMP 'lighttoken.cosmos'
+          $corrupt = Join-Path $env:RUNNER_TEMP 'lighttoken-corrupt.cosmos'
+          python scripts/generate_lighttoken_fixtures.py --output tests/fixtures/lighttoken
+          if ($LASTEXITCODE -ne 0) { throw 'Rust fixture generation failed' }
+          python scripts/generate_lighttoken_fixtures.py --output $fixtures
+          if ($LASTEXITCODE -ne 0) { throw 'Oracle fixture generation failed' }
+          python scripts/generate_lighttoken_almi_fixture.py --lighttoken-dir $fixtures --workspace $workspace --bundle $bundle --corrupt-bundle $corrupt
+          if ($LASTEXITCODE -ne 0) { throw 'A-LMI fixture generation failed' }
+          "LIGHTTOKEN_ALMI_WORKSPACE=$workspace" >> $env:GITHUB_ENV
+          "LIGHTTOKEN_ALMI_BUNDLE=$bundle" >> $env:GITHUB_ENV
+          "LIGHTTOKEN_ALMI_CORRUPT_BUNDLE=$corrupt" >> $env:GITHUB_ENV
+          "LIGHTTOKEN_FIXTURES=$fixtures" >> $env:GITHUB_ENV
+      - name: Strict native Clippy and full Rust workspace tests
+        shell: pwsh
+        run: |
+          cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml --locked --workspace --all-targets -- -D warnings
+          if ($LASTEXITCODE -ne 0) { throw 'Strict Clippy failed' }
+          cargo test --manifest-path native/lighttoken-rs/Cargo.toml --locked --workspace
+          if ($LASTEXITCODE -ne 0) { throw 'Native Rust workspace tests failed' }
+      - name: Compile and self-test optional C++ accelerator
+        shell: pwsh
+        run: |
+          cmake -S native/lighttoken-cpp -B native/lighttoken-cpp/build -DCMAKE_BUILD_TYPE=Release
+          if ($LASTEXITCODE -ne 0) { throw 'CMake configure failed' }
+          cmake --build native/lighttoken-cpp/build --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'C++ build failed' }
+          ctest --test-dir native/lighttoken-cpp/build -C Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw 'C++ self-test failed' }
+          $suffix = if ($IsWindows) { '.dll' } elseif ($IsMacOS) { '.dylib' } else { '.so' }
+          $lib = @(Get-ChildItem native/lighttoken-cpp/build -Recurse -File -Filter "*lighttoken_accel$suffix")
+          if ($lib.Count -ne 1) { throw "Expected exactly one C++ accelerator library; found $($lib.Count)" }
+          "LIGHTTOKEN_CPP_LIB=$($lib[0].FullName)" >> $env:GITHUB_ENV
+      - name: Verify C++ parity and explicit Rust fallback
+        shell: pwsh
+        run: |
+          cargo test --manifest-path native/lighttoken-rs/Cargo.toml --locked -p lighttoken-spectrum --test cpp_parity -- --nocapture
+          if ($LASTEXITCODE -ne 0) { throw 'C++ parity failed' }
+          cargo test --manifest-path native/lighttoken-rs/Cargo.toml --locked -p lighttoken-spectrum --test cpp_fallback
+          if ($LASTEXITCODE -ne 0) { throw 'Rust fallback failed' }
+      - name: Build release CLI JNI library and native benchmark
+        shell: pwsh
+        run: |
+          cargo build --manifest-path native/lighttoken-rs/Cargo.toml --locked --release -p lighttoken-cli -p lighttoken-ffi
+          if ($LASTEXITCODE -ne 0) { throw 'Rust release build failed' }
+      - name: Verify Python oracle and native CLI parity
+        shell: pwsh
+        run: |
+          $cli = if ($IsWindows) { 'lighttoken.exe' } else { 'lighttoken' }
+          $env:LIGHTTOKEN_NATIVE_CLI = (Resolve-Path (Join-Path 'native/lighttoken-rs/target/release' $cli)).Path
+          python -m pytest -q tests/test_light_token_contract.py tests/test_lighttoken_native_interop.py
+          if ($LASTEXITCODE -ne 0) { throw 'Python/Rust parity failed' }
+      - name: Verify Java JNI SQLite and source-integrity contracts
+        shell: pwsh
+        run: |
+          Push-Location apps/lighttoken-workstation-java
+          try {
+            $gradle = if ($IsWindows) { './gradlew.bat' } else { './gradlew' }
+            if (-not $IsWindows) { chmod +x ./gradlew }
+            $nativeDir = (Resolve-Path '../../native/lighttoken-rs/target/release').Path
+            & $gradle test "-Dlighttoken.native.dir=$nativeDir" "-Dlighttoken.fixture.dir=$env:LIGHTTOKEN_FIXTURES" "-Dlighttoken.almi.workspace=$env:LIGHTTOKEN_ALMI_WORKSPACE" "-Dlighttoken.almi.bundle=$env:LIGHTTOKEN_ALMI_BUNDLE" "-Dlighttoken.almi.corrupt_bundle=$env:LIGHTTOKEN_ALMI_CORRUPT_BUNDLE" --no-daemon
+            if ($LASTEXITCODE -ne 0) { throw 'Java JNI and persistence tests failed' }
+          } finally { Pop-Location }
+      - name: Verify external C ABI on POSIX
+        if: matrix.target != 'windows'
+        shell: bash
+        run: |
+          cc native/lighttoken-rs/tests/c_abi_smoke.c \
+            -I native/lighttoken-rs/include \
+            -L native/lighttoken-rs/target/release \
+            -Wl,-rpath,${{ github.workspace }}/native/lighttoken-rs/target/release \
+            -llighttoken_ffi -o "$RUNNER_TEMP/lighttoken-c-smoke"
+          "$RUNNER_TEMP/lighttoken-c-smoke" "$RUNNER_TEMP/lighttoken-fixtures/active_random.json"
+      - name: Build Windows portable product through actual lifecycle
+        if: matrix.target == 'windows'
+        shell: cmd
+        run: BUILD_LIGHTTOKEN_WINDOWS.bat
+      - name: Build non-Windows jlink jpackage application image
+        if: matrix.target != 'windows'
+        shell: pwsh
+        run: |
+          Push-Location apps/lighttoken-workstation-java
+          try {
+            ./gradlew jpackageImage --no-daemon
+            if ($LASTEXITCODE -ne 0) { throw 'jlink/jpackage build failed' }
+          } finally { Pop-Location }
+      - name: Create portable release checksums SPDX SBOM and evidence
+        shell: pwsh
+        run: |
+          python scripts/package_lighttoken_release.py --target ${{ matrix.target }} --commit "${{ github.sha }}" --run-id "${{ github.run_id }}" --output "$env:RUNNER_TEMP/lighttoken-release"
+          if ($LASTEXITCODE -ne 0) { throw 'Portable release package failed' }
+      - name: Execute packaged JNI launcher smoke on POSIX
+        if: matrix.target != 'windows'
+        shell: pwsh
+        run: |
+          $stage = @(Get-ChildItem "$env:RUNNER_TEMP/lighttoken-release" -Directory | Select-Object -First 1)
+          if ($stage.Count -ne 1) { throw 'release stage missing' }
+          if ($IsMacOS) {
+            $launcher = Join-Path $stage[0].FullName 'app/LightTokenWorkstation.app/Contents/MacOS/LightTokenWorkstation'
+          } else {
+            $launcher = Join-Path $stage[0].FullName 'app/bin/LightTokenWorkstation'
+          }
+          if (-not (Test-Path $launcher)) { throw "packaged launcher missing: $launcher" }
+          $evidence = Get-Content (Join-Path $stage[0].FullName 'EVIDENCE.json') -Raw | ConvertFrom-Json
+          $native = Join-Path $stage[0].FullName $evidence.native_directory
+          $accelerator = if ($IsMacOS) { 'liblighttoken_accel.dylib' } else { 'liblighttoken_accel.so' }
+          $env:LIGHTTOKEN_CPP_LIB = Join-Path $native $accelerator
+          if (-not (Test-Path $env:LIGHTTOKEN_CPP_LIB)) { throw 'packaged C++ accelerator is missing' }
+          & $launcher --packaged-smoke
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged JNI smoke failed' }
+      - name: Upload platform release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighttoken-release-${{ matrix.target }}
+          path: ${{ runner.temp }}/lighttoken-release/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  release-integrity:
+    needs: release-platform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: lighttoken-release-*
+          path: ${{ runner.temp }}/lighttoken-download
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify all three released archives belong to exact commit
+        run: |
+          python scripts/verify_lighttoken_release.py \
+            --root "$RUNNER_TEMP/lighttoken-download" \
+            --commit "${{ github.sha }}"
