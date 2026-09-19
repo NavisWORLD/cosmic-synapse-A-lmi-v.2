@@ -2,12 +2,14 @@ param(
     [switch]$SkipTests
 )
 
+$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')
 Assert-Windows
 $arch = Get-HostArchitecture
 $cmakeArch = Get-CMakeArchitecture
 $cargo = Require-Command 'cargo' 'Install Rust using rustup.'
 $cmake = Require-Command 'cmake' 'Install CMake 3.24 or newer.'
+$ctest = Require-Command 'ctest' 'Install CMake 3.24 or newer.'
 $java = Require-Command 'java' 'Install a Java 21 JDK.'
 $python = Require-Command 'python' 'Install Python 3.11 or newer.'
 $gradle = Join-Path $script:JavaRoot 'gradlew.bat'
@@ -20,7 +22,7 @@ $cppBuild = Join-Path $script:CppRoot 'build-windows'
 Invoke-External $cmake @('-S', $script:CppRoot, '-B', $cppBuild, '-A', $cmakeArch)
 Invoke-External $cmake @('--build', $cppBuild, '--config', 'Release')
 if (-not $SkipTests) {
-    Invoke-External $cmake @('--build', $cppBuild, '--target', 'test', '--config', 'Release')
+    Invoke-External $ctest @('--test-dir', $cppBuild, '-C', 'Release', '--output-on-failure')
 }
 
 Invoke-External $java @('-version')
