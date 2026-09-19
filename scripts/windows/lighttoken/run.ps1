@@ -5,6 +5,7 @@ param(
     [string[]]$Arguments
 )
 
+$ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'common.ps1')
 Assert-Windows
 $launcher = Get-InstalledLauncher
@@ -12,7 +13,7 @@ if (-not (Test-Path -LiteralPath $launcher)) {
     throw 'LightToken workstation is not installed. Run INSTALL_LIGHTTOKEN_WINDOWS.bat first.'
 }
 $nativeDir = Get-InstalledNativeDir
-if (-not (Test-Path -LiteralPath (Join-Path $nativeDir 'lighttoken_ffi.dll')) {
+if (-not (Test-Path -LiteralPath (Join-Path $nativeDir 'lighttoken_ffi.dll'))) {
     throw 'Installed LightToken JNI DLL is missing.'
 }
 
