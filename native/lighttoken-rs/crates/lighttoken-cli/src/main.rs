@@ -131,6 +131,7 @@ impl From<IoError> for AppError {
             IoError::Token(LightTokenError::Unsupported(_)) => "unsupported_version",
             IoError::Token(_) | IoError::Json(_) => "invalid_token",
             IoError::Almi(_) => "almi",
+            IoError::Integrity(_) => "integrity",
             IoError::Security(_) => "security",
             IoError::Limit(_) => "limit",
         };
