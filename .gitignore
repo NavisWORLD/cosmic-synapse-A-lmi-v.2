@@ -43,4 +43,3 @@ native/lighttoken-cpp/build-windows/
 apps/lighttoken-workstation-java/build/
 dist/lighttoken/
 apps/lighttoken-workstation-java/.gradle/
-native/lighttoken-rs/Cargo.lock

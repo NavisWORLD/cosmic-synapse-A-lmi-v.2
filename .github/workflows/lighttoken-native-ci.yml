@@ -54,17 +54,6 @@ jobs:
         run: cargo clippy --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-core --all-targets -- -D warnings
       - name: Rust core tests
         run: cargo test --manifest-path native/lighttoken-rs/Cargo.toml -p lighttoken-core
-      - name: Emit generated Rust lockfile evidence for reproducible packaging
-        run: |
-          python - <<'PY'
-          import base64
-          from pathlib import Path
-          lock = Path('native/lighttoken-rs/Cargo.lock').read_bytes()
-          encoded = base64.b64encode(lock).decode('ascii')
-          for index in range(0, len(encoded), 96):
-              print('LIGHTTOKEN_CARGO_LOCK_CHUNK:' + encoded[index:index + 96])
-          PY
-
   rust-spectrum:
     runs-on: ubuntu-latest
     steps:
