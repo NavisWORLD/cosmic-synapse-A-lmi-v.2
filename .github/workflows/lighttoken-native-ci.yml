@@ -263,6 +263,13 @@ jobs:
       - name: Validate installed RUN entrypoint
         shell: cmd
         run: RUN_LIGHTTOKEN_WINDOWS.bat -Check
+      - name: Diagnose dirty source before safe update
+        if: github.event_name == 'push'
+        shell: pwsh
+        run: |
+          git status --porcelain=v1
+          git diff --name-only
+          git ls-files --others --exclude-standard
       - name: Exercise ff-only updater on named branch pushes
         if: github.event_name == 'push'
         shell: cmd
