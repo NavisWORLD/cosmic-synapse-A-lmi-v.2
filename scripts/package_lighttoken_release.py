@@ -139,7 +139,7 @@ def build_stage(target: str, stage: Path) -> tuple[Path, Path]:
         image = JAVA / "build/jpackage" / ("LightTokenWorkstation.app" if target == "macos" else "LightTokenWorkstation")
         if not image.is_dir():
             raise ValueError(f"jpackage app image missing: {image}")
-        shutil.copytree(image, stage / "app")
+        shutil.copytree(image, stage / "app" / "LightTokenWorkstation.app" if target == "macos" else stage / "app")
         copy_file(cli, stage / "bin/lighttoken")
         jars = list((stage / "app").rglob("lighttoken-workstation-java-0.1.0.jar"))
         if len(jars) != 1:

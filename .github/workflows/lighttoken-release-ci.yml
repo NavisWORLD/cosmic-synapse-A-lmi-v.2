@@ -161,6 +161,11 @@ jobs:
             $launcher = Join-Path $stage[0].FullName 'app/bin/LightTokenWorkstation'
           }
           if (-not (Test-Path $launcher)) { throw "packaged launcher missing: $launcher" }
+          $evidence = Get-Content (Join-Path $stage[0].FullName 'EVIDENCE.json') -Raw | ConvertFrom-Json
+          $native = Join-Path $stage[0].FullName $evidence.native_directory
+          $accelerator = if ($IsMacOS) { 'liblighttoken_accel.dylib' } else { 'liblighttoken_accel.so' }
+          $env:LIGHTTOKEN_CPP_LIB = Join-Path $native $accelerator
+          if (-not (Test-Path $env:LIGHTTOKEN_CPP_LIB)) { throw 'packaged C++ accelerator is missing' }
           & $launcher --packaged-smoke
           if ($LASTEXITCODE -ne 0) { throw 'Packaged JNI smoke failed' }
       - name: Upload platform release evidence
