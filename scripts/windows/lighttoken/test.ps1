@@ -34,6 +34,7 @@ try {
 
     $nativeDir = Get-RustReleaseDir
     Invoke-External $gradle @(
+        '-p', $script:JavaRoot,
         'test',
         "-Dlighttoken.native.dir=$nativeDir",
         "-Dlighttoken.fixture.dir=$fixtures",
