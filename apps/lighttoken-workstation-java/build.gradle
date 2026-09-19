@@ -41,3 +41,14 @@ tasks.named('test') {
     systemProperty 'lighttoken.native.dir', System.getProperty('lighttoken.native.dir', '')
     systemProperty 'lighttoken.fixture.dir', System.getProperty('lighttoken.fixture.dir', '')
 }
+
+tasks.register('javafxSmoke', JavaExec) {
+    group = 'verification'
+    description = 'Loads synthetic LightTokens through JNI and renders the JavaFX explorer charts.'
+    dependsOn tasks.named('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'world.navis.lighttoken.ExplorerSmoke'
+    systemProperty 'lighttoken.native.dir', System.getProperty('lighttoken.native.dir', '')
+    systemProperty 'lighttoken.fixture.dir', System.getProperty('lighttoken.fixture.dir', '')
+    jvmArgs '-Dprism.order=sw'
+}

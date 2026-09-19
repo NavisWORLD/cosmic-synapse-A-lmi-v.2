@@ -202,3 +202,8 @@ jobs:
       - name: Verify Java JNI SQLite and application service contracts
         working-directory: apps/lighttoken-workstation-java
         run: ./gradlew test -Dlighttoken.native.dir=${{ github.workspace }}/native/lighttoken-rs/target/debug -Dlighttoken.fixture.dir=${{ github.workspace }}/tests/fixtures/lighttoken --no-daemon
+      - name: Verify functional JavaFX Resonance Explorer smoke
+        working-directory: apps/lighttoken-workstation-java
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: xvfb-run -a ./gradlew javafxSmoke -Dlighttoken.native.dir=${{ github.workspace }}/native/lighttoken-rs/target/debug -Dlighttoken.fixture.dir=${{ github.workspace }}/tests/fixtures/lighttoken --no-daemon
