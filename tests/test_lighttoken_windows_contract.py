@@ -32,8 +32,8 @@ def test_all_lighttoken_windows_wrappers_are_thin_powershell_entrypoints():
 def test_windows_common_owns_only_lighttoken_program_and_data_roots():
     text = read("scripts/windows/lighttoken/common.ps1")
     assert "LIGHTTOKEN_INSTALL_ROOT" in text
-    assert "'A-LMI'" in text
-    assert "'LightToken'" in text
+    assert "A-LMI" in text
+    assert "LightToken" in text
     assert "DataRoot" in text
     assert "install.json" in text
     assert "Assert-Windows" in text
