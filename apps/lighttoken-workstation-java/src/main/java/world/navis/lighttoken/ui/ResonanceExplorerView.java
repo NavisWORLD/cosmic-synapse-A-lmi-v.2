@@ -31,9 +31,9 @@ import world.navis.lighttoken.model.SimilarityMethod;
 import world.navis.lighttoken.model.TokenDetail;
 
 public final class ResonanceExplorerView extends BorderPane {
-    public static final String EMBEDDING_CHART_TITLE = "Embedding values";
+    public static final String EMBEDDING_CHART_TITLE = "Embedding spectrum";
     public static final String EMBEDDING_X_AXIS_LABEL = "Embedding dimension";
-    public static final String SPECTRAL_CHART_TITLE = "Embedding spectrum";
+    public static final String SPECTRAL_CHART_TITLE = "Spectral magnitude";
     public static final String SPECTRAL_X_AXIS_LABEL = "Spectral bin";
 
     private final MainController controller;
