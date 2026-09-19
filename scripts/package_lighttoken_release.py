@@ -131,12 +131,12 @@ def build_stage(target: str, stage: Path) -> tuple[Path, Path]:
         source = ROOT / "dist/lighttoken/windows-x64"
         if not (source / "app/LightTokenWorkstation.exe").is_file():
             raise ValueError("missing user-local Windows application image")
-        shutil.copytree(source, stage)
+        shutil.copytree(source, stage, dirs_exist_ok=True)
         native_dir = ensure_package_native(stage, ffi.name, sha256(require_file(ffi)))
         if not (stage / "bin/lighttoken.exe").is_file():
             raise ValueError("missing portable CLI")
     else:
-        image = JAVA / "build/jpackage/LightTokenWorkstation"
+        image = JAVA / "build/jpackage" / ("LightTokenWorkstation.app" if target == "macos" else "LightTokenWorkstation")
         if not image.is_dir():
             raise ValueError(f"jpackage app image missing: {image}")
         shutil.copytree(image, stage / "app")
